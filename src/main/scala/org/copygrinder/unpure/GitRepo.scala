@@ -1,15 +1,13 @@
 package org.copygrinder.unpure
 
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
-import org.eclipse.jgit.api.CloneCommand
 import java.io.File
-import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import org.eclipse.jgit.api.Git
-import java.nio.file.Files
 import org.apache.commons.io.FileUtils
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.lib.Repository
 
 class GitRepo {
+
+  protected val fileRepositoryBuilderWrapper = new FileRepositoryBuilderWrapper
 
   def create(name: String, overwrite: Boolean = false): Unit = {
 
@@ -17,9 +15,29 @@ class GitRepo {
       FileUtils.deleteDirectory(new File(name))
     }
 
-    val builder = new FileRepositoryBuilder();
-    val repository = builder.setGitDir(new File(name + "/.git")).setup().build()
+    val repository = fileRepositoryBuilderWrapper.setGitDir(new File(name + "/.git")).setup().build()
     repository.create(false)
+    repository.close()
+  }
+
+}
+
+class FileRepositoryBuilderWrapper {
+
+  val builder = new FileRepositoryBuilder()
+
+  def setGitDir(file: File): FileRepositoryBuilderWrapper = {
+    builder.setGitDir(file)
+    this
+  }
+
+  def setup(): FileRepositoryBuilderWrapper = {
+    builder.setup()
+    this
+  }
+
+  def build(): Repository = {
+    builder.build()
   }
 
 }

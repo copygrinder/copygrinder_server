@@ -29,7 +29,6 @@ libraryDependencies ++= Seq(
 /* TEST LIBS */
 libraryDependencies ++= Seq(
   "org.specs2"          %%  "specs2"                       % "2.2.2"    % "test",
-  "org.scalatest"       %%  "scalatest"                    % "2.0.RC2"  % "test",
   "org.scalamock"       %%  "scalamock-scalatest-support"  % "3.0.1"    % "test"
 )
 
