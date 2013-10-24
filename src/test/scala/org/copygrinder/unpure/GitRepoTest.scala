@@ -18,15 +18,17 @@ class GitRepoTest extends FlatSpec with MockFactory {
     
     abstract class NoArgsRepo extends Repository(new BaseRepositoryBuilder)
     
-    val stubRepo = stub[NoArgsRepo]
-    (mockFRBW.build _).expects.returns(stubRepo)
+    val mockRepo = mock[NoArgsRepo]
+    (mockFRBW.build _).expects.returns(mockRepo)
+    
+    (mockRepo.create _).expects
+    (mockRepo.close _).expects
 
     val git = new GitRepo() {
       override val fileRepositoryBuilderWrapper = mockFRBW
-
     }
 
-    git.create(name = "copybeans", overwrite = true) 
+    git.create(repoName = "copybeans") 
   }
-
+  
 }
