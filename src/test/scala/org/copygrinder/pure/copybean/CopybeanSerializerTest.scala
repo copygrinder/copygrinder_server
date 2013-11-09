@@ -13,6 +13,16 @@
  */
 package org.copygrinder.pure.copybean
 
-case class Copybean(id: String, enforcedTypes: Set[CopybeanType], values: Map[String, String]) {
+import org.scalatest.FlatSpec
+import org.copygrinder.pure.copybean.serialize.CopybeanSerializer
+
+class CopybeanSerializerTest extends FlatSpec {
+
+  val copybeanSerializer = new CopybeanSerializer()
+  
+  "copybeanSerializer" should "stuff" in {
+    val cb = new Copybean("Abc", Set(), Map())
+    copybeanSerializer.serialize(cb)
+  }
 
 }

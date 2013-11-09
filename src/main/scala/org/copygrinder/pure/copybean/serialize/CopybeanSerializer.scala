@@ -11,8 +11,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean
+package org.copygrinder.pure.copybean.serialize
 
-case class Copybean(id: String, enforcedTypes: Set[CopybeanType], values: Map[String, String]) {
+import spray.json._
+import org.copygrinder.pure.copybean.serialize.CopybeanJsonProtocol._
+import org.copygrinder.pure.copybean.Copybean
+
+class CopybeanSerializer {
+
+  def serialize(copybean: Copybean): Unit = {
+    val out = copybean.toJson
+    println(out.prettyPrint)
+  }
 
 }
+
