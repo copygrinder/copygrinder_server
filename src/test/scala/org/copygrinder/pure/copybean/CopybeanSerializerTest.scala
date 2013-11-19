@@ -21,7 +21,7 @@ class CopybeanSerializerTest extends FlatSpec {
   val copybeanSerializer = new CopybeanSerializer()
   
   "copybeanSerializer" should "stuff" in {
-    val cb = new Copybean("Abc", Set(), Map())
+    val cb = new Copybean("RAND0MID", Set("Blog"), Map("a" -> 1))
     copybeanSerializer.serialize(cb)
   }
 
