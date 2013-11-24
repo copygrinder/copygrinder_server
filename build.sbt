@@ -30,7 +30,8 @@ libraryDependencies ++= Seq(
 /* TEST LIBS */
 libraryDependencies ++= Seq(
   "org.specs2"          %%  "specs2"                       % "2.2.2"    % "test",
-  "org.scalamock"       %%  "scalamock-scalatest-support"  % "3.0.1"    % "test"
+  "org.scalatest" 		%   "scalatest_2.10"               % "2.0"      % "test",
+  "org.mockito"         %   "mockito-core"                 % "1.9.5"    % "test"
 )
 
 seq(Revolver.settings: _*)
