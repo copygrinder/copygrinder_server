@@ -1,10 +1,12 @@
 package org.copygrinder.api
 
+import org.junit.runner.RunWith
+import org.specs2.runner.JUnitRunner
 import org.specs2.mutable.Specification
 import spray.testkit.Specs2RouteTest
-import spray.http._
 import spray.http.StatusCodes._
 
+@RunWith(classOf[JUnitRunner])
 class CopygrinderServiceSpec extends Specification with Specs2RouteTest with CopygrinderService {
   def actorRefFactory = system
   

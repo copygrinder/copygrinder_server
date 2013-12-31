@@ -8,7 +8,8 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 resolvers ++= Seq(
   "spray repo" at "http://repo.spray.io/",
-  "JGit repo" at "https://repo.eclipse.org/content/groups/releases/"
+  "JGit repo" at "https://repo.eclipse.org/content/groups/releases/",
+  "OSS" at "https://oss.sonatype.org/content/repositories/snapshots"
 )
 
 /* SCALA LIBS */
@@ -29,9 +30,10 @@ libraryDependencies ++= Seq(
 
 /* TEST LIBS */
 libraryDependencies ++= Seq(
-  "org.specs2"          %%  "specs2"                       % "2.2.2"    % "test",
-  "org.scalatest" 		%   "scalatest_2.10"               % "2.0"      % "test",
-  "org.mockito"         %   "mockito-core"                 % "1.9.5"    % "test"
+  "org.specs2"          %%  "specs2"          	% "2.2.2"    	% "test",
+  "org.scalatest" 		%   "scalatest_2.10"    % "2.0"      	% "test",
+  "org.mockito"         %   "mockito-core"     	% "1.9.5"    	% "test",
+  "junit" 				% 	"junit" 			% "4.11" 		% "test"
 )
 
 seq(Revolver.settings: _*)
