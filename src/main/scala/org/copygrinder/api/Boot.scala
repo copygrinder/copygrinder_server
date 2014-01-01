@@ -5,7 +5,7 @@ import akka.io.IO
 import spray.can.Http
 import akka.actor.actorRef2Scala
 
-object Boot extends App {
+object Boot extends App with Configuration {
 
   // we need an ActorSystem to host our application in
   implicit val system = ActorSystem("on-spray-can")
@@ -14,5 +14,5 @@ object Boot extends App {
   val service = system.actorOf(Props[CopygrinderServiceActor], "copygrinder-service")
 
   // start a new HTTP server on port 8080 with our service actor as the handler
-  IO(Http) ! Http.Bind(service, interface = "localhost", port = 8080)
+  IO(Http) ! Http.Bind(service, serviceHost, servicePort)
 }
