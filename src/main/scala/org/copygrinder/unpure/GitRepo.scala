@@ -20,22 +20,28 @@ import org.eclipse.jgit.lib.Repository
 import java.io.FileWriter
 import org.eclipse.jgit.api.Git
 
-class GitRepo {
+class GitRepo(repoName: String) {
 
   protected val fileRepositoryBuilderWrapper = new FileRepositoryBuilderWrapper
 
-  def create(repoName: String, overwrite: Boolean = false): Unit = {
+  def create(overwrite: Boolean = false): Unit = {
 
     if (overwrite) {
       FileUtils.deleteDirectory(new File(repoName))
     }
 
-    val repository = buildRepository(repoName)
+    val repository = buildRepository()
     repository.create()
     repository.close()
   }
 
-  def add(repoName: String, fileName: String, content: String): Unit = {
+  def createIfNonExistant(): Unit = {
+    if (new File(repoName).exists() == false) {
+      create(false)
+    }
+  }
+
+  def add(fileName: String, content: String): Unit = {
 
     val file = new File(repoName + "/" + fileName)
     file.createNewFile()
@@ -43,25 +49,25 @@ class GitRepo {
     out.write(content)
     out.close()
 
-    doGitAction(repoName, (git: Git) => {
+    doGitAction((git: Git) => {
       git.add().addFilepattern(".").call()
     })
   }
 
-  def commit(repoName: String, message: String): Unit = {
-    doGitAction(repoName, (git: Git) => {
+  def commit(message: String): Unit = {
+    doGitAction((git: Git) => {
       git.commit().setMessage(message).call()
     })
   }
 
-  protected def doGitAction(repoName: String, func: (Git) => Unit): Unit = {
-    val repository = buildRepository(repoName)
+  protected def doGitAction(func: (Git) => Unit): Unit = {
+    val repository = buildRepository()
     val git = new Git(repository)
     func(git)
     repository.close()
   }
 
-  protected def buildRepository(repoName: String): Repository = {
+  protected def buildRepository(): Repository = {
     fileRepositoryBuilderWrapper.setGitDir(new File(repoName + "/.git")).setup().build()
   }
 

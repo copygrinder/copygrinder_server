@@ -39,11 +39,11 @@ class GitRepoTest extends FlatSpec with MockitoSugar {
     //(mockRepo.create _).expects
     //(mockRepo.close _).expects
 
-    val git = new GitRepo() {
+    val git = new GitRepo("cbtest") {
       override val fileRepositoryBuilderWrapper = mockFRBW
     }
 
-    git.create(repoName = "copybeans") 
+    git.create() 
   }
   
 }

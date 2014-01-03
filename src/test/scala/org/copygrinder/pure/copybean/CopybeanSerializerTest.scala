@@ -23,7 +23,7 @@ class CopybeanSerializerTest extends FlatSpec {
   "copybeanSerializer" should "stuff" in {
     val nestedMap = Map("nested" -> 2)
     val cb = new Copybean("RAND0MID", Set("Blog"), Map("a" -> 1, "b" -> nestedMap))
-    copybeanSerializer.serialize(cb)
+    println(copybeanSerializer.serialize(cb))
   }
 
 }

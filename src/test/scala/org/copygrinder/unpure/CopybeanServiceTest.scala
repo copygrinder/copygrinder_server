@@ -11,18 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.serialize
+package org.copygrinder.unpure
 
-import org.copygrinder.pure.copybean.Copybean
-import org.copygrinder.pure.copybean.serialize.CopybeanJsonProtocol._
+import org.scalatest.FlatSpec
 
-import spray.json._
+class CopybeanServiceTest extends FlatSpec {
 
-class CopybeanSerializer {
-
-  def serialize(copybean: Copybean): String = {
-    copybean.toJson.toString
+  "createAndPersist" should "create a file and persist it to the git repository" in {
+    CopybeanService.createAndPersist(Set(), Map("a" -> 2))
   }
-
+  
 }
-

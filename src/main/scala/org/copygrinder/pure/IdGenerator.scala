@@ -13,7 +13,7 @@ class IdGenerator {
 
   protected val utf8 = Charset.forName("UTF-8");
 
-  def GenerateEncodedUuid(): String = {
+  def generateEncodedUuid(): String = {
     encodeUuid(UUID.randomUUID())
   }
 
