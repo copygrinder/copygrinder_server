@@ -1,7 +1,6 @@
-package org.copygrinder.pure
+package org.copygrinder.unpure
 
 import java.io.File
-import java.util.UUID
 
 class HashedFileLocator {
 

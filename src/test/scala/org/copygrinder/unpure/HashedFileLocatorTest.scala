@@ -11,9 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure
-
-import java.util.UUID
+package org.copygrinder.unpure
 import java.io.File
 import org.copygrinder.UnitTest
 
