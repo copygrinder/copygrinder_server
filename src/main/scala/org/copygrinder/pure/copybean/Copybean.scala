@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean
 
-case class Copybean(id: String, enforcedTypeIds: Set[String], values: Map[String, AnyVal]) {
+case class Copybean(id: String, enforcedTypeIds: Set[String], values: Map[String, Any]) {
 
 }

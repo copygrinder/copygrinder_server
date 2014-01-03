@@ -16,10 +16,13 @@ package org.copygrinder.pure.copybean.serialize
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import org.copygrinder.pure.copybean.Copybean
+import scala.util.parsing.json.JSONType
+import scala.util.parsing.json.JSONObject
+import scala.util.parsing.json.JSON
 
 object CopybeanJsonProtocol extends DefaultJsonProtocol {
 
-  implicit object CopybeanFieldDefJsonFormat extends JsonFormat[AnyVal] {
+  implicit object CopybeanFieldDefJsonFormat extends JsonFormat[Any] {
 
     def read(value: JsValue) = value match {
       case JsString(pType) =>
@@ -27,8 +30,19 @@ object CopybeanJsonProtocol extends DefaultJsonProtocol {
       case _ => deserializationError("PrimitiveType expected")
     }
 
-    def write(pType: AnyVal) = {
-      JsString(pType.toString())
+    def write(value: Any) = {
+      value match {
+        case map: Map[_, _] =>
+          value.asInstanceOf[Map[String, Any]].toJson
+        case _: String =>
+          JsString(value.toString)
+        case _: Int | Long | Double | Float =>
+          JsNumber(value.toString)
+        case b: Boolean =>
+          JsBoolean(b)
+        case _ =>
+          serializationError("Can't serialize " + value)
+      }
     }
   }
 
