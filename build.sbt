@@ -14,12 +14,12 @@ resolvers ++= Seq(
 
 /* SCALA LIBS */
 libraryDependencies ++= Seq(
-  "io.spray"            %   "spray-can"         % "1.2-M8",
-  "io.spray"            %   "spray-routing"     % "1.2-M8",
-  "io.spray"            %   "spray-testkit"     % "1.2-M8",
+  "io.spray"            %   "spray-can"         % "1.2.0",
+  "io.spray"            %   "spray-routing"     % "1.2.0",
+  "io.spray"            %   "spray-testkit"     % "1.2.0",
   "io.spray" 			%%  "spray-json" 		% "1.2.5",
-  "com.typesafe.akka"   %%  "akka-actor"        % "2.2.0-RC1",
-  "com.typesafe.akka"   %%  "akka-testkit"      % "2.2.0-RC1"
+  "com.typesafe.akka"   %%  "akka-actor"        % "2.2.3",
+  "com.typesafe.akka"   %%  "akka-testkit"      % "2.2.3"
 )
 
 /* JAVA LIBS */
@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
 
 /* TEST LIBS */
 libraryDependencies ++= Seq(
-  "org.specs2"          %%  "specs2"          	% "2.2.2"    	% "test",
+  "org.specs2"          %%  "specs2"          	% "2.2.3"    	% "test",
   "org.scalatest" 		%   "scalatest_2.10"    % "2.0"      	% "test",
   "org.mockito"         %   "mockito-core"     	% "1.9.5"    	% "test",
   "junit" 				% 	"junit" 			% "4.11" 		% "test"

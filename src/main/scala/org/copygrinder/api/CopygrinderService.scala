@@ -5,7 +5,6 @@ import spray.routing._
 import spray.http._
 import spray.http.MediaTypes._
 import spray.routing.Directive.pimpApply
-import spray.routing.directives.CompletionMagnet.fromObject
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
