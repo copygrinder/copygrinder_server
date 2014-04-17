@@ -24,13 +24,13 @@ object CopybeanJsonProtocol extends DefaultJsonProtocol {
 
   implicit object CopybeanFieldDefJsonFormat extends JsonFormat[Any] {
 
-    def read(value: JsValue) = value match {
+    override def read(value: JsValue) = value match {
       case JsString(pType) =>
         ""
       case _ => deserializationError("PrimitiveType expected")
     }
 
-    def write(value: Any) = {
+    override def write(value: Any) = {
       value match {
         case map: Map[_, _] =>
           value.asInstanceOf[Map[String, Any]].toJson
