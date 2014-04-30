@@ -14,14 +14,12 @@
 package org.copygrinder.pure.copybean.serialize
 
 import org.copygrinder.pure.copybean.Copybean
-import org.copygrinder.pure.copybean.serialize.CopybeanJsonProtocol._
-
-import spray.json._
 
 class CopybeanSerializer {
 
   def serialize(copybean: Copybean): String = {
-    copybean.toJson.toString
+    //copybean.toJson.toString
+    ""
   }
 
 }

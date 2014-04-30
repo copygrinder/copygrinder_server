@@ -45,7 +45,7 @@ class GitRepo(repoName: String) {
 
     val file = new File(repoName + "/" + fileName)
     file.createNewFile()
-    val out = new FileWriter(file);
+    val out = new FileWriter(file)
     out.write(content)
     out.close()
 

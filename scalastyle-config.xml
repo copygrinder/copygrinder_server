@@ -118,4 +118,10 @@
     </check>
     <check level="warning" class="org.scalastyle.file.NewLineAtEofChecker" enabled="false"></check>
     <check level="warning" class="org.scalastyle.file.NoNewLineAtEofChecker" enabled="false"></check>
+    <check enabled="true" class="org.scalastyle.file.RegexChecker" level="warning">
+        <parameters>
+            <parameter name="regex">(?m)^((?!\*).)*;$</parameter>
+        </parameters>
+        <customMessage>Unneeded semicolon</customMessage>
+    </check>
 </scalastyle>

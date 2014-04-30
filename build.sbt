@@ -6,7 +6,7 @@ organization  := "org.copygrinder"
 
 version       := "0.1"
 
-scalaVersion  := "2.10.4"
+scalaVersion  := "2.11.0"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
@@ -18,12 +18,10 @@ resolvers ++= Seq(
 
 /* SCALA LIBS */
 libraryDependencies ++= Seq(
-  "io.spray"            %   "spray-can"         % "1.3.1",
-  "io.spray"            %   "spray-routing"     % "1.3.1",
-  "io.spray"            %   "spray-testkit"     % "1.3.1",
-  "io.spray"            %%  "spray-json"        % "1.2.6",
-  "com.typesafe.akka"   %%  "akka-actor"        % "2.3.1",
-  "com.typesafe.akka"   %%  "akka-testkit"      % "2.3.2"
+  "io.spray"               %%   "spray-can"         % "1.3.1-20140423",
+  "io.spray"               %%   "spray-routing"     % "1.3.1-20140423",
+  "io.spray"               %%   "spray-testkit"     % "1.3.1-20140423",
+  "org.scala-lang.modules" %%   "scala-xml"         % "1.0.1"
 )
 
 /* JAVA LIBS */
@@ -34,10 +32,8 @@ libraryDependencies ++= Seq(
 
 /* TEST LIBS */
 libraryDependencies ++= Seq(
-  "org.specs2"          %%  "specs2"            % "2.3.11"    % "test",
-  "org.scalatest"       %   "scalatest_2.10"    % "2.1.3"     % "test",
-  "org.mockito"         %   "mockito-core"      % "1.9.5"     % "test",
-  "junit"               %   "junit"             % "4.11"      % "test"
+  "org.scalatest"       %%   "scalatest"                   % "2.1.5"   % "test",
+  "org.scalamock"       %%  "scalamock-scalatest-support"  % "3.1.1"   % "test"
 )
 
 Revolver.settings.settings
@@ -49,6 +45,8 @@ org.scalastyle.sbt.ScalastylePlugin.Settings
 unmanagedSourceDirectories in Test := (scalaSource in Test).value :: Nil
 
 EclipseKeys.withSource := true
+
+incOptions := incOptions.value.withNameHashing(true)
 
 ideaExcludeFolders += ".idea"
 
