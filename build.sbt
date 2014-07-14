@@ -6,7 +6,7 @@ organization  := "org.copygrinder"
 
 version       := "0.1"
 
-scalaVersion  := "2.11.0"
+scalaVersion  := "2.11.1"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
@@ -18,27 +18,27 @@ resolvers ++= Seq(
 
 /* SCALA LIBS */
 libraryDependencies ++= Seq(
-  "io.spray"               %%   "spray-can"         % "1.3.1-20140423",
-  "io.spray"               %%   "spray-routing"     % "1.3.1-20140423",
-  "io.spray"               %%   "spray-testkit"     % "1.3.1-20140423",
-  "org.scala-lang.modules" %%   "scala-xml"         % "1.0.1"
+  "io.spray"               %%   "spray-can"         % "1.3.1",
+  "io.spray"               %%   "spray-routing"     % "1.3.1",
+  "io.spray"               %%   "spray-testkit"     % "1.3.1",
+  "org.scala-lang.modules" %%   "scala-xml"         % "1.0.2"
 )
 
 /* JAVA LIBS */
 libraryDependencies ++= Seq(
-  "org.eclipse.jgit"    %   "org.eclipse.jgit"  % "3.1.0.201310021548-r",
+  "org.eclipse.jgit"    %   "org.eclipse.jgit"  % "3.4.1.201406201815-r",
   "commons-io"          %   "commons-io"        % "2.4"
 )
 
 /* TEST LIBS */
 libraryDependencies ++= Seq(
-  "org.scalatest"       %%   "scalatest"                   % "2.1.5"   % "test",
+  "org.scalatest"       %%   "scalatest"                   % "2.2.0"   % "test",
   "org.scalamock"       %%  "scalamock-scalatest-support"  % "3.1.1"   % "test"
 )
 
 Revolver.settings.settings
 
-ScoverageSbtPlugin.instrumentSettings
+instrumentSettings
 
 org.scalastyle.sbt.ScalastylePlugin.Settings
 
