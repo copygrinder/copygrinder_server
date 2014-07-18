@@ -15,17 +15,19 @@ package org.copygrinder.unpure.system
 
 import akka.actor.{DeadLetter, ActorSystem, Props, actorRef2Scala}
 import akka.io.IO
-import org.copygrinder.unpure.api.CopygrinderApiActor
+import org.copygrinder.unpure.api.CopygrinderApi
 import spray.can.Http
+import spray.routing.SimpleRoutingApp
 
-object Boot extends App {
+object Boot extends App with SimpleRoutingApp with CopygrinderApi  {
 
   implicit val system = ActorSystem("copygrinder-system")
 
   val deadLetterActor = system.actorOf(Props(classOf[DeadLetterActor]))
   system.eventStream.subscribe(deadLetterActor, classOf[DeadLetter])
 
-  val service = system.actorOf(Props[CopygrinderApiActor], "copygrinder-api")
+  startServer(interface = Configuration.serviceHost, port = Configuration.servicePort) {
+    copygrinderRoutes
+  }
 
-  IO(Http) ! Http.Bind(service, Configuration.serviceHost, Configuration.servicePort)
 }

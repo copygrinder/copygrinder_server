@@ -19,19 +19,13 @@ import spray.http._
 import spray.http.MediaTypes._
 import spray.routing.Directive.pimpApply
 
-class CopygrinderApiActor extends HttpServiceActor with CopygrinderApi {
-
-  override def receive = runRoute(myRoute)
-
-}
-
 // this trait defines our service behavior independently from the service actor
 trait CopygrinderApi extends HttpService {
 
   // we use the enclosing ActorContext's or ActorSystem's dispatcher for our Futures and Scheduler
   implicit def executionContext = actorRefFactory.dispatcher
 
-  val myRoute = {
+  val copygrinderRoutes = {
     path("") {
       get {
         respondWithMediaType(`text/html`) {
