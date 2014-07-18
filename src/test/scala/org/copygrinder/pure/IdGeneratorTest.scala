@@ -16,6 +16,7 @@ package org.copygrinder.pure
 import java.io.File
 import java.util.UUID
 import org.copygrinder.UnitTest
+import org.copygrinder.pure.copybean.IdGenerator
 
 class IdGeneratorTest extends UnitTest {
   

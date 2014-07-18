@@ -11,12 +11,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure
+package org.copygrinder.unpure.persistance
 
-import org.copygrinder.pure.IdGenerator
-import org.copygrinder.pure.copybean.Copybean
-import org.copygrinder.pure.copybean.serialize.CopybeanSerializer
 import java.io.File
+import org.copygrinder.pure.copybean.{IdGenerator, Copybean}
+import org.copygrinder.pure.copybean.serialize.CopybeanSerializer
 
 object CopybeanService {
 

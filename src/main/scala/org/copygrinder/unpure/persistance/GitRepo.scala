@@ -11,14 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure
+package org.copygrinder.unpure.persistance
 
-import java.io.File
+import java.io.{File, FileWriter}
+
 import org.apache.commons.io.FileUtils
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import org.eclipse.jgit.lib.Repository
-import java.io.FileWriter
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 
 class GitRepo(repoName: String) {
 

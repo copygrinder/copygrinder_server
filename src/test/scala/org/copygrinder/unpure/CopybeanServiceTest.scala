@@ -13,6 +13,7 @@
  */
 package org.copygrinder.unpure
 
+import org.copygrinder.unpure.persistance.CopybeanService
 import org.scalatest.FlatSpec
 
 class CopybeanServiceTest extends FlatSpec {

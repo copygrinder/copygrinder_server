@@ -11,18 +11,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.api
+package org.copygrinder.unpure.persistance
 
-import com.typesafe.config.ConfigFactory
-import scala.util.Try
+import java.io.File
 
-trait Configuration {
+class HashedFileLocator {
 
-  val defaultPortNumber = 8080
+  def locate(id: String, extension: String, root: File): File = {
 
-  val config = ConfigFactory.load()
+    if (id.length() < 2) {
+      throw new RuntimeException(s"The id '$id' must be at least 2 characters long.")
+    }
 
-  lazy val servicePort = Try(config.getInt("service.port")).getOrElse(defaultPortNumber)
+    val directory1 = id.charAt(0)
+    val directory2 = id.charAt(1)
+    val rootPath = root.getPath()
+    val extensionWithDot = if (extension.nonEmpty) s".$extension" else ""
+    new File(s"$rootPath/$directory1/$directory2/$id$extensionWithDot")
+  }
 
-  lazy val serviceHost = Try(config.getString("service.host")).getOrElse("localhost")
 }

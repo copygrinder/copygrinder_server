@@ -11,16 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure
+package org.copygrinder.pure.copybean
 
-import java.util.UUID
-import encoding.CrockfordBase32
-import java.util.Arrays
-import java.nio.charset.Charset
-import java.io.ObjectOutputStream
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
+import java.io.{ByteArrayOutputStream, DataOutputStream}
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
+import java.util.UUID
+
+import encoding.CrockfordBase32
 
 class IdGenerator {
 

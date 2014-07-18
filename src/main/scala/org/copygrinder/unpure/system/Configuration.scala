@@ -11,21 +11,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.api
+package org.copygrinder.unpure.system
 
-import akka.actor.{ActorSystem, Props}
-import akka.io.IO
-import spray.can.Http
-import akka.actor.actorRef2Scala
+import com.typesafe.config.ConfigFactory
 
-object Boot extends App with Configuration {
+import scala.util.Try
 
-  // we need an ActorSystem to host our application in
-  implicit val system = ActorSystem("on-spray-can")
+object Configuration {
 
-  // create and start our service actor
-  val service = system.actorOf(Props[CopygrinderServiceActor], "copygrinder-service")
+  protected val defaultPortNumber = 8080
 
-  // start a new HTTP server on port 8080 with our service actor as the handler
-  IO(Http) ! Http.Bind(service, serviceHost, servicePort)
+  protected val config = ConfigFactory.load()
+
+  lazy val servicePort = Try(config.getInt("service.port")).getOrElse(defaultPortNumber)
+
+  lazy val serviceHost = Try(config.getString("service.host")).getOrElse("localhost")
 }

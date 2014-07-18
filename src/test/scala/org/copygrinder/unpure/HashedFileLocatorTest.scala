@@ -14,6 +14,7 @@
 package org.copygrinder.unpure
 import java.io.File
 import org.copygrinder.UnitTest
+import org.copygrinder.unpure.persistance.HashedFileLocator
 
 class HashedFileLocatorTest extends UnitTest {
 

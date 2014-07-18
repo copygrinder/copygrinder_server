@@ -11,23 +11,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure
+package org.copygrinder.unpure.system
 
-import java.io.File
+import akka.actor.{ActorLogging, Actor, DeadLetter, Props}
 
-class HashedFileLocator {
-
-  def locate(id: String, extension: String, root: File): File = {
-
-    if (id.length() < 2) {
-      throw new RuntimeException(s"The id '$id' must be at least 2 characters long.")
+class DeadLetterActor extends Actor with ActorLogging {
+  def receive = {
+    case d: DeadLetter => {
+      log.error("sending actor: " + d.sender)
+      log.error("recipient actor: " + d.recipient)
+      log.error("message: " + d.message)
     }
-
-    val directory1 = id.charAt(0)
-    val directory2 = id.charAt(1)
-    val rootPath = root.getPath()
-    val extensionWithDot = if (extension.nonEmpty) s".$extension" else ""
-    new File(s"$rootPath/$directory1/$directory2/$id$extensionWithDot")
   }
-
 }
+
