@@ -13,11 +13,10 @@
  */
 package org.copygrinder.unpure.persistance
 
-import java.io.File
-import org.copygrinder.pure.copybean.{IdGenerator, Copybean}
 import org.copygrinder.pure.copybean.serialize.CopybeanSerializer
+import org.copygrinder.pure.copybean.{Copybean, IdGenerator}
 
-object CopybeanService {
+class CopybeanService {
 
   val idGenerator = new IdGenerator
 
@@ -31,7 +30,7 @@ object CopybeanService {
 
   def createAndPersist(enforcedTypeIds: Set[String], values: Map[String, Any]) {
     val copybean = new Copybean(idGenerator.generateEncodedUuid, enforcedTypeIds, values)
-    val file = haashedFileLocator.locate(copybean.id, "json", new File(""))
+    val file = haashedFileLocator.locate(copybean.id, "json", "reponame")
     val json = serializer.serialize(copybean)
     git.add(file.getName(), json)
     git.commit("")

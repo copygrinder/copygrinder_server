@@ -14,17 +14,20 @@
 package org.copygrinder.unpure.system
 
 import akka.actor.{ActorSystem, DeadLetter, Props}
+import com.softwaremill.macwire.MacwireMacros._
 import org.copygrinder.pure.api.CopygrinderApi
 import spray.routing.SimpleRoutingApp
 
 object Boot extends App with SimpleRoutingApp with CopygrinderApi  {
+
+  lazy val config = wire[Configuration]
 
   implicit val system = ActorSystem("copygrinder-system")
 
   val deadLetterActor = system.actorOf(Props(classOf[DeadLetterActor]))
   system.eventStream.subscribe(deadLetterActor, classOf[DeadLetter])
 
-  startServer(interface = Configuration.serviceHost, port = Configuration.servicePort) {
+  startServer(interface = config.serviceHost, port = config.servicePort) {
     copygrinderRoutes
   }
 

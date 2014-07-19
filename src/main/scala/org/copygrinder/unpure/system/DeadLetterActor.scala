@@ -16,7 +16,7 @@ package org.copygrinder.unpure.system
 import akka.actor.{ActorLogging, Actor, DeadLetter, Props}
 
 class DeadLetterActor extends Actor with ActorLogging {
-  def receive = {
+  def receive:Actor.Receive = {
     case d: DeadLetter => {
       log.error("sending actor: " + d.sender)
       log.error("recipient actor: " + d.recipient)

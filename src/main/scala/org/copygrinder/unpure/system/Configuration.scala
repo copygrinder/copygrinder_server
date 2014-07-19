@@ -17,7 +17,7 @@ import com.typesafe.config.ConfigFactory
 
 import scala.util.Try
 
-object Configuration {
+class Configuration {
 
   protected val defaultPortNumber = 8080
 

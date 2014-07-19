@@ -14,20 +14,23 @@
 package org.copygrinder.unpure.persistance
 
 import java.io.File
+import com.softwaremill.macwire.MacwireMacros.wire
+import org.copygrinder.unpure.system.Configuration
 
 class HashedFileLocator {
 
-  def locate(id: String, extension: String, root: File): File = {
+  lazy val config = wire[Configuration]
+
+  def locate(id: String, extension: String, directory: String): File = {
 
     if (id.length() < 2) {
       throw new RuntimeException(s"The id '$id' must be at least 2 characters long.")
     }
 
-    val directory1 = id.charAt(0)
-    val directory2 = id.charAt(1)
-    val rootPath = root.getPath()
+    val subDirectory1 = id.charAt(0)
+    val subDirectory2 = id.charAt(1)
     val extensionWithDot = if (extension.nonEmpty) s".$extension" else ""
-    new File(s"$rootPath/$directory1/$directory2/$id$extensionWithDot")
+    new File(s"$directory/$subDirectory1/$subDirectory2/$id$extensionWithDot")
   }
 
 }

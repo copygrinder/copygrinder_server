@@ -19,7 +19,7 @@ import org.scalatest.FlatSpec
 class CopybeanServiceTest extends FlatSpec {
 
   "createAndPersist" should "create a file and persist it to the git repository" in {
-    CopybeanService.createAndPersist(Set(), Map("a" -> 2))
+    new CopybeanService().createAndPersist(Set(), Map("a" -> 2))
   }
   
 }
