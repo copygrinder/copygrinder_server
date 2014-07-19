@@ -11,3 +11,5 @@ test-output/
 .project
 /.settings
 *.stackdump
+copybeans
+log

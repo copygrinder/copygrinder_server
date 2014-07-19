@@ -13,8 +13,8 @@
  */
 package org.copygrinder.unpure.system
 
-import akka.actor.{DeadLetter, ActorSystem, Props, actorRef2Scala}
-import org.copygrinder.unpure.api.CopygrinderApi
+import akka.actor.{ActorSystem, DeadLetter, Props}
+import org.copygrinder.pure.api.CopygrinderApi
 import spray.routing.SimpleRoutingApp
 
 object Boot extends App with SimpleRoutingApp with CopygrinderApi  {
