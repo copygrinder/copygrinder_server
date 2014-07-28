@@ -15,6 +15,7 @@ package org.copygrinder.unpure.persistance
 
 import java.io.{File, FileWriter}
 
+import com.softwaremill.macwire.MacwireMacros._
 import org.apache.commons.io.FileUtils
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Repository
@@ -22,7 +23,7 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 
 class GitRepo(repoName: String) {
 
-  protected val fileRepositoryBuilderWrapper = new FileRepositoryBuilderWrapper
+  protected val fileRepositoryBuilderWrapper = wire[FileRepositoryBuilderWrapper]
 
   def create(overwrite: Boolean = false): Unit = {
 

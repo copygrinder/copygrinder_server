@@ -16,11 +16,11 @@ package org.copygrinder.pure
 import java.io.File
 import java.util.UUID
 import org.copygrinder.UnitTest
-import org.copygrinder.pure.copybean.IdGenerator
+import org.copygrinder.pure.copybean.IdEncoderDecoder
 
-class IdGeneratorTest extends UnitTest {
+class IdEncoderDecoderTest extends UnitTest {
   
-  val idGenerator = new IdGenerator();
+  val idGenerator = new IdEncoderDecoder();
 
   val uuid1 = new UUID(0, 0)
   val uuid2 = new UUID(5234423498494123456L, 2234423498494123452L)

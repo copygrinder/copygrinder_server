@@ -15,7 +15,7 @@ package org.copygrinder.unpure.system
 
 import akka.actor.{ActorSystem, DeadLetter, Props}
 import com.softwaremill.macwire.MacwireMacros._
-import org.copygrinder.pure.api.CopygrinderApi
+import org.copygrinder.unpure.api.CopygrinderApi
 import spray.routing.SimpleRoutingApp
 
 object Boot extends App with SimpleRoutingApp with CopygrinderApi  {

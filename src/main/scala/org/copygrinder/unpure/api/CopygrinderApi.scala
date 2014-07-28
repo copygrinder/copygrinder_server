@@ -11,13 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.api
+package org.copygrinder.unpure.api
 
-import org.copygrinder.pure.copybean.Copybean
+import org.copygrinder.pure.copybean.model.Copybean
 import org.json4s.{DefaultFormats, Formats}
 import spray.httpx.Json4sJacksonSupport
-import spray.routing.Directive.pimpApply
 import spray.routing._
+import org.json4s.jackson.JsonMethods._
 
 trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
 
@@ -26,7 +26,8 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
   val rootRoute = path("") {
     get {
       complete {
-        new Copybean("bean1", Set("hi"), Map("go" -> 1))
+        val jsonValues = parse("""{"name":"joe","age":15}""")
+        new Copybean("bean1", Set("hi"), jsonValues)
       }
     }
   }

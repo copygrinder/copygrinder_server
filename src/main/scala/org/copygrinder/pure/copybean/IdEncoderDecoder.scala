@@ -20,15 +20,11 @@ import java.util.UUID
 
 import encoding.CrockfordBase32
 
-class IdGenerator {
+class IdEncoderDecoder {
 
   protected val utf8 = Charset.forName("UTF-8")
 
   protected val byteSize = 8
-
-  def generateEncodedUuid(): String = {
-    encodeUuid(UUID.randomUUID())
-  }
 
   def encodeUuid(uuid: UUID): String = {
 

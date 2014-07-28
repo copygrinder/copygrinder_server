@@ -11,19 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean
+package org.copygrinder.pure.copybean.model
 
-import org.scalatest.FlatSpec
-import org.copygrinder.pure.copybean.serialize.CopybeanSerializer
+import org.json4s.JsonAST.JValue
 
-class CopybeanSerializerTest extends FlatSpec {
-
-  val copybeanSerializer = new CopybeanSerializer()
-  
-  "copybeanSerializer" should "stuff" in {
-    val nestedMap = Map("nested" -> 2)
-    val cb = new Copybean("RAND0MID", Set("Blog"), Map("a" -> 1, "b" -> nestedMap))
-    println(copybeanSerializer.serialize(cb))
-  }
+case class Copybean(id: String, enforcedTypeIds: Set[String], values: JValue) {
 
 }

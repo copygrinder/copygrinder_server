@@ -13,7 +13,7 @@
  */
 package org.copygrinder.pure.copybean
 
-import org.copygrinder.pure.copybean.validator.CopybeanValidator
+import org.copygrinder.pure.copybean.model.validator.CopybeanValidator
 
 case class CopybeanType(name: String, fieldDefs: Seq[CopybeanFieldDef], validators: Seq[CopybeanValidator]) {
 
