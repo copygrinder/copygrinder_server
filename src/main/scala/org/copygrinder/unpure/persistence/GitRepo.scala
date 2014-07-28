@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.persistance
+package org.copygrinder.unpure.persistence
 
 import java.io.{File, FileWriter}
 
