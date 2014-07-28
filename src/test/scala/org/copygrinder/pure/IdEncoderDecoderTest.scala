@@ -16,7 +16,7 @@ package org.copygrinder.pure
 import java.io.File
 import java.util.UUID
 import org.copygrinder.UnitTest
-import org.copygrinder.pure.copybean.IdEncoderDecoder
+import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 
 class IdEncoderDecoderTest extends UnitTest {
   

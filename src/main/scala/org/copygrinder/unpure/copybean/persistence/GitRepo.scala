@@ -11,24 +11,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.persistence
+package org.copygrinder.unpure.copybean.persistence
 
 import java.io.{File, FileWriter}
 
 import com.softwaremill.macwire.MacwireMacros._
 import org.apache.commons.io.FileUtils
+import org.copygrinder.unpure.system.Configuration
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 
 class GitRepo(repoName: String) {
 
+  lazy val config = wire[Configuration]
+
+  lazy val repoDir = new File(config.copybeanRepoRoot + "/" + repoName + "/")
+
   protected val fileRepositoryBuilderWrapper = wire[FileRepositoryBuilderWrapper]
 
   def create(overwrite: Boolean = false): Unit = {
 
     if (overwrite) {
-      FileUtils.deleteDirectory(new File(repoName))
+      FileUtils.deleteDirectory(repoDir)
     }
 
     val repository = buildRepository()
@@ -37,14 +42,17 @@ class GitRepo(repoName: String) {
   }
 
   def createIfNonExistant(): Unit = {
-    if (new File(repoName).exists() == false) {
+    if (repoDir.exists() == false) {
       create(false)
     }
   }
 
-  def add(fileName: String, content: String): Unit = {
+  def add(filename: String, content: String): Unit = {
 
-    val file = new File(repoName + "/" + fileName)
+    val file = new File(repoDir, filename)
+
+    FileUtils.forceMkdir(file.getParentFile)
+
     file.createNewFile()
     val out = new FileWriter(file)
     out.write(content)
@@ -69,7 +77,8 @@ class GitRepo(repoName: String) {
   }
 
   protected def buildRepository(): Repository = {
-    fileRepositoryBuilderWrapper.setGitDir(new File(repoName + "/.git")).setup().build()
+    FileUtils.forceMkdir(repoDir)
+    fileRepositoryBuilderWrapper.setGitDir(new File(repoDir, ".git")).setup().build()
   }
 
 }

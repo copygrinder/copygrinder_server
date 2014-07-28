@@ -11,26 +11,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.persistence
+package org.copygrinder.unpure.copybean.persistence
 
-import java.io.File
-import com.softwaremill.macwire.MacwireMacros.wire
+import com.softwaremill.macwire.MacwireMacros._
+import org.copygrinder.pure.copybean.model.Copybean
 import org.copygrinder.unpure.system.Configuration
+import org.json4s.jackson.Serialization._
+import org.json4s.{DefaultFormats, Formats}
 
-class HashedFileLocator {
+class PersistenceService {
 
   lazy val config = wire[Configuration]
 
-  def locate(id: String, extension: String, directory: String): File = {
+  lazy val hashedFileNester = wire[HashedFileNester]
 
-    if (id.length() < 2) {
-      throw new RuntimeException(s"The id '$id' must be at least 2 characters long.")
-    }
+  lazy val gitRepo = new GitRepo(config.copybeanDefaultRepo)
 
-    val subDirectory1 = id.charAt(0)
-    val subDirectory2 = id.charAt(1)
-    val extensionWithDot = if (extension.nonEmpty) s".$extension" else ""
-    new File(s"$directory/$subDirectory1/$subDirectory2/$id$extensionWithDot")
+  implicit def json4sJacksonFormats: Formats = DefaultFormats
+
+  def store(copybean: Copybean): Unit = {
+
+    gitRepo.createIfNonExistant()
+
+    val pathAndFileName = hashedFileNester.nest(copybean.id, "json")
+
+    gitRepo.add(pathAndFileName, write(copybean))
   }
 
 }

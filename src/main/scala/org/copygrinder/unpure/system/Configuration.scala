@@ -26,4 +26,9 @@ class Configuration {
   lazy val servicePort = Try(config.getInt("service.port")).getOrElse(defaultPortNumber)
 
   lazy val serviceHost = Try(config.getString("service.host")).getOrElse("localhost")
+
+  lazy val copybeanRepoRoot = Try(config.getString("copybeans.repoRoot")).getOrElse("copybeans")
+
+  val copybeanDefaultRepo = Try(config.getString("copybeans.defaultRepo")).getOrElse("default")
+
 }

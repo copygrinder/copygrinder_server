@@ -14,19 +14,19 @@
 package org.copygrinder.unpure
 import java.io.File
 import org.copygrinder.UnitTest
-import org.copygrinder.unpure.persistence.HashedFileLocator
+import org.copygrinder.unpure.copybean.persistence.HashedFileNester
 
-class HashedFileLocatorTest extends UnitTest {
+class HashedFileNesterTest extends UnitTest {
 
-  val locator = new HashedFileLocator()
+  val locator = new HashedFileNester()
 
   "locate" should "return a file with a directory 2 levels deep and with the right root and extension" in {
-    locator.locate("TEST", "json", "/rootdir") should be (new File("/rootdir/T/E/TEST.json"))
+    locator.nest("TEST", "json") should be ("T/E/TEST.json")
   }
 
   "locate" should "fail for ids with less than 2 characters" in {
     intercept[RuntimeException] {
-      locator.locate("A", "json", "/rootdir")
+      locator.nest("A", "json")
     }
   }
 

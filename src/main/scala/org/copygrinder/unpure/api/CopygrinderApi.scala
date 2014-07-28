@@ -13,24 +13,43 @@
  */
 package org.copygrinder.unpure.api
 
+import com.softwaremill.macwire.MacwireMacros._
 import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.unpure.copybean.CopybeanFactory
+import org.copygrinder.unpure.copybean.persistence.PersistenceService
+import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
+import spray.http.HttpResponse
 import spray.httpx.Json4sJacksonSupport
 import spray.routing._
-import org.json4s.jackson.JsonMethods._
+
 
 trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
+
+  lazy val persistenceService = wire[PersistenceService]
+  lazy val copybeanFactory = wire[CopybeanFactory]
 
   override implicit def json4sJacksonFormats: Formats = DefaultFormats
 
   val rootRoute = path("") {
     get {
       complete {
-        val jsonValues = parse("""{"name":"joe","age":15}""")
+        val jsonValues = parse( """{"name":"joe","age":15}""")
         new Copybean("bean1", Set("hi"), jsonValues)
       }
     }
   }
 
-  val copygrinderRoutes = rootRoute
+  val copybeanRoute = path("copybean") {
+    get {
+      complete {
+        val jsonValues = parse( """{"name":"joe","age":15}""")
+        val copybean = copybeanFactory.create(Set("hi"), jsonValues)
+        persistenceService.store(copybean)
+        HttpResponse
+      }
+    }
+  }
+
+  val copygrinderRoutes = rootRoute ~ copybeanRoute
 }

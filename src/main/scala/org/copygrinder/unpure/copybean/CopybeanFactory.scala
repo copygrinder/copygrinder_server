@@ -11,11 +11,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.model
+package org.copygrinder.unpure.copybean
 
+import java.util.UUID
+
+import com.softwaremill.macwire.MacwireMacros._
+import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.json4s.JsonAST.JValue
 
-case class Copybean(id: String, enforcedTypeIds: Set[String], values: JValue) {
+class CopybeanFactory {
 
+  lazy val idEncoderDecoder = wire[IdEncoderDecoder]
+
+  def create(enforcedTypeIds: Set[String], values: JValue):Copybean = {
+    new Copybean(idEncoderDecoder.encodeUuid(UUID.randomUUID()), enforcedTypeIds, values)
+  }
 }
-

@@ -11,11 +11,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.model
+package org.copygrinder.unpure.copybean.persistence
 
-import org.json4s.JsonAST.JValue
+class HashedFileNester {
 
-case class Copybean(id: String, enforcedTypeIds: Set[String], values: JValue) {
+  def nest(id: String, extension: String): String = {
+
+    if (id.length() < 2) {
+      throw new RuntimeException(s"The id '$id' must be at least 2 characters long.")
+    }
+
+    val subDirectory1 = id.charAt(0)
+    val subDirectory2 = id.charAt(1)
+    val extensionWithDot = if (extension.nonEmpty) s".$extension" else ""
+    s"$subDirectory1/$subDirectory2/$id$extensionWithDot"
+  }
 
 }
-
