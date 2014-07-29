@@ -14,7 +14,7 @@
 package org.copygrinder.unpure.api
 
 import com.softwaremill.macwire.MacwireMacros._
-import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
 import org.copygrinder.unpure.copybean.CopybeanFactory
 import org.copygrinder.unpure.copybean.persistence.PersistenceService
 import org.json4s.jackson.JsonMethods._
@@ -35,18 +35,19 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
     get {
       complete {
         val jsonValues = parse( """{"name":"joe","age":15}""")
-        new Copybean("bean1", Set("hi"), jsonValues)
+        new Copybean(("bean1"), Set("hi"), jsonValues)
       }
     }
   }
 
-  val copybeanRoute = path("copybean") {
-    get {
-      complete {
-        val jsonValues = parse( """{"name":"joe","age":15}""")
-        val copybean = copybeanFactory.create(Set("hi"), jsonValues)
-        persistenceService.store(copybean)
-        HttpResponse
+  val copybeanRoute = path("copybeans") {
+    post {
+      entity(as[AnonymousCopybean]) { bean =>
+        complete {
+          val copybean = copybeanFactory.create(bean)
+          persistenceService.store(copybean)
+          copybean.id
+        }
       }
     }
   }

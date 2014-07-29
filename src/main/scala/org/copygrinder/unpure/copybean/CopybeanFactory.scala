@@ -16,7 +16,7 @@ package org.copygrinder.unpure.copybean
 import java.util.UUID
 
 import com.softwaremill.macwire.MacwireMacros._
-import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.pure.copybean.model.{CoreCopybean, Copybean}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.json4s.JsonAST.JValue
 
@@ -24,7 +24,7 @@ class CopybeanFactory {
 
   lazy val idEncoderDecoder = wire[IdEncoderDecoder]
 
-  def create(enforcedTypeIds: Set[String], values: JValue):Copybean = {
-    new Copybean(idEncoderDecoder.encodeUuid(UUID.randomUUID()), enforcedTypeIds, values)
+  def create(c: CoreCopybean):Copybean = {
+    new Copybean(idEncoderDecoder.encodeUuid(UUID.randomUUID()), c.enforcedTypeIds, c.values)
   }
 }
