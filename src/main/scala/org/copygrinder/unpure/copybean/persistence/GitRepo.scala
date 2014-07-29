@@ -17,18 +17,15 @@ import java.io.{File, FileWriter}
 
 import com.softwaremill.macwire.MacwireMacros._
 import org.apache.commons.io.FileUtils
-import org.copygrinder.unpure.system.Configuration
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 
-class GitRepo(repoName: String) {
+class GitRepo(repoDir: File) {
 
-  lazy val config = wire[Configuration]
+  protected lazy val fileRepositoryBuilderWrapper = wire[FileRepositoryBuilderWrapper]
 
-  lazy val repoDir = new File(config.copybeanRepoRoot + "/" + repoName + "/")
-
-  protected val fileRepositoryBuilderWrapper = wire[FileRepositoryBuilderWrapper]
+  protected lazy val repository = buildRepository()
 
   def create(overwrite: Boolean = false): Unit = {
 
@@ -36,7 +33,6 @@ class GitRepo(repoName: String) {
       FileUtils.deleteDirectory(repoDir)
     }
 
-    val repository = buildRepository()
     repository.create()
     repository.close()
   }
@@ -47,9 +43,7 @@ class GitRepo(repoName: String) {
     }
   }
 
-  def add(filename: String, content: String): Unit = {
-
-    val file = new File(repoDir, filename)
+  def add(file: File, content: String): Unit = {
 
     FileUtils.forceMkdir(file.getParentFile)
 
@@ -70,7 +64,6 @@ class GitRepo(repoName: String) {
   }
 
   protected def doGitAction(func: (Git) => Unit): Unit = {
-    val repository = buildRepository()
     val git = new Git(repository)
     func(git)
     repository.close()

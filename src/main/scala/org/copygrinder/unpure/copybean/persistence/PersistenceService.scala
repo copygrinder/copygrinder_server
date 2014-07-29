@@ -13,29 +13,48 @@
  */
 package org.copygrinder.unpure.copybean.persistence
 
+import java.io.{FileReader, File}
+
 import com.softwaremill.macwire.MacwireMacros._
-import org.copygrinder.pure.copybean.model.Copybean
+import org.apache.commons.io.FileUtils
+import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
+import org.copygrinder.unpure.copybean.CopybeanFactory
 import org.copygrinder.unpure.system.Configuration
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 
 class PersistenceService {
 
-  lazy val config = wire[Configuration]
+  protected lazy val config = wire[Configuration]
 
-  lazy val hashedFileNester = wire[HashedFileNester]
+  protected lazy val hashedFileResolver = wire[HashedFileResolver]
 
-  lazy val gitRepo = new GitRepo(config.copybeanDefaultRepo)
+  protected lazy val repoDir = new File(config.copybeanRepoRoot + "/" + config.copybeanDefaultRepo + "/")
 
-  implicit def json4sJacksonFormats: Formats = DefaultFormats
+  protected lazy val gitRepo = new GitRepo(repoDir)
+
+  protected lazy val copybeanFactory = wire[CopybeanFactory]
+
+  protected implicit def json4sJacksonFormats: Formats = DefaultFormats
+
+  def fetch(id: String):Copybean = {
+    val file = hashedFileResolver.locate(id, "json", repoDir)
+
+    val json = FileUtils.readFileToString(file)
+
+    read[Copybean](json)
+  }
+
+  def store(anonCopybean: AnonymousCopybean): String = {
+    val copybean = copybeanFactory.create(anonCopybean)
+    store(copybean)
+    copybean.id
+  }
 
   def store(copybean: Copybean): Unit = {
-
     gitRepo.createIfNonExistant()
-
-    val pathAndFileName = hashedFileNester.nest(copybean.id, "json")
-
-    gitRepo.add(pathAndFileName, write(copybean))
+    val file = hashedFileResolver.locate(copybean.id, "json", repoDir)
+    gitRepo.add(file, write(copybean))
   }
 
 }
