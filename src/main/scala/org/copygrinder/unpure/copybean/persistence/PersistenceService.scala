@@ -17,6 +17,7 @@ import java.io.{FileReader, File}
 
 import com.softwaremill.macwire.MacwireMacros._
 import org.apache.commons.io.FileUtils
+import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
 import org.copygrinder.unpure.copybean.CopybeanFactory
 import org.copygrinder.unpure.system.Configuration
@@ -40,9 +41,12 @@ class PersistenceService {
   def fetch(id: String):Copybean = {
     val file = hashedFileResolver.locate(id, "json", repoDir)
 
-    val json = FileUtils.readFileToString(file)
-
-    read[Copybean](json)
+    if(!file.exists()) {
+      throw new CopybeanNotFound()
+    } else {
+      val json = FileUtils.readFileToString(file)
+      read[Copybean](json)
+    }
   }
 
   def store(anonCopybean: AnonymousCopybean): String = {

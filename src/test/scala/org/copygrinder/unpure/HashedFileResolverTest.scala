@@ -21,7 +21,7 @@ class HashedFileResolverTest extends UnitTest {
   val locator = new HashedFileResolver()
 
   "locate" should "return a file with a directory 2 levels deep and with the right root and extension" in {
-    locator.locate("TEST", "json", new File("")) should be (new File("T/E/TEST.json"))
+    locator.locate("TEST", "json", new File("")) should be (new File("/T/E/TEST.json"))
   }
 
   "locate" should "fail for ids with less than 2 characters" in {
