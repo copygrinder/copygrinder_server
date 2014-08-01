@@ -9,3 +9,7 @@ addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.1.5")
 addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "0.99.5.1")
 
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.4.0")
+
+addSbtPlugin("com.typesafe.sbt" % "sbt-proguard" % "0.2.2")
+
+addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.7.4")

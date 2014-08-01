@@ -11,6 +11,7 @@ scalaVersion  := "2.11.2"
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 resolvers ++= Seq(
+  Resolver.file("local-repo", file("project/lib/")) (Resolver.ivyStylePatterns),
   "spray repo" at "http://repo.spray.io/",
   "JGit repo" at "https://repo.eclipse.org/content/groups/releases/",
   "sonatype-releases" at "https://oss.sonatype.org/content/repositories/releases/"
@@ -58,3 +59,15 @@ ideaExcludeFolders += ".idea_modules"
 fork := true
 
 addCommandAlias("check", ";scalastyle;scoverage:test")
+
+proguardSettings
+
+ProguardKeys.options in Proguard ++= Seq("-dontnote", "-dontwarn", "-ignorewarnings", "-dontobfuscate")
+
+ProguardKeys.options in Proguard += ProguardOptions.keepMain("org.copygrinder.unpure.system.Boot")
+
+ProguardKeys.proguardVersion in Proguard := "5.0"
+
+javaOptions in (Proguard, ProguardKeys.proguard) := Seq("-Xms1024m", "-Xmx1024m")
+
+net.virtualvoid.sbt.graph.Plugin.graphSettings
