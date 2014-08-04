@@ -1,3 +1,4 @@
+import de.johoop.jacoco4sbt._
 import spray.revolver.RevolverPlugin.Revolver
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
 import org.sbtidea.SbtIdeaPlugin._
@@ -61,6 +62,13 @@ ideaExcludeFolders += ".idea_modules"
 fork := true
 
 addCommandAlias("check", ";scalastyle;scoverage:test")
+
+jacoco.settings
+
+jacoco.reportFormats in jacoco.Config := Seq(
+  XMLReport(encoding = "utf-8"))
+
+//jacoco.classesToCover in jacoco.Config := Seq()
 
 proguardSettings
 
