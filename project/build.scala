@@ -15,21 +15,31 @@ object CopygrinderBuild extends Build {
 
     val uberJar = (outputPath in assembly).value
 
-    AssemblyUtils.unzip(uberJar,classDir, Keys.streams.value.log)
-
+    AssemblyUtils.unzip(uberJar, classDir, Keys.streams.value.log)
   }
 
+  val doPruneJar = taskKey[Unit]("Removes any unused classes from the UberJar based on Jacoco coverage.") := {
 
-  val pruneJar = taskKey[Unit]("Removes any unused classes from the UberJar based on Jacoco coverage.") := {
+    implicit val logger = Keys.streams.value.log
 
     val jacocoDir = (jacoco.outputDirectory in jacoco.Config).value
 
     val classDir = (Keys.classDirectory in Compile).value
 
     deleteUnusedClasses(jacocoDir, classDir)
+
+    val uberJar = (outputPath in assembly).value
+
+    val allJarFiles = PathFinder(classDir).***.get
+
+    val parentPath = classDir.getPath
+
+    val fileAndPath = allJarFiles.zip(allJarFiles.map(_.getPath.replace(parentPath, "")))
+
+    IO.zip(fileAndPath, new File(uberJar.getPath.replace(".jar", ".min.jar")))
   }
 
-  protected def deleteUnusedClasses(jacocoDir: File, classDir: File) {
+  protected def deleteUnusedClasses(jacocoDir: File, classDir: File)(implicit logger: Logger) {
     val jacocoXml = fetchJacocoXml(jacocoDir)
 
     val usedClasses = extractJacocoUsedClasses(jacocoXml.child)
@@ -41,18 +51,18 @@ object CopygrinderBuild extends Build {
         file.getAbsolutePath.contains(usedClass)
       )
     ).foreach { file =>
-      println("deleting " + file)
+      logger.debug("deleting " + file)
       file.delete()
     }
 
     deleteEmptyDirectories(classDir)
   }
 
-  protected def deleteEmptyDirectories(classDir: File) = {
+  protected def deleteEmptyDirectories(classDir: File)(implicit logger: Logger) = {
     val allDirectoriesStream = PathFinder(classDir).**(DirectoryFilter).get.toStream
     val sortedDirectories = allDirectoriesStream.sortWith(_.getAbsolutePath.length > _.getAbsolutePath.length)
     sortedDirectories.filter(_.list().isEmpty).foreach { dir =>
-      println("deleting " + dir)
+      logger.debug("deleting " + dir)
       dir.delete()
     }
   }
@@ -91,7 +101,7 @@ object CopygrinderBuild extends Build {
 
   lazy val root: Project = Project(id = "copygrinder",
     base = file("."),
-    settings = Seq(pruneJar, feedJacoco)
+    settings = Seq(doPruneJar, feedJacoco)
   )
 
 }

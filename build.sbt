@@ -63,6 +63,8 @@ fork := true
 
 addCommandAlias("check", ";scalastyle;scoverage:test")
 
+addCommandAlias("pruneJar", ";clean;assembly;feedJacoco;jacoco:cover;doPruneJar")
+
 jacoco.settings
 
 jacoco.reportFormats in jacoco.Config := Seq(XMLReport(encoding = "utf-8"))
@@ -70,3 +72,5 @@ jacoco.reportFormats in jacoco.Config := Seq(XMLReport(encoding = "utf-8"))
 net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 assemblySettings
+
+test in AssemblyKeys.assembly := {}
