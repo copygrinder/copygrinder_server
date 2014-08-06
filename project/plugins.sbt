@@ -10,8 +10,8 @@ addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "0.99.7.1")
 
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.4.0")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-proguard" % "0.2.2")
-
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.7.4")
 
 addSbtPlugin("de.johoop" % "jacoco4sbt" % "2.1.6")
+
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.11.2")
