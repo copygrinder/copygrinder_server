@@ -22,7 +22,6 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "io.spray"                  %%  "spray-can"       %  "1.3.1",
   "io.spray"                  %%  "spray-routing"   %  "1.3.1",
-  "io.spray"                  %%  "spray-testkit"   %  "1.3.1",
   "org.json4s"                %%  "json4s-jackson"  %  "3.2.10",
   "com.typesafe.akka"         %%  "akka-slf4j"      %  "2.3.4",
   "com.softwaremill.macwire"  %%  "macros"          %  "0.7"
@@ -30,15 +29,17 @@ libraryDependencies ++= Seq(
 
 /* JAVA LIBS */
 libraryDependencies ++= Seq(
-  "org.eclipse.jgit"    %   "org.eclipse.jgit"  % "3.4.1.201406201815-r",
-  "commons-io"          %   "commons-io"        % "2.4",
-  "ch.qos.logback"      %   "logback-classic"   % "1.1.2"
+  "org.eclipse.jgit"  %  "org.eclipse.jgit"  %  "3.4.1.201406201815-r",
+  "commons-io"        %  "commons-io"        %  "2.4",
+  "ch.qos.logback"    %  "logback-classic"   %  "1.1.2"
 )
 
 /* TEST LIBS */
 libraryDependencies ++= Seq(
-  "org.scalatest"       %%   "scalatest"                   % "2.2.0"   % "test",
-  "org.scalamock"       %%  "scalamock-scalatest-support"  % "3.1.2"   % "test"
+  "org.scalatest"            %%  "scalatest"                    %  "2.2.0"   %  "test, it",
+  "org.scalamock"            %%  "scalamock-scalatest-support"  %  "3.1.2"   %  "test, it",
+  "io.spray"                 %%  "spray-testkit"                %  "1.3.1"   %  "test, it",
+  "net.databinder.dispatch"  %%  "dispatch-core"                %  "0.11.1"  %  "test, it"
 )
 
 Revolver.settings.settings
@@ -63,14 +64,19 @@ fork := true
 
 addCommandAlias("check", ";scalastyle;scoverage:test")
 
-addCommandAlias("pruneJar", ";clean;assembly;feedJacoco;jacoco:cover;doPruneJar")
+addCommandAlias("pruneJar", ";clean;assembly;feedJacoco;jacoco:check;it-jacoco:check;it-jacoco:report;pruneClasses;createPruneJar")
+
+addCommandAlias("reprune", ";reload;feedJacoco;pruneClasses")
 
 jacoco.settings
 
-jacoco.reportFormats in jacoco.Config := Seq(XMLReport(encoding = "utf-8"))
+itJacoco.settings
+
+itJacoco.reportFormats in itJacoco.Config := Seq(XMLReport(encoding = "utf-8"), HTMLReport())
 
 net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 assemblySettings
 
 test in AssemblyKeys.assembly := {}
+
