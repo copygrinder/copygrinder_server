@@ -31,4 +31,6 @@ class Configuration {
 
   val copybeanDefaultRepo = Try(config.getString("copybeans.defaultRepo")).getOrElse("default")
 
+  lazy val indexRoot = Try(config.getString("index.root")).getOrElse("index")
+
 }

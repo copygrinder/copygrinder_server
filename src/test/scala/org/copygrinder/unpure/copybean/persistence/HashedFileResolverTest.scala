@@ -11,10 +11,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure
+package org.copygrinder.unpure.copybean.persistence
+
 import java.io.File
+
 import org.copygrinder.UnitTest
-import org.copygrinder.unpure.copybean.persistence.HashedFileResolver
 
 class HashedFileResolverTest extends UnitTest {
 

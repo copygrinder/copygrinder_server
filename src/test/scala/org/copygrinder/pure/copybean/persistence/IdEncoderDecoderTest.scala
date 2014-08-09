@@ -11,12 +11,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure
+package org.copygrinder.pure.copybean.persistence
 
-import java.io.File
 import java.util.UUID
+
 import org.copygrinder.UnitTest
-import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 
 class IdEncoderDecoderTest extends UnitTest {
   
