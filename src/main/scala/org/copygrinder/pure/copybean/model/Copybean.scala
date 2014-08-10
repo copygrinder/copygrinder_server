@@ -13,19 +13,19 @@
  */
 package org.copygrinder.pure.copybean.model
 
-import org.json4s.JsonAST.JValue
+import org.json4s.JsonAST.{JObject, JValue}
 
 
 trait CoreCopybean {
   val enforcedTypeIds: Set[String]
-  val values: JValue
+  val values: JObject
 }
 
-case class AnonymousCopybean(enforcedTypeIds: Set[String], values: JValue) extends CoreCopybean {
+case class AnonymousCopybean(enforcedTypeIds: Set[String], values: JObject) extends CoreCopybean {
 
 }
 
-case class Copybean(id: String, val enforcedTypeIds: Set[String], val values: JValue) extends CoreCopybean {
+case class Copybean(id: String, val enforcedTypeIds: Set[String], val values: JObject) extends CoreCopybean {
 
 }
 

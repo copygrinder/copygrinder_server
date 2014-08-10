@@ -21,11 +21,15 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
+import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.pure.copybean.search.DocumentBuilder
 import org.copygrinder.unpure.system.Configuration
 
 class Indexer {
 
   protected lazy val config = wire[Configuration]
+
+  protected val documentBuilder = wire[DocumentBuilder]
 
   protected val analyzer = new StandardAnalyzer(Version.LUCENE_4_9, StopAnalyzer.ENGLISH_STOP_WORDS_SET)
 
@@ -33,8 +37,11 @@ class Indexer {
 
   protected val indexWriter = new IndexWriter(FSDirectory.open(new File(config.indexRoot)), indexWriterConfig)
 
-  def doCommit() = {
+  def addCopybean(copybean: Copybean):Unit = {
+    val doc = documentBuilder.buildDocument(copybean)
+    indexWriter.addDocument(doc)
     indexWriter.commit()
   }
+
 
 }

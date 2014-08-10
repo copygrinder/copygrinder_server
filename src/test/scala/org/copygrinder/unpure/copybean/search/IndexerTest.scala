@@ -17,10 +17,8 @@ import org.copygrinder.UnitTest
 
 class IndexerTest extends UnitTest {
 
-  val indexer = new Indexer
-
   "Indexer" should "initialize" in {
-    indexer.doCommit()
+    val indexer = new Indexer
   }
 
 }

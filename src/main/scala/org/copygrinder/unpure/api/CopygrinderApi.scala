@@ -17,6 +17,7 @@ import com.softwaremill.macwire.MacwireMacros._
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
 import org.copygrinder.unpure.copybean.persistence.PersistenceService
+import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
 import spray.http.StatusCodes._
@@ -44,7 +45,7 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
   protected val rootRoute = path("") {
     get {
       complete {
-        val jsonValues = parse( """{"name":"joe","age":15}""")
+        val jsonValues = parse( """{"name":"joe","age":15}""").extract[JObject]
         new Copybean(("bean1"), Set("hi"), jsonValues)
       }
     }
