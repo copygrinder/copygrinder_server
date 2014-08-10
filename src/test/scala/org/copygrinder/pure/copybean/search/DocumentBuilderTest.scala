@@ -22,10 +22,12 @@ class DocumentBuilderTest extends UnitTest {
   val documentBuilder = new DocumentBuilder
 
   "buildDocument" should "return a Document object that matches the supplied Copybean" in {
-    val doc = documentBuilder.buildDocument(Copybean("876", Set("someType"), JObject(JField("panda", JString("true")))))
+    val values = JObject(JField("panda", JString("true")), JField("panda2", JString("false")))
+    val doc = documentBuilder.buildDocument(Copybean("876", Set("someType"), values))
     doc.getField("id").stringValue() should be("876")
     doc.getField("enforcedType").stringValue() should be("someType")
     doc.getField("values.panda").stringValue() should be("true")
+    doc.getField("values.panda2").stringValue() should be("false")
   }
 
 }

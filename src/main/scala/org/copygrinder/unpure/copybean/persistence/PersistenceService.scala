@@ -13,22 +13,28 @@
  */
 package org.copygrinder.unpure.copybean.persistence
 
-import java.io.{FileReader, File}
+import java.io.File
 
 import com.softwaremill.macwire.MacwireMacros._
 import org.apache.commons.io.FileUtils
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
 import org.copygrinder.unpure.copybean.CopybeanFactory
+import org.copygrinder.unpure.copybean.search.Indexer
 import org.copygrinder.unpure.system.Configuration
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import scala.concurrent.Future
 
 class PersistenceService {
 
   protected lazy val config = wire[Configuration]
 
   protected lazy val hashedFileResolver = wire[HashedFileResolver]
+
+  protected lazy val indexer = wire[Indexer]
 
   protected lazy val repoDir = new File(config.copybeanRepoRoot + "/" + config.copybeanDefaultRepo + "/")
 
@@ -38,10 +44,10 @@ class PersistenceService {
 
   protected implicit def json4sJacksonFormats: Formats = DefaultFormats
 
-  def fetch(id: String):Copybean = {
+  def fetch(id: String): Copybean = {
     val file = hashedFileResolver.locate(id, "json", repoDir)
 
-    if(!file.exists()) {
+    if (!file.exists()) {
       throw new CopybeanNotFound()
     } else {
       val json = FileUtils.readFileToString(file)
@@ -49,16 +55,19 @@ class PersistenceService {
     }
   }
 
-  def store(anonCopybean: AnonymousCopybean): String = {
+  def store(anonCopybean: AnonymousCopybean): Future[String] = {
     val copybean = copybeanFactory.create(anonCopybean)
-    store(copybean)
-    copybean.id
+    store(copybean).map(_ => copybean.id)
   }
 
-  def store(copybean: Copybean): Unit = {
+  def store(copybean: Copybean): Future[_] = {
     gitRepo.createIfNonExistant()
     val file = hashedFileResolver.locate(copybean.id, "json", repoDir)
-    gitRepo.add(file, write(copybean))
+    Future {
+      gitRepo.add(file, write(copybean))
+    }.zip(Future {
+      indexer.addCopybean(copybean)
+    })
   }
 
 }

@@ -24,12 +24,16 @@ import spray.http.StatusCodes._
 import spray.httpx.Json4sJacksonSupport
 import spray.routing._
 
+import scala.concurrent._
+
 
 trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
 
   protected lazy val persistenceService = wire[PersistenceService]
 
   override implicit def json4sJacksonFormats: Formats = DefaultFormats
+
+  protected implicit def executionContext = actorRefFactory.dispatcher
 
   protected def copybeanExceptionHandler() =
     ExceptionHandler {
@@ -60,13 +64,15 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
           }
         }
       } ~
-      post {
-        entity(as[AnonymousCopybean]) { anonBean =>
-          complete {
-            persistenceService.store(anonBean)
+        post {
+          entity(as[AnonymousCopybean]) { anonBean =>
+            complete {
+              Future {
+                persistenceService.store(anonBean)
+              }
+            }
           }
         }
-      }
     }
   }
 

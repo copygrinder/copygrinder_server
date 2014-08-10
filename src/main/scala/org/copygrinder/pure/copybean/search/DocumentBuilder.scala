@@ -13,8 +13,9 @@
  */
 package org.copygrinder.pure.copybean.search
 
-import org.apache.lucene.document.{Document, Field, StringField}
+import org.apache.lucene.document._
 import org.copygrinder.pure.copybean.model.Copybean
+import org.json4s.JInt
 import org.json4s.JsonAST.JString
 
 class DocumentBuilder {
@@ -33,7 +34,9 @@ class DocumentBuilder {
     copybean.values.obj.foreach(value => {
       val field = value._2 match {
         case string: JString =>
-          new StringField("values." + value._1, string.s, Field.Store.NO)
+          new TextField("values." + value._1, string.s, Field.Store.NO)
+        case int: JInt =>
+          new IntField("values." + value._1, int.num.toInt, Field.Store.NO)
       }
       doc.add(field)
     })
