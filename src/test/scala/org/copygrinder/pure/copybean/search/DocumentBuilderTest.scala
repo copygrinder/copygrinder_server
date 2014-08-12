@@ -25,9 +25,9 @@ class DocumentBuilderTest extends UnitTest {
     val values = JObject(JField("panda", JString("true")), JField("panda2", JString("false")))
     val doc = documentBuilder.buildDocument(Copybean("876", Set("someType"), values))
     doc.getField("id").stringValue() should be("876")
-    doc.getField("enforcedType").stringValue() should be("someType")
-    doc.getField("values.panda").stringValue() should be("true")
-    doc.getField("values.panda2").stringValue() should be("false")
+    doc.getField("enforcedTypeIds").stringValue() should be("someType")
+    doc.getField("contains.panda").stringValue() should be("true")
+    doc.getField("contains.panda2").stringValue() should be("false")
   }
 
 }

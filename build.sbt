@@ -29,10 +29,10 @@ libraryDependencies ++= Seq(
 
 /* JAVA LIBS */
 libraryDependencies ++= Seq(
-  "org.eclipse.jgit"  %  "org.eclipse.jgit"  %  "3.4.1.201406201815-r",
-  "commons-io"        %  "commons-io"        %  "2.4",
-  "ch.qos.logback"    %  "logback-classic"   %  "1.1.2",
-  "org.apache.lucene" %  "lucene-analyzers-common"       %  "4.9.0"
+  "org.eclipse.jgit"   %  "org.eclipse.jgit"         %  "3.4.1.201406201815-r",
+  "commons-io"         %  "commons-io"               %  "2.4",
+  "ch.qos.logback"     %  "logback-classic"          %  "1.1.2",
+  "org.apache.lucene"  %  "lucene-analyzers-common"  %  "4.9.0"
 )
 
 /* TEST LIBS */

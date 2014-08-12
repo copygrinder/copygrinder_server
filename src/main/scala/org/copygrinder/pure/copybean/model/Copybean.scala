@@ -18,14 +18,14 @@ import org.json4s.JsonAST.{JObject, JValue}
 
 trait CoreCopybean {
   val enforcedTypeIds: Set[String]
-  val values: JObject
+  val contains: JObject
 }
 
-case class AnonymousCopybean(enforcedTypeIds: Set[String], values: JObject) extends CoreCopybean {
+case class AnonymousCopybean(enforcedTypeIds: Set[String], contains: JObject) extends CoreCopybean {
 
 }
 
-case class Copybean(id: String, val enforcedTypeIds: Set[String], val values: JObject) extends CoreCopybean {
+case class Copybean(id: String, val enforcedTypeIds: Set[String], val contains: JObject) extends CoreCopybean {
 
 }
 

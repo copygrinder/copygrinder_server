@@ -34,13 +34,13 @@ class PersistenceService {
 
   protected lazy val hashedFileResolver = wire[HashedFileResolver]
 
+  protected lazy val copybeanFactory = wire[CopybeanFactory]
+
   protected lazy val indexer = wire[Indexer]
 
   protected lazy val repoDir = new File(config.copybeanRepoRoot + "/" + config.copybeanDefaultRepo + "/")
 
   protected lazy val gitRepo = new GitRepo(repoDir)
-
-  protected lazy val copybeanFactory = wire[CopybeanFactory]
 
   protected implicit def json4sJacksonFormats: Formats = DefaultFormats
 
@@ -67,6 +67,13 @@ class PersistenceService {
       gitRepo.add(file, write(copybean))
     }.zip(Future {
       indexer.addCopybean(copybean)
+    })
+  }
+
+  def find(field: String, phrase: String): Seq[Copybean] = {
+    val copybeanIds = indexer.findCopybeanIds(field, phrase)
+    copybeanIds.map(id => {
+      fetch(id)
     })
   }
 

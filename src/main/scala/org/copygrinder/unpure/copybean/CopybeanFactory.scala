@@ -24,6 +24,6 @@ class CopybeanFactory {
   lazy val idEncoderDecoder = wire[IdEncoderDecoder]
 
   def create(c: CoreCopybean):Copybean = {
-    new Copybean(idEncoderDecoder.encodeUuid(UUID.randomUUID()), c.enforcedTypeIds, c.values)
+    new Copybean(idEncoderDecoder.encodeUuid(UUID.randomUUID()), c.enforcedTypeIds, c.contains)
   }
 }

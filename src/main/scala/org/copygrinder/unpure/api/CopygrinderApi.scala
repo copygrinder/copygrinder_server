@@ -58,9 +58,17 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
   protected val copybeanRoute = handleExceptions(copybeanExceptionHandler) {
     pathPrefix("copybeans") {
       get {
-        path(Segment) { id =>
+        parameters('field, 'phrase) { (field, phrase) =>
           complete {
-            persistenceService.fetch(id)
+            Future {
+              persistenceService.find(field, phrase)
+            }
+          }
+        } ~ path(Segment) { id =>
+          complete {
+            Future {
+              persistenceService.fetch(id)
+            }
           }
         }
       } ~

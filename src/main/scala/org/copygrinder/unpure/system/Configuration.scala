@@ -21,6 +21,8 @@ class Configuration {
 
   protected val defaultPortNumber = 8080
 
+  protected val defaultMaxResults = 100
+
   protected val config = ConfigFactory.load()
 
   lazy val servicePort = Try(config.getInt("service.port")).getOrElse(defaultPortNumber)
@@ -29,8 +31,10 @@ class Configuration {
 
   lazy val copybeanRepoRoot = Try(config.getString("copybeans.repoRoot")).getOrElse("copybeans")
 
-  val copybeanDefaultRepo = Try(config.getString("copybeans.defaultRepo")).getOrElse("default")
+  lazy val copybeanDefaultRepo = Try(config.getString("copybeans.defaultRepo")).getOrElse("default")
 
   lazy val indexRoot = Try(config.getString("index.root")).getOrElse("index")
+
+  lazy val indexMaxResults = Try(config.getInt("index.maxResults")).getOrElse(defaultMaxResults)
 
 }

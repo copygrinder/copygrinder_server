@@ -23,20 +23,20 @@ class DocumentBuilder {
   def buildDocument(copybean: Copybean): Document = {
     val doc = new Document
 
-    val idField = new StringField("id", copybean.id, Field.Store.NO)
+    val idField = new StringField("id", copybean.id, Field.Store.YES)
     doc.add(idField)
 
     copybean.enforcedTypeIds.foreach(typeId => {
-      val typeField = new StringField("enforcedType", typeId, Field.Store.NO)
+      val typeField = new StringField("enforcedTypeIds", typeId, Field.Store.NO)
       doc.add(typeField)
     })
 
-    copybean.values.obj.foreach(value => {
+    copybean.contains.obj.foreach(value => {
       val field = value._2 match {
         case string: JString =>
-          new TextField("values." + value._1, string.s, Field.Store.NO)
+          new TextField("contains." + value._1, string.s, Field.Store.NO)
         case int: JInt =>
-          new IntField("values." + value._1, int.num.toInt, Field.Store.NO)
+          new IntField("contains." + value._1, int.num.toInt, Field.Store.NO)
       }
       doc.add(field)
     })

@@ -16,9 +16,10 @@ package org.copygrinder.unpure.copybean.search
 import java.io.File
 
 import com.softwaremill.macwire.MacwireMacros._
-import org.apache.lucene.analysis.core.StopAnalyzer
+import org.apache.lucene.analysis.core.{KeywordAnalyzer, StopAnalyzer}
 import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
+import org.apache.lucene.index.{DirectoryReader, IndexWriter, IndexWriterConfig, Term}
+import org.apache.lucene.search.{MatchAllDocsQuery, IndexSearcher, PhraseQuery}
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
 import org.copygrinder.pure.copybean.model.Copybean
@@ -29,18 +30,35 @@ class Indexer {
 
   protected lazy val config = wire[Configuration]
 
-  protected val documentBuilder = wire[DocumentBuilder]
+  protected lazy val documentBuilder = wire[DocumentBuilder]
 
-  protected val analyzer = new StandardAnalyzer(Version.LUCENE_4_9, StopAnalyzer.ENGLISH_STOP_WORDS_SET)
+  protected lazy val analyzer = new KeywordAnalyzer()
 
-  protected val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_9, analyzer)
+  protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_9, analyzer)
 
-  protected val indexWriter = new IndexWriter(FSDirectory.open(new File(config.indexRoot)), indexWriterConfig)
+  protected lazy val indexDirFile = FSDirectory.open(new File(config.indexRoot))
 
-  def addCopybean(copybean: Copybean):Unit = {
+  protected lazy val indexWriter = new IndexWriter(indexDirFile, indexWriterConfig)
+
+  protected lazy val indexReader = DirectoryReader.open(indexDirFile)
+
+  protected lazy val indexSearcher = new IndexSearcher(indexReader)
+
+  def addCopybean(copybean: Copybean): Unit = {
     val doc = documentBuilder.buildDocument(copybean)
     indexWriter.addDocument(doc)
     indexWriter.commit()
+  }
+
+  def findCopybeanIds(field: String, phrase: String): Seq[String] = {
+    val query = new PhraseQuery
+    query.add(new Term(s"contains.$field", phrase))
+    val docs = indexSearcher.search(query, config.indexMaxResults)
+    val copybeanIds = docs.scoreDocs.map(scoreDoc => {
+      val doc = indexReader.document(scoreDoc.doc)
+      doc.get("id")
+    })
+    copybeanIds
   }
 
 
