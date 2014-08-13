@@ -20,6 +20,7 @@ resolvers ++= Seq(
 
 /* SCALA LIBS */
 libraryDependencies ++= Seq(
+  "io.spray"                  %%  "spray-caching"   %  "1.3.1",
   "io.spray"                  %%  "spray-can"       %  "1.3.1",
   "io.spray"                  %%  "spray-routing"   %  "1.3.1",
   "org.json4s"                %%  "json4s-jackson"  %  "3.2.10",

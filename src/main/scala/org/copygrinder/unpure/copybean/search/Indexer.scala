@@ -16,10 +16,9 @@ package org.copygrinder.unpure.copybean.search
 import java.io.File
 
 import com.softwaremill.macwire.MacwireMacros._
-import org.apache.lucene.analysis.core.{KeywordAnalyzer, StopAnalyzer}
-import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.index.{DirectoryReader, IndexWriter, IndexWriterConfig, Term}
-import org.apache.lucene.search.{MatchAllDocsQuery, IndexSearcher, PhraseQuery}
+import org.apache.lucene.analysis.core.KeywordAnalyzer
+import org.apache.lucene.index._
+import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
 import org.copygrinder.pure.copybean.model.Copybean
@@ -34,31 +33,59 @@ class Indexer {
 
   protected lazy val analyzer = new KeywordAnalyzer()
 
+  protected lazy val indexDirectory = FSDirectory.open(new File(config.indexRoot))
+
   protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_9, analyzer)
 
-  protected lazy val indexDirFile = FSDirectory.open(new File(config.indexRoot))
+  protected lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
-  protected lazy val indexWriter = new IndexWriter(indexDirFile, indexWriterConfig)
+  protected lazy val trackingIndexWriter = new TrackingIndexWriter(indexWriter)
 
-  protected lazy val indexReader = DirectoryReader.open(indexDirFile)
+  protected lazy val searcherManager = new SearcherManager(indexWriter, true, new SearcherFactory())
 
-  protected lazy val indexSearcher = new IndexSearcher(indexReader)
+  protected lazy val indexRefresher = new ControlledRealTimeReopenThread[IndexSearcher](
+    trackingIndexWriter, searcherManager, 60.00, 0.1
+  )
+
+  protected var reopenToken = 0L
+
+  indexRefresher.start()
+
+  override def finalize() = {
+    close()
+    super.finalize()
+  }
+
+  protected def close() = {
+    indexRefresher.interrupt()
+    indexRefresher.close()
+
+    indexWriter.commit()
+    indexWriter.close()
+  }
+
 
   def addCopybean(copybean: Copybean): Unit = {
     val doc = documentBuilder.buildDocument(copybean)
-    indexWriter.addDocument(doc)
+    reopenToken = trackingIndexWriter.addDocument(doc)
     indexWriter.commit()
   }
 
   def findCopybeanIds(field: String, phrase: String): Seq[String] = {
     val query = new PhraseQuery
     query.add(new Term(s"contains.$field", phrase))
-    val docs = indexSearcher.search(query, config.indexMaxResults)
-    val copybeanIds = docs.scoreDocs.map(scoreDoc => {
-      val doc = indexReader.document(scoreDoc.doc)
-      doc.get("id")
-    })
-    copybeanIds
+    indexRefresher.waitForGeneration(reopenToken);
+    val indexSearcher = searcherManager.acquire()
+    try {
+      val docs = indexSearcher.search(query, config.indexMaxResults)
+      val copybeanIds = docs.scoreDocs.map(scoreDoc => {
+        val doc = indexSearcher.getIndexReader.document(scoreDoc.doc)
+        doc.get("id")
+      })
+      copybeanIds
+    } finally {
+      searcherManager.release(indexSearcher)
+    }
   }
 
 

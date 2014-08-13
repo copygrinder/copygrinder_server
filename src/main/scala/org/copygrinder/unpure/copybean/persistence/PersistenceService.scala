@@ -24,8 +24,9 @@ import org.copygrinder.unpure.copybean.search.Indexer
 import org.copygrinder.unpure.system.Configuration
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
-import scala.concurrent.ExecutionContext.Implicits.global
+import spray.caching.{Cache, LruCache}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class PersistenceService {
@@ -42,6 +43,8 @@ class PersistenceService {
 
   protected lazy val gitRepo = new GitRepo(repoDir)
 
+  protected lazy val cache: Cache[Copybean] = LruCache()
+
   protected implicit def json4sJacksonFormats: Formats = DefaultFormats
 
   def fetch(id: String): Copybean = {
@@ -53,6 +56,10 @@ class PersistenceService {
       val json = FileUtils.readFileToString(file)
       read[Copybean](json)
     }
+  }
+
+  def cachedFetch(id: String) = cache(id) {
+    fetch(id)
   }
 
   def store(anonCopybean: AnonymousCopybean): Future[String] = {
@@ -70,11 +77,12 @@ class PersistenceService {
     })
   }
 
-  def find(field: String, phrase: String): Seq[Copybean] = {
+  def find(field: String, phrase: String): Future[Seq[Copybean]] = {
     val copybeanIds = indexer.findCopybeanIds(field, phrase)
-    copybeanIds.map(id => {
-      fetch(id)
+    val futures = copybeanIds.map(id => {
+      cachedFetch(id)
     })
+    Future.sequence(futures)
   }
 
 }

@@ -67,7 +67,7 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
         } ~ path(Segment) { id =>
           complete {
             Future {
-              persistenceService.fetch(id)
+              persistenceService.cachedFetch(id)
             }
           }
         }
