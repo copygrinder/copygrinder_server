@@ -209,6 +209,4 @@ object CopygrinderBuild extends Build {
     settings = Seq(feedJacoco, pruneClasses, createPruneJar, trialRun)
   ).configs(IntegrationTest).settings(Defaults.itSettings: _*)
 
-  lazy val specs = "org.specs2" %% "specs2" % "2.0" % "it,test"
-
 }

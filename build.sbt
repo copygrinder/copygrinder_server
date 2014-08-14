@@ -38,10 +38,10 @@ libraryDependencies ++= Seq(
 
 /* TEST LIBS */
 libraryDependencies ++= Seq(
-  "org.scalatest"            %%  "scalatest"                    %  "2.2.0"   %  "test, it",
-  "org.scalamock"            %%  "scalamock-scalatest-support"  %  "3.1.2"   %  "test, it",
-  "io.spray"                 %%  "spray-testkit"                %  "1.3.1"   %  "test, it",
-  "net.databinder.dispatch"  %%  "dispatch-core"                %  "0.11.1"  %  "test, it"
+  "org.scalatest"            %%  "scalatest"                    %  "2.2.0"      %  "test, it",
+  "org.scalamock"            %%  "scalamock-scalatest-support"  %  "3.1.2"      %  "test, it",
+  "io.spray"                 %%  "spray-testkit"                %  "1.3.1"      %  "test, it",
+  "net.databinder.dispatch"  %%  "dispatch-core"                %  "0.11.1"     %  "test, it"
 )
 
 Revolver.settings.settings
@@ -82,3 +82,4 @@ assemblySettings
 
 test in AssemblyKeys.assembly := {}
 
+lazy val gatling = project in file("gatling")
