@@ -81,5 +81,3 @@ net.virtualvoid.sbt.graph.Plugin.graphSettings
 assemblySettings
 
 test in AssemblyKeys.assembly := {}
-
-lazy val gatling = project in file("gatling")
