@@ -15,19 +15,30 @@ package org.copygrinder.pure.copybean.search
 
 import org.copygrinder.UnitTest
 import org.copygrinder.pure.copybean.model.Copybean
-import org.json4s.JsonAST.{JField, JObject, JString}
+import org.json4s.JsonAST._
 
 class DocumentBuilderTest extends UnitTest {
 
   val documentBuilder = new DocumentBuilder
 
   "buildDocument" should "return a Document object that matches the supplied Copybean" in {
-    val values = JObject(JField("panda", JString("true")), JField("panda2", JString("false")))
+    val nestedObject = JField("nested", JObject(
+      JField("nestedField", JInt(123)),
+      JField("decField", JDecimal(1.1)),
+      JField("nullField", JNull)
+    ))
+    val array = JField("array", JArray(List(JBool(false), JDouble(3.14))))
+    val values = JObject(JField("stringField", JString("true")), nestedObject, array)
     val doc = documentBuilder.buildDocument(Copybean("876", Set("someType"), values))
+
     doc.getField("id").stringValue() should be("876")
     doc.getField("enforcedTypeIds").stringValue() should be("someType")
-    doc.getField("contains.panda").stringValue() should be("true")
-    doc.getField("contains.panda2").stringValue() should be("false")
+    doc.getField("contains.stringField").stringValue() should be("true")
+    doc.getField("contains.nested.nestedField").numericValue() should be(123)
+    doc.getField("contains.nested.decField").numericValue() should be(1.1)
+    doc.getField("contains.nested.nullField").stringValue() should be("null")
+    println(doc.getField("contains.array[1]"))
+    doc.getFields("contains.array").map(_.stringValue()) should be(Array("false", "3.14"))
   }
 
 }
