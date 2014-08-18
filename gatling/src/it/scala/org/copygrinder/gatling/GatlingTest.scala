@@ -2,6 +2,7 @@ package org.copygrinder.gatling
 
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
+import io.gatling.http.config.HttpProtocol
 import scala.concurrent.duration._
 
 class GatlingTest extends Simulation {
@@ -9,22 +10,31 @@ class GatlingTest extends Simulation {
   val httpConf = http
     .baseURL("http://localhost:8080")
     .acceptHeader("application/json")
+    .contentTypeHeader("application/json")
 
-  val scn = scenario("BasicSimulation")
+  val scn = scenario("Search")
     .exec(http("request_1")
-    .get("/copybeans?field=name&phrase=Joe2"))
+    .get("/copybeans?field=testValue1&phrase=abc"))
 
-  val scn2 = scenario("R2")
-    .exec(http("request_2")
-    .get("/copybeans?field=name&phrase=Joe3"))
+  val json = """{"enforcedTypeIds": [], "contains": {"testValue1":"abc", "testValue2": "123"}}"""
+
+  val populate = scenario("Populate").exec(
+    http("request_populate")
+      .post("/copybeans")
+      .body(StringBody(json))
+  )
 
   setUp(
-    scn2.inject(
+    /*populate.inject(
+      heavisideUsers(100) over  (5 seconds)
+    )
+    scn.copy("warmupSearch").inject(
       atOnceUsers(1)
-    ),
+    ),*/
     scn.inject(
-      nothingFor(2 second),
-      rampUsersPerSec(1).to(100).during(10 seconds)
+      //nothingFor(2 second),
+      //rampUsersPerSec(1).to(500).during(10 seconds)
+      atOnceUsers(10000)
     )
   ).protocols(httpConf)
 
