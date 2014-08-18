@@ -29,11 +29,11 @@ class Configuration {
 
   lazy val serviceHost = Try(config.getString("service.host")).getOrElse("localhost")
 
-  lazy val copybeanRepoRoot = Try(config.getString("copybeans.repoRoot")).getOrElse("copybeans")
+  lazy val copybeanRepoRoot = Try(config.getString("copybeans.repoRoot")).getOrElse("data/copybeans")
 
   lazy val copybeanDefaultRepo = Try(config.getString("copybeans.defaultRepo")).getOrElse("default")
 
-  lazy val indexRoot = Try(config.getString("index.root")).getOrElse("index")
+  lazy val indexRoot = Try(config.getString("index.root")).getOrElse("data/index")
 
   lazy val indexMaxResults = Try(config.getInt("index.maxResults")).getOrElse(defaultMaxResults)
 

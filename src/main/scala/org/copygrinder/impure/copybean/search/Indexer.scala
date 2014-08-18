@@ -51,11 +51,6 @@ class Indexer {
 
   indexRefresher.start()
 
-  override def finalize() = {
-    close()
-    super.finalize()
-  }
-
   protected def close() = {
     indexRefresher.interrupt()
     indexRefresher.close()
@@ -63,7 +58,6 @@ class Indexer {
     indexWriter.commit()
     indexWriter.close()
   }
-
 
   def addCopybean(copybean: Copybean): Unit = {
     val doc = documentBuilder.buildDocument(copybean)
@@ -74,7 +68,7 @@ class Indexer {
   def findCopybeanIds(field: String, phrase: String): Seq[String] = {
     val query = new PhraseQuery
     query.add(new Term(s"contains.$field", phrase))
-    indexRefresher.waitForGeneration(reopenToken);
+    indexRefresher.waitForGeneration(reopenToken)
     val indexSearcher = searcherManager.acquire()
     try {
       val docs = indexSearcher.search(query, config.indexMaxResults)

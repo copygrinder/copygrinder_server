@@ -58,7 +58,7 @@ class PersistenceService {
     }
   }
 
-  def cachedFetch(id: String) = cache(id) {
+  def cachedFetch(id: String): Future[Copybean] = cache(id) {
     fetch(id)
   }
 
