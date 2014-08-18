@@ -13,7 +13,7 @@
  */
 package org.copygrinder
 
-import org.copygrinder.unpure.system.Boot
+import org.copygrinder.impure.system.Boot
 import org.scalatest.{FlatSpec, Matchers}
 import dispatch._, Defaults._
 

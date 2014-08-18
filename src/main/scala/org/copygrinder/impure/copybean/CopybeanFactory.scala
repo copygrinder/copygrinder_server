@@ -11,14 +11,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.copybean.search
+package org.copygrinder.impure.copybean
 
-import org.copygrinder.UnitTest
+import java.util.UUID
 
-class IndexerTest extends UnitTest {
+import com.softwaremill.macwire.MacwireMacros._
+import org.copygrinder.pure.copybean.model.{Copybean, CoreCopybean}
+import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 
-  "Indexer" should "initialize" in {
-    val indexer = new Indexer
+class CopybeanFactory {
+
+  lazy val idEncoderDecoder = wire[IdEncoderDecoder]
+
+  def create(c: CoreCopybean):Copybean = {
+    new Copybean(idEncoderDecoder.encodeUuid(UUID.randomUUID()), c.enforcedTypeIds, c.contains)
   }
-
 }

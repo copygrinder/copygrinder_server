@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.copybean.search
+package org.copygrinder.impure.copybean.search
 
 import java.io.File
 
@@ -23,7 +23,7 @@ import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
 import org.copygrinder.pure.copybean.model.Copybean
 import org.copygrinder.pure.copybean.search.DocumentBuilder
-import org.copygrinder.unpure.system.Configuration
+import org.copygrinder.impure.system.Configuration
 
 class Indexer {
 

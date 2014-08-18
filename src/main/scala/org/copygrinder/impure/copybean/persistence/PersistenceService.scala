@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.copybean.persistence
+package org.copygrinder.impure.copybean.persistence
 
 import java.io.File
 
@@ -19,9 +19,9 @@ import com.softwaremill.macwire.MacwireMacros._
 import org.apache.commons.io.FileUtils
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
-import org.copygrinder.unpure.copybean.CopybeanFactory
-import org.copygrinder.unpure.copybean.search.Indexer
-import org.copygrinder.unpure.system.Configuration
+import org.copygrinder.impure.copybean.CopybeanFactory
+import org.copygrinder.impure.copybean.search.Indexer
+import org.copygrinder.impure.system.Configuration
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 import spray.caching.{Cache, LruCache}

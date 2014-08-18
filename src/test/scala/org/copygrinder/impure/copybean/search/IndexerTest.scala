@@ -11,24 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.copybean.persistence
-
-import java.io.File
+package org.copygrinder.impure.copybean.search
 
 import org.copygrinder.UnitTest
 
-class HashedFileResolverTest extends UnitTest {
+class IndexerTest extends UnitTest {
 
-  val locator = new HashedFileResolver()
-
-  "locate" should "return a file with a directory 2 levels deep and with the right root and extension" in {
-    locator.locate("TEST", "json", new File("")) should be (new File("/T/E/TEST.json"))
-  }
-
-  "locate" should "fail for ids with less than 2 characters" in {
-    intercept[RuntimeException] {
-      locator.locate("A", "json", new File(""))
-    }
+  "Indexer" should "initialize" in {
+    val indexer = new Indexer
   }
 
 }

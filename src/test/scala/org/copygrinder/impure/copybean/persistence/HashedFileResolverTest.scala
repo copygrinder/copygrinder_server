@@ -11,14 +11,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.copybean.persistence
+package org.copygrinder.impure.copybean.persistence
+
+import java.io.File
 
 import org.copygrinder.UnitTest
 
-class GitRepoTest extends UnitTest {
+class HashedFileResolverTest extends UnitTest {
 
-  ignore should "create initalize a git repository" in {
-    //git.create()
+  val locator = new HashedFileResolver()
+
+  "locate" should "return a file with a directory 2 levels deep and with the right root and extension" in {
+    locator.locate("TEST", "json", new File("")) should be (new File("/T/E/TEST.json"))
   }
-  
+
+  "locate" should "fail for ids with less than 2 characters" in {
+    intercept[RuntimeException] {
+      locator.locate("A", "json", new File(""))
+    }
+  }
+
 }

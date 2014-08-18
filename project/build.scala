@@ -49,7 +49,7 @@ object CopygrinderBuild extends Build {
     val classDir = (Keys.classDirectory in Compile).value
     val buffer = new StringBuffer()
 
-    val result = Process((Seq("java", "org.copygrinder.unpure.system.Boot")), classDir).lines_!
+    val result = Process((Seq("java", "org.copygrinder.impure.system.Boot")), classDir).lines_!
   }
 
   val keepClasses = Seq("")

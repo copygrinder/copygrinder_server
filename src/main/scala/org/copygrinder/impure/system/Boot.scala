@@ -11,11 +11,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.system
+package org.copygrinder.impure.system
 
 import akka.actor.{ActorSystem, DeadLetter, Props}
 import com.softwaremill.macwire.MacwireMacros._
-import org.copygrinder.unpure.api.CopygrinderApi
+import org.copygrinder.impure.api.CopygrinderApi
 import spray.routing.SimpleRoutingApp
 
 object Boot extends App with SimpleRoutingApp with CopygrinderApi  {

@@ -11,24 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.copybean.persistence
+package org.copygrinder.impure.copybean.persistence
 
-import java.io.File
+import org.copygrinder.UnitTest
 
-class HashedFileResolver {
+class GitRepoTest extends UnitTest {
 
-  def locate(id: String, extension: String, parent: File): File = {
-
-    if (id.length() < 2) {
-      throw new RuntimeException(s"The id '$id' must be at least 2 characters long.")
-    }
-
-    val subDirectory1 = id.charAt(0)
-    val subDirectory2 = id.charAt(1)
-    val extensionWithDot = if (extension.nonEmpty) s".$extension" else ""
-    val path = s"$subDirectory1/$subDirectory2/$id$extensionWithDot"
-
-    new File(parent, path)
+  ignore should "create initalize a git repository" in {
+    //git.create()
   }
-
+  
 }

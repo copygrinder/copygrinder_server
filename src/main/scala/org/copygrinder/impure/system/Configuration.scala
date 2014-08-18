@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.system
+package org.copygrinder.impure.system
 
 import com.typesafe.config.ConfigFactory
 

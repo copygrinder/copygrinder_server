@@ -11,12 +11,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.api
+package org.copygrinder.impure.api
 
 import com.softwaremill.macwire.MacwireMacros._
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
-import org.copygrinder.unpure.copybean.persistence.PersistenceService
+import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}

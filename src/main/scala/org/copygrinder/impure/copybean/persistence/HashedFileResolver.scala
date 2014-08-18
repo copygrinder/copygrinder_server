@@ -11,19 +11,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.unpure.copybean
+package org.copygrinder.impure.copybean.persistence
 
-import java.util.UUID
+import java.io.File
 
-import com.softwaremill.macwire.MacwireMacros._
-import org.copygrinder.pure.copybean.model.{Copybean, CoreCopybean}
-import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
+class HashedFileResolver {
 
-class CopybeanFactory {
+  def locate(id: String, extension: String, parent: File): File = {
 
-  lazy val idEncoderDecoder = wire[IdEncoderDecoder]
+    if (id.length() < 2) {
+      throw new RuntimeException(s"The id '$id' must be at least 2 characters long.")
+    }
 
-  def create(c: CoreCopybean):Copybean = {
-    new Copybean(idEncoderDecoder.encodeUuid(UUID.randomUUID()), c.enforcedTypeIds, c.contains)
+    val subDirectory1 = id.charAt(0)
+    val subDirectory2 = id.charAt(1)
+    val extensionWithDot = if (extension.nonEmpty) s".$extension" else ""
+    val path = s"$subDirectory1/$subDirectory2/$id$extensionWithDot"
+
+    new File(parent, path)
   }
+
 }

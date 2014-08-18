@@ -126,7 +126,7 @@
     </check>
     <check enabled="true" class="org.scalastyle.file.RegexChecker" level="error">
         <parameters>
-            <parameter name="regex">(?s)package org\.copygrinder\.pure\.api.*org.copygrinder.unpure</parameter>
+            <parameter name="regex">(?s)package org\.copygrinder\.pure\.api.*org.copygrinder.impure</parameter>
         </parameters>
         <customMessage>Use of unpure code from a pure class</customMessage>
     </check>
