@@ -76,7 +76,7 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
           entity(as[AnonymousCopybean]) { anonBean =>
             complete {
               Future {
-                persistenceService.store(anonBean)
+                persistenceService.store(anonBean).map(("key", _))
               }
             }
           }
