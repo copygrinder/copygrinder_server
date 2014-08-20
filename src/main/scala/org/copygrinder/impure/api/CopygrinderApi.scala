@@ -13,7 +13,10 @@
  */
 package org.copygrinder.impure.api
 
+import java.io.IOException
+
 import com.softwaremill.macwire.MacwireMacros._
+import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
 import org.copygrinder.impure.copybean.persistence.PersistenceService
@@ -27,7 +30,7 @@ import spray.routing._
 import scala.concurrent._
 
 
-trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
+trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogging {
 
   protected lazy val persistenceService = wire[PersistenceService]
 
@@ -37,20 +40,25 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport {
 
   protected def copybeanExceptionHandler() =
     ExceptionHandler {
-      case e: CopybeanNotFound => {
+      case e: CopybeanNotFound =>
         pathPrefix("copybeans") {
           path(Segment) { id =>
+            logger.debug(s"Copybean with id=$id was not found")
             complete(NotFound, s"Copy bean with id '$id' was not found.")
           }
         }
-      }
+      case e: IOException =>
+        requestUri { uri =>
+          logger.error(s"Error occurred while processing request to $uri", e)
+          complete(InternalServerError, "Error occurred")
+        }
     }
 
   protected val rootRoute = path("") {
     get {
       complete {
         val jsonValues = parse( """{"name":"joe","age":15}""").extract[JObject]
-        new Copybean(("bean1"), Set("hi"), jsonValues)
+        new Copybean("bean1", Set("hi"), jsonValues)
       }
     }
   }

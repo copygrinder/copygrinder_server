@@ -15,7 +15,9 @@ package org.copygrinder.impure.copybean.persistence
 
 import java.io.File
 
-class HashedFileResolver {
+import com.typesafe.scalalogging.LazyLogging
+
+class HashedFileResolver extends LazyLogging {
 
   def locate(id: String, extension: String, parent: File): File = {
 
@@ -28,7 +30,8 @@ class HashedFileResolver {
     val extensionWithDot = if (extension.nonEmpty) s".$extension" else ""
     val path = s"$subDirectory1/$subDirectory2/$id$extensionWithDot"
 
+    logger.debug(s"Resolved file path: $path from id=$id extention=$extension")
+
     new File(parent, path)
   }
-
 }

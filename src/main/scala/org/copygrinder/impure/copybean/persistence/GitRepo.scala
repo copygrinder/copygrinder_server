@@ -38,8 +38,8 @@ class GitRepo(repoDir: File) {
   }
 
   def createIfNonExistant(): Unit = {
-    if (repoDir.exists() == false) {
-      create(false)
+    if (!repoDir.exists()) {
+      create(overwrite = false)
     }
   }
 
