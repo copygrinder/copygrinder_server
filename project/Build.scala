@@ -24,7 +24,6 @@ object CopygrinderBuild extends Build {
       scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
 
       resolvers ++= Seq(
-        Resolver.file("local-repo", file("project/lib/"))(Resolver.ivyStylePatterns),
         "spray repo" at "http://repo.spray.io/",
         "JGit repo" at "https://repo.eclipse.org/content/groups/releases/",
         "sonatype-releases" at "https://oss.sonatype.org/content/repositories/releases/"
