@@ -1,14 +1,17 @@
+import java.io.File
+import java.lang.Process
 import javax.xml.parsers.SAXParserFactory
 
 import de.johoop.jacoco4sbt.JacocoPlugin.itJacoco
+import sbt.Node
 import sbt._
 import sbtassembly.AssemblyUtils
 import sbtassembly.Plugin.AssemblyKeys._
 
-import scala.sys.process.ProcessLogger
-import scala.xml.{Node, SAXParser, XML}
-
+import scala.xml._
+/*
 object CopygrinderBuild extends Build {
+
 
   val feedJacoco = taskKey[Unit]("Copies in the classes from the UberJar into the classes directory so Jacoco gets coverage of them.") := {
 
@@ -204,9 +207,9 @@ object CopygrinderBuild extends Build {
     (allClassesText, usedClassesText)
   }
 
-  lazy val root: Project = Project(id = "copygrinder",
-    base = file("."),
-    settings = Seq(feedJacoco, pruneClasses, createPruneJar, trialRun)
-  ).configs(IntegrationTest).settings(Defaults.itSettings: _*)
-
 }
+
+//addCommandAlias("pruneJar", ";clean;assembly;feedJacoco;jacoco:check;it-jacoco:check;it-jacoco:report;pruneClasses;createPruneJar"),
+//addCommandAlias("reprune", ";reload;feedJacoco;pruneClasses"),
+
+*/
