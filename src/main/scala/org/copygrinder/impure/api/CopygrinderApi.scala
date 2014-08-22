@@ -30,7 +30,7 @@ import spray.routing._
 import scala.concurrent._
 
 
-trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogging {
+trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogging with CorsSupport {
 
   protected lazy val persistenceService = wire[PersistenceService]
 
@@ -92,5 +92,5 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogg
     }
   }
 
-  def copygrinderRoutes: Route = rootRoute ~ copybeanRoute
+  def copygrinderRoutes: Route = cors(rootRoute ~ copybeanRoute)
 }
