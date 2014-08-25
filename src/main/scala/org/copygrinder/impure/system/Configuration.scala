@@ -13,6 +13,8 @@
  */
 package org.copygrinder.impure.system
 
+import java.io.File
+
 import com.typesafe.config.ConfigFactory
 
 import scala.util.Try
@@ -23,7 +25,7 @@ class Configuration {
 
   protected val defaultMaxResults = 100
 
-  protected val config = ConfigFactory.load()
+  protected val config = ConfigFactory.parseFile(new File("copygrinder.conf"))
 
   lazy val serviceReadPort = Try(config.getInt("service.readPort")).getOrElse(defaultPortNumber)
 
