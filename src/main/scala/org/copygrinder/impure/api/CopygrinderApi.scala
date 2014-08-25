@@ -63,7 +63,7 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogg
     }
   }
 
-  protected val copybeanRoute = handleExceptions(copybeanExceptionHandler) {
+  protected val copybeanReadRoute = handleExceptions(copybeanExceptionHandler) {
     pathPrefix("copybeans") {
       get {
         parameters('field, 'phrase) { (field, phrase) =>
@@ -79,18 +79,27 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogg
             }
           }
         }
-      } ~
-        post {
-          entity(as[AnonymousCopybean]) { anonBean =>
-            complete {
-              Future {
-                persistenceService.store(anonBean).map(("key", _))
-              }
-            }
-          }
-        }
+      }
     }
   }
 
-  def copygrinderRoutes: Route = cors(rootRoute ~ copybeanRoute)
+
+  protected val copybeanWriteRoute = handleExceptions(copybeanExceptionHandler) {
+    pathPrefix("copybeans") {
+      post {
+        entity(as[AnonymousCopybean]) { anonBean =>
+          complete {
+            Future {
+              persistenceService.store(anonBean).map(("key", _))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def copygrinderReadRoutes: Route = cors(rootRoute ~ copybeanReadRoute)
+
+  def copygrinderWriteRoutes: Route = cors(copybeanWriteRoute)
+
 }

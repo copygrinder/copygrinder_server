@@ -19,13 +19,15 @@ import scala.util.Try
 
 class Configuration {
 
-  protected val defaultPortNumber = 8080
+  protected val defaultPortNumber = 19836
 
   protected val defaultMaxResults = 100
 
   protected val config = ConfigFactory.load()
 
-  lazy val servicePort = Try(config.getInt("service.port")).getOrElse(defaultPortNumber)
+  lazy val serviceReadPort = Try(config.getInt("service.readPort")).getOrElse(defaultPortNumber)
+
+  lazy val serviceWritePort = Try(config.getInt("service.writePort")).getOrElse(defaultPortNumber)
 
   lazy val serviceHost = Try(config.getString("service.host")).getOrElse("localhost")
 
