@@ -13,3 +13,6 @@ test-output/
 *.stackdump
 copybeans
 log
+.DS_Store
+data
+gatling/.idea
