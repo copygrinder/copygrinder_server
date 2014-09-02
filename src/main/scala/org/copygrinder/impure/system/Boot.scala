@@ -14,13 +14,18 @@
 package org.copygrinder.impure.system
 
 import akka.actor.{ActorSystem, DeadLetter, Props}
+import akka.io.IO
+import akka.pattern.ask
+import akka.util.Timeout
 import com.softwaremill.macwire.MacwireMacros._
-import org.copygrinder.impure.api.CopygrinderApi
-import spray.routing.{Route, SimpleRoutingApp}
+import spray.can.Http
 
-object Boot extends App with SimpleRoutingApp with CopygrinderApi {
+import scala.concurrent.duration._
 
-  lazy val config = wire[Configuration]
+
+object Boot extends App {
+
+  protected lazy val config = wire[Configuration]
 
   implicit val system = ActorSystem("copygrinder-system")
 
@@ -28,20 +33,16 @@ object Boot extends App with SimpleRoutingApp with CopygrinderApi {
   system.eventStream.subscribe(deadLetterActor, classOf[DeadLetter])
 
   if (config.serviceReadPort == config.serviceWritePort) {
-    startCopygrinder("copygrinder-service-actor", config.serviceReadPort) {
-      copygrinderReadRoutes ~ copygrinderWriteRoutes
-    }
+    startCopygrinder("copygrinder-service-actor", config.serviceReadPort)
   } else {
-    startCopygrinder("copygrinder-read-service-actor", config.serviceReadPort) {
-      copygrinderReadRoutes
-    }
-    startCopygrinder("copygrinder-write-service-actor", config.serviceWritePort) {
-      copygrinderWriteRoutes
-    }
+    startCopygrinder("copygrinder-read-service-actor", config.serviceReadPort)
+    startCopygrinder("copygrinder-write-service-actor", config.serviceWritePort)
   }
 
-  protected def startCopygrinder(serviceName: String, port: Int)(route: Route) = {
-    startServer(serviceActorName = serviceName, interface = config.serviceHost, port = port)(route)
+  protected def startCopygrinder(serviceName: String, port: Int) = {
+    implicit val bindingTimeout: Timeout = 1 second
+    val serviceActor = system.actorOf(Props[MyServiceActor], name = serviceName)
+    IO(Http) ? Http.Bind(serviceActor, config.serviceHost, port = port)
   }
 
 }

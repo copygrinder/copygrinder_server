@@ -15,11 +15,12 @@ package org.copygrinder.impure.api
 
 import java.io.IOException
 
+import akka.actor.ActorContext
 import com.softwaremill.macwire.MacwireMacros._
 import com.typesafe.scalalogging.LazyLogging
+import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
-import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
@@ -29,14 +30,13 @@ import spray.routing._
 
 import scala.concurrent._
 
-
-trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogging with CorsSupport {
+class CopygrinderApi(implicit ac: ActorContext) extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
 
   protected lazy val persistenceService = wire[PersistenceService]
 
   override implicit def json4sJacksonFormats: Formats = DefaultFormats
 
-  protected implicit def executionContext = actorRefFactory.dispatcher
+  protected implicit def executionContext = ac.dispatcher
 
   protected def copybeanExceptionHandler() =
     ExceptionHandler {
@@ -87,7 +87,6 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogg
     }
   }
 
-
   protected val copybeanWriteRoute = handleExceptions(copybeanExceptionHandler) {
     pathPrefix("copybeans") {
       post {
@@ -102,8 +101,10 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogg
     }
   }
 
-  def copygrinderReadRoutes: Route = cors(rootRoute ~ copybeanReadRoute)
+  val copygrinderReadRoutes: Route = cors(rootRoute ~ copybeanReadRoute)
 
-  def copygrinderWriteRoutes: Route = cors(copybeanWriteRoute)
+  val copygrinderWriteRoutes: Route = cors(copybeanWriteRoute)
+
+  val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes
 
 }

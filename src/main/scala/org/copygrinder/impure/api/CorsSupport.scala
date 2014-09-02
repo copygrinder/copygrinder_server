@@ -19,7 +19,7 @@ import spray.http.HttpMethods._
 import spray.routing._
 
 trait CorsSupport {
-  this: HttpService =>
+  this: Directives =>
 
   protected final val `24HoursInSeconds` = 60 * 60 * 24
 
