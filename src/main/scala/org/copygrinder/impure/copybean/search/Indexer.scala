@@ -65,9 +65,19 @@ class Indexer {
     indexWriter.commit()
   }
 
+  def findCopybeanIds(): Seq[String] = {
+    val query = new MatchAllDocsQuery
+    doQuery(query)
+  }
+
+
   def findCopybeanIds(field: String, phrase: String): Seq[String] = {
     val query = new PhraseQuery
     query.add(new Term(s"contains.$field", phrase))
+    doQuery(query)
+  }
+
+  def doQuery(query: Query): Seq[String] = {
     indexRefresher.waitForGeneration(reopenToken)
     val indexSearcher = searcherManager.acquire()
     try {

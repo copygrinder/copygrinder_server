@@ -78,6 +78,10 @@ trait CopygrinderApi extends HttpService with Json4sJacksonSupport with LazyLogg
               persistenceService.cachedFetch(id)
             }
           }
+        } ~ complete {
+          Future {
+            persistenceService.find()
+          }
         }
       }
     }

@@ -77,12 +77,20 @@ class PersistenceService {
     })
   }
 
+  def find(): Future[Seq[Copybean]] = {
+    val copybeanIds = indexer.findCopybeanIds()
+    fetchCopybeans(copybeanIds)
+  }
+
   def find(field: String, phrase: String): Future[Seq[Copybean]] = {
     val copybeanIds = indexer.findCopybeanIds(field, phrase)
+    fetchCopybeans(copybeanIds)
+  }
+
+  protected def fetchCopybeans(copybeanIds: Seq[String]): Future[Seq[Copybean]] = {
     val futures = copybeanIds.map(id => {
       cachedFetch(id)
     })
     Future.sequence(futures)
   }
-
 }
