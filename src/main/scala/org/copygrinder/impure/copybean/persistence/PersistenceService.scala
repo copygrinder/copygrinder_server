@@ -15,35 +15,27 @@ package org.copygrinder.impure.copybean.persistence
 
 import java.io.File
 
-import com.softwaremill.macwire.MacwireMacros._
 import org.apache.commons.io.FileUtils
-import org.copygrinder.pure.copybean.exception.CopybeanNotFound
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
 import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.impure.system.Configuration
+import org.copygrinder.pure.copybean.exception.CopybeanNotFound
+import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
-import spray.caching.{Cache, LruCache}
+import spray.caching.Cache
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class PersistenceService {
-
-  protected lazy val config = wire[Configuration]
-
-  protected lazy val hashedFileResolver = wire[HashedFileResolver]
-
-  protected lazy val copybeanFactory = wire[CopybeanFactory]
-
-  protected lazy val indexer = wire[Indexer]
+class PersistenceService(
+  config: Configuration, hashedFileResolver: HashedFileResolver, copybeanFactory: CopybeanFactory, indexer: Indexer,
+  cache: Cache[Copybean], gitRepoFactory: (File) => GitRepo
+  ) {
 
   protected lazy val repoDir = new File(config.copybeanRepoRoot + "/" + config.copybeanDefaultRepo + "/")
 
-  protected lazy val gitRepo = new GitRepo(repoDir)
-
-  protected lazy val cache: Cache[Copybean] = LruCache()
+  protected lazy val gitRepo = gitRepoFactory(repoDir)
 
   protected implicit def json4sJacksonFormats: Formats = DefaultFormats
 

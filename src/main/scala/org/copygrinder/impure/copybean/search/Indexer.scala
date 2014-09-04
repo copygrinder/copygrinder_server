@@ -15,27 +15,22 @@ package org.copygrinder.impure.copybean.search
 
 import java.io.File
 
-import com.softwaremill.macwire.MacwireMacros._
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.index._
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
+import org.copygrinder.impure.system.Configuration
 import org.copygrinder.pure.copybean.model.Copybean
 import org.copygrinder.pure.copybean.search.DocumentBuilder
-import org.copygrinder.impure.system.Configuration
 
-class Indexer {
-
-  protected lazy val config = wire[Configuration]
-
-  protected lazy val documentBuilder = wire[DocumentBuilder]
+class Indexer(config: Configuration, documentBuilder: DocumentBuilder) {
 
   protected lazy val analyzer = new KeywordAnalyzer()
 
   protected lazy val indexDirectory = FSDirectory.open(new File(config.indexRoot))
 
-  protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_9, analyzer)
+  protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_10_0, analyzer)
 
   protected lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 

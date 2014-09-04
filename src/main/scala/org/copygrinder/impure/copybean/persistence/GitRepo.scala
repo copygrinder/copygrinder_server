@@ -15,15 +15,12 @@ package org.copygrinder.impure.copybean.persistence
 
 import java.io.{File, FileWriter}
 
-import com.softwaremill.macwire.MacwireMacros._
 import org.apache.commons.io.FileUtils
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 
-class GitRepo(repoDir: File) {
-
-  protected lazy val fileRepositoryBuilderWrapper = wire[FileRepositoryBuilderWrapper]
+class GitRepo(repoDir: File, fileRepositoryBuilderWrapper: FileRepositoryBuilderWrapper) {
 
   protected lazy val repository = buildRepository()
 

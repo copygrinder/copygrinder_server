@@ -15,15 +15,12 @@ package org.copygrinder.impure.copybean
 
 import java.util.UUID
 
-import com.softwaremill.macwire.MacwireMacros._
 import org.copygrinder.pure.copybean.model.{Copybean, CoreCopybean}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 
-class CopybeanFactory {
+class CopybeanFactory(idEncoderDecoder: IdEncoderDecoder) {
 
-  lazy val idEncoderDecoder = wire[IdEncoderDecoder]
-
-  def create(c: CoreCopybean):Copybean = {
+  def create(c: CoreCopybean): Copybean = {
     new Copybean(idEncoderDecoder.encodeUuid(UUID.randomUUID()), c.enforcedTypeIds, c.contains)
   }
 }

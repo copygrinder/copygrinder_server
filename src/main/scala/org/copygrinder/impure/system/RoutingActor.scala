@@ -13,26 +13,50 @@
  */
 package org.copygrinder.impure.system
 
-import akka.actor.Actor
+import akka.actor.{ActorContext, Actor, Props}
+import akka.routing.BalancingPool
 import org.copygrinder.impure.api.CopygrinderApi
+import spray.http.{HttpRequest, HttpResponse, StatusCodes, Timedout}
 import spray.routing._
 
-class MyServiceActor extends Actor with HttpService {
+
+class RoutingActor(routeExecutingActor: Props) extends Actor {
+
+  lazy val actorPool = context.actorOf(
+    routeExecutingActor.withRouter(BalancingPool(Runtime.getRuntime.availableProcessors()))
+    , name = self.path.name
+  )
+
+  protected implicit def executionContext = context.dispatcher
+
+  override def receive = {
+    case message => {
+      actorPool forward message
+    }
+  }
+
+}
+
+class RouteExecutingActor(apiFactory: (ActorContext) => CopygrinderApi) extends Actor with HttpService {
 
   override def actorRefFactory = context
 
-  override def receive = run(route)
+  val api = apiFactory(context)
 
-  protected val api = new CopygrinderApi
-
-  protected val route = self.path.name match {
+  protected val route = context.parent.path.name match {
     case "copygrinder-service-actor" => api.allCopygrinderRoutes
     case "copygrinder-read-service-actor" => api.copygrinderReadRoutes
     case "copygrinder-write-service-actor" => api.copygrinderWriteRoutes
   }
 
-  protected def run(route: Route) = {
+  override def receive = {
+    //handleTimeouts orElse runRoute(route)
     runRoute(route)
+  }
+
+  protected def handleTimeouts: Receive = {
+    case Timedout(x: HttpRequest) =>
+      sender ! HttpResponse(StatusCodes.InternalServerError, "Too late")
   }
 
 }

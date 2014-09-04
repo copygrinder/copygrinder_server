@@ -36,7 +36,6 @@ object CopygrinderBuild extends Build {
         "io.spray" %% "spray-routing" % "1.3.1",
         "org.json4s" %% "json4s-jackson" % "3.2.10",
         "com.typesafe.akka" %% "akka-slf4j" % "2.3.5",
-        "com.softwaremill.macwire" %% "macros" % "0.7",
         "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
       ),
 
@@ -45,12 +44,12 @@ object CopygrinderBuild extends Build {
         "org.eclipse.jgit" % "org.eclipse.jgit" % "3.4.1.201406201815-r",
         "commons-io" % "commons-io" % "2.4",
         "ch.qos.logback" % "logback-classic" % "1.1.2",
-        "org.apache.lucene" % "lucene-analyzers-common" % "4.9.0"
+        "org.apache.lucene" % "lucene-analyzers-common" % "4.10.0"
       ),
 
       /* TEST LIBS */
       libraryDependencies ++= Seq(
-        "org.scalatest" %% "scalatest" % "2.2.1" % "test, it",
+        "org.scalatest" %% "scalatest" % "2.2.2" % "test, it",
         "org.scalamock" %% "scalamock-scalatest-support" % "3.1.2" % "test, it",
         "io.spray" %% "spray-testkit" % "1.3.1" % "test, it",
         "net.databinder.dispatch" %% "dispatch-core" % "0.11.2" % "test, it"

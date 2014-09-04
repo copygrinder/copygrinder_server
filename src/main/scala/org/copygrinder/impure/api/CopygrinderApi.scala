@@ -16,7 +16,6 @@ package org.copygrinder.impure.api
 import java.io.IOException
 
 import akka.actor.ActorContext
-import com.softwaremill.macwire.MacwireMacros._
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
@@ -30,9 +29,7 @@ import spray.routing._
 
 import scala.concurrent._
 
-class CopygrinderApi(implicit ac: ActorContext) extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
-
-  protected lazy val persistenceService = wire[PersistenceService]
+class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService) extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
 
   override implicit def json4sJacksonFormats: Formats = DefaultFormats
 
