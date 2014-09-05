@@ -74,8 +74,8 @@ class PersistenceService(
     fetchCopybeans(copybeanIds)
   }
 
-  def find(field: String, phrase: String): Future[Seq[Copybean]] = {
-    val copybeanIds = indexer.findCopybeanIds(field, phrase)
+  def find(params: Seq[(String, String)]): Future[Seq[Copybean]] = {
+    val copybeanIds = indexer.findCopybeanIds(params)
     fetchCopybeans(copybeanIds)
   }
 

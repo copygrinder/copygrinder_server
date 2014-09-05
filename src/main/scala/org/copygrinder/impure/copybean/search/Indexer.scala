@@ -66,10 +66,29 @@ class Indexer(config: Configuration, documentBuilder: DocumentBuilder) {
   }
 
 
-  def findCopybeanIds(field: String, phrase: String): Seq[String] = {
-    val query = new PhraseQuery
-    query.add(new Term(s"contains.$field", phrase))
-    doQuery(query)
+  def findCopybeanIds(params: Seq[(String, String)]): Seq[String] = {
+    val booleanQuery = new BooleanQuery
+    params.foreach { param =>
+      if (param._1.nonEmpty && param._2.nonEmpty) {
+        addParamToQuery(param, booleanQuery)
+      }
+    }
+    doQuery(booleanQuery)
+  }
+
+  def addParamToQuery(param: (String, String), booleanQuery: BooleanQuery): Unit = {
+    val field = s"contains." + param._1
+    val value = param._2
+
+    val query = if (value.nonEmpty && value.forall(_.isDigit)) {
+      val intValue = value.toInt
+      NumericRangeQuery.newIntRange(field, 1, intValue, intValue, true, true)
+    } else {
+      val q = new PhraseQuery
+      q.add(new Term(field, value))
+      q
+    }
+    booleanQuery.add(query, BooleanClause.Occur.MUST)
   }
 
   def doQuery(query: Query): Seq[String] = {

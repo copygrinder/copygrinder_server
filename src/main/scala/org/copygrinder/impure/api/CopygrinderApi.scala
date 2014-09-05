@@ -63,10 +63,14 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService) e
   protected val copybeanReadRoute = handleExceptions(copybeanExceptionHandler) {
     pathPrefix("copybeans") {
       get {
-        parameters('field, 'phrase) { (field, phrase) =>
-          complete {
-            Future {
-              persistenceService.find(field, phrase)
+        parameterSeq { params =>
+          if (params.isEmpty || params.head._1.isEmpty) {
+            reject
+          } else {
+            complete {
+              Future {
+                persistenceService.find(params)
+              }
             }
           }
         } ~ path(Segment) { id =>
