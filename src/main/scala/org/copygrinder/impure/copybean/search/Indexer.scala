@@ -17,6 +17,7 @@ import java.io.File
 
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.index._
+import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
@@ -68,30 +69,45 @@ class Indexer(config: Configuration, documentBuilder: DocumentBuilder) {
 
   def findCopybeanIds(params: Seq[(String, String)]): Seq[String] = {
     val booleanQuery = new BooleanQuery
-    params.foreach { param =>
+    params.zipWithIndex.foreach { paramAndIndex =>
+      val (param, index) = paramAndIndex
       if (param._1.nonEmpty && param._2.nonEmpty) {
-        addParamToQuery(param, booleanQuery)
+        val (field, clause) = determineBooleanClause(param._1)
+        val query = addParamToQuery((field, param._2), booleanQuery)
+        booleanQuery.add(query, clause)
       }
     }
     doQuery(booleanQuery)
   }
 
-  def addParamToQuery(param: (String, String), booleanQuery: BooleanQuery): Unit = {
+  protected def determineBooleanClause(field: String): (String, Occur) = {
+    if (field.endsWith("~")) {
+      (field.dropRight(1), BooleanClause.Occur.SHOULD)
+    } else if (field.endsWith("!")) {
+      (field.dropRight(1), BooleanClause.Occur.MUST_NOT)
+    } else {
+      (field, BooleanClause.Occur.MUST)
+    }
+  }
+
+  protected def addParamToQuery(param: (String, String), booleanQuery: BooleanQuery): Query = {
     val field = s"contains." + param._1
     val value = param._2
 
-    val query = if (value.nonEmpty && value.forall(_.isDigit)) {
-      val intValue = value.toInt
-      NumericRangeQuery.newIntRange(field, 1, intValue, intValue, true, true)
-    } else {
-      val q = new PhraseQuery
-      q.add(new Term(field, value))
-      q
+    value match {
+      case intString if intString.forall(_.isDigit) => {
+        val intValue = value.toInt
+        NumericRangeQuery.newIntRange(field, 1, intValue, intValue, true, true)
+      }
+      case _ => {
+        val q = new PhraseQuery
+        q.add(new Term(field, value))
+        q
+      }
     }
-    booleanQuery.add(query, BooleanClause.Occur.MUST)
   }
 
-  def doQuery(query: Query): Seq[String] = {
+  protected def doQuery(query: Query): Seq[String] = {
     indexRefresher.waitForGeneration(reopenToken)
     val indexSearcher = searcherManager.acquire()
     try {
