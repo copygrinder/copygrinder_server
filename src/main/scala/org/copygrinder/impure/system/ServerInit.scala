@@ -27,8 +27,8 @@ class ActorSystemInit() {
   def init(): ActorSystem = {
     val system = ActorSystem("copygrinder-system")
 
-    val deadLetterActor = system.actorOf(Props(classOf[DeadLetterActor]))
-    system.eventStream.subscribe(deadLetterActor, classOf[DeadLetter])
+    //val deadLetterActor = system.actorOf(Props(classOf[DeadLetterActor]))
+    //system.eventStream.subscribe(deadLetterActor, classOf[DeadLetter])
 
     system
   }
@@ -47,7 +47,7 @@ class ServerInit(config: Configuration, routingActor: Props)(implicit system: Ac
   }
 
   protected def startCopygrinder(serviceName: String, port: Int)(implicit system: ActorSystem) = {
-    implicit val bindingTimeout: Timeout = 1 second
+    implicit val bindingTimeout: Timeout = 5 seconds
     val serviceActor = system.actorOf(routingActor, name = serviceName)
     IO(Http) ? Http.Bind(serviceActor, config.serviceHost, port = port)
   }

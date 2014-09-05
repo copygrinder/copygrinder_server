@@ -8,13 +8,14 @@ import scala.concurrent.duration._
 class GatlingTest extends Simulation {
 
   val httpConf = http
-    .baseURL("http://localhost:8080")
+    .baseURL("http://localhost:19836")
     .acceptHeader("application/json")
     .contentTypeHeader("application/json")
 
   val scn = scenario("Search")
     .exec(http("request_1")
-    .get("/copybeans?field=testValue1&phrase=abc"))
+    //.get("/copybeans?field=testValue1&phrase=abc"))
+    .get("/"))
 
   val json = """{"enforcedTypeIds": [], "contains": {"testValue1":"abc", "testValue2": "123"}}"""
 
@@ -33,8 +34,8 @@ class GatlingTest extends Simulation {
     ),*/
     scn.inject(
       //nothingFor(2 second),
-      //rampUsersPerSec(1).to(500).during(10 seconds)
-      atOnceUsers(10000)
+      rampUsersPerSec(1).to(500).during(20 seconds)
+      //atOnceUsers(1000)
     )
   ).protocols(httpConf)
 
