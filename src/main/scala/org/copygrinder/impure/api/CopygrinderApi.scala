@@ -33,7 +33,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService) e
 
   override implicit def json4sJacksonFormats: Formats = DefaultFormats
 
-  protected implicit def executionContext = ac.dispatcher
+  private implicit def executionContext = ac.dispatcher
 
   protected def copybeanExceptionHandler() =
     ExceptionHandler {

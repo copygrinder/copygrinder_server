@@ -51,7 +51,7 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
 
   lazy val routeExecutingActor = Props(new RouteExecutingActor(copygrinderApiFactory))
 
-  lazy val routingActor = Props(new RoutingActor(routeExecutingActor))
+  lazy val routingActor = Props(new RoutingActor(routeExecutingActor, globalModule.configuration))
 
   lazy val serverInit = new ServerInit(globalModule.configuration, routingActor)
 

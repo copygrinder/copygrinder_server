@@ -19,7 +19,7 @@ import org.json4s.JsonAST._
 
 class DocumentBuilderTest extends UnitTest {
 
-  val documentBuilder = new DocumentBuilder
+  val documentBuilder = new DocumentBuilder()
 
   "buildDocument" should "return a Document object that matches the supplied Copybean" in {
     val nestedObject = JField("nested", JObject(

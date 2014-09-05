@@ -20,10 +20,10 @@ import spray.http.{HttpRequest, HttpResponse, StatusCodes, Timedout}
 import spray.routing._
 
 
-class RoutingActor(routeExecutingActor: Props) extends Actor {
+class RoutingActor(routeExecutingActor: Props, config: Configuration) extends Actor {
 
   lazy val actorPool = context.actorOf(
-    routeExecutingActor.withRouter(BalancingPool(Runtime.getRuntime.availableProcessors()))
+    routeExecutingActor.withRouter(BalancingPool(config.serviceThreads))
     , name = self.path.name
   )
 

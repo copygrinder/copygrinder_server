@@ -13,35 +13,83 @@
  */
 package org.copygrinder
 
-import org.copygrinder.impure.system.Boot
+import akka.actor.ActorContext
+import dispatch.Defaults._
+import dispatch._
+import org.copygrinder.impure.api.CopygrinderApi
+import org.copygrinder.impure.system._
 import org.scalatest.{FlatSpec, Matchers}
-import dispatch._, Defaults._
+import spray.routing.Route
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 
 class Startup extends FlatSpec with Matchers {
 
-  "Boot" should "start" in {
-    Boot.main(Array())
+  val wiring = new DefaultWiring() {
+    override lazy val globalModule = new GlobalModule {
+      override lazy val configuration = new Configuration {
+        override lazy val serviceReadPort = 9999
+        override lazy val serviceWritePort = 9999
+        override lazy val serviceThreads = 2
+      }
+    }
+    override lazy val serverModule = new ServerModule(globalModule, persistenceServiceModule) {
 
-    //println(Boot.system)
+      override def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
+        new CopygrinderApi(ac, persistenceServiceModule.persistenceService) {
+          override val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes ~
+            path("longpause") {
+              get {
+                complete {
+                  Thread.sleep(500)
+                  "LONG"
+                }
+              }
+            } ~
+            path("shortpause") {
+              get {
+                complete {
+                  Thread.sleep(100)
+                  "SHORT"
+                }
+              }
+            }
+        }
+      }
+    }
+  }
 
-    Thread.sleep(3000)
 
-    val svc = url("http://localhost:8080")
-    val data = Http(svc OK as.String)
-    println(data())
+  "ServerInit" should "start" in {
 
-    val svc2 = url("http://localhost:8080/copybeans/123")
-    val data2 = Http(svc2 > as.String)
-    println(data2())
+    Await.result(wiring.serverModule.serverInit.init, 3 second)
 
-    def myPostWithParams = url("http://localhost:8080/copybeans").POST.setContentType("application/json", "UTF8").setBody("""{"values":{"name":"joe","age":16}}""")
-    val data3 = Http(myPostWithParams > as.String)
-    println(data3())
+    val shortReq = url("http://localhost:9999/shortpause")
 
-    def myPostWithBadParams = url("http://localhost:8080/copybeans").POST.setBody("""{"values":{"name":"joe","age":16}}""")
-    val data4 = Http(myPostWithBadParams > as.String)
-    println(data4())
+    val longReq = url("http://localhost:9999/longpause")
+
+    Await.result(Http(shortReq OK as.String), 1 second)
+
+    val time1 = System.nanoTime()
+
+    val longFutures = 1.to(2).map { _ =>
+      Http(longReq OK as.String)
+    }
+
+    val shortFutures = 1.to(10).map { _ =>
+      Http(shortReq OK as.String)
+    }
+
+    val futureSeq = Future.sequence(longFutures ++ shortFutures)
+    Await.result(futureSeq, 10 second)
+
+    val time2 = System.nanoTime()
+    val duration = (time2 - time1) / 1000 / 1000
+
+    assert(duration < 1000 + 200)
+
   }
 
 }

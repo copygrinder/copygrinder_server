@@ -19,7 +19,9 @@ import akka.pattern.ask
 import akka.util.Timeout
 import spray.can.Http
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
+
 
 class ActorSystemInit() {
   def init(): ActorSystem = {
@@ -34,7 +36,7 @@ class ActorSystemInit() {
 
 class ServerInit(config: Configuration, routingActor: Props)(implicit system: ActorSystem) {
 
-  def init: Unit = {
+  def init: Future[Any] = {
 
     if (config.serviceReadPort == config.serviceWritePort) {
       startCopygrinder("copygrinder-service-actor", config.serviceReadPort)
