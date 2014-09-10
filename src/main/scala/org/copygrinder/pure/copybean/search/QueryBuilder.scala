@@ -22,7 +22,8 @@ class QueryBuilder {
   def build(params: Seq[(String, String)]): Query = {
     val (paramHead, paramTail) = params.span(param => {
       val field = param._1.toLowerCase
-      field != "or" && field != "and" && field != "nor"
+      val operator = field == "or" || field == "and" || field == "not"
+      !operator || (operator && param._2.nonEmpty)
     })
     val headQuery = createQuery(paramHead)
     if (paramTail.nonEmpty) {
