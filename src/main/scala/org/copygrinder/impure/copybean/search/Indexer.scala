@@ -17,15 +17,14 @@ import java.io.File
 
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.index._
-import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
 import org.copygrinder.impure.system.Configuration
 import org.copygrinder.pure.copybean.model.Copybean
-import org.copygrinder.pure.copybean.search.DocumentBuilder
+import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 
-class Indexer(config: Configuration, documentBuilder: DocumentBuilder) {
+class Indexer(config: Configuration, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder) {
 
   protected lazy val analyzer = new KeywordAnalyzer()
 
@@ -68,44 +67,10 @@ class Indexer(config: Configuration, documentBuilder: DocumentBuilder) {
 
 
   def findCopybeanIds(params: Seq[(String, String)]): Seq[String] = {
-    val booleanQuery = new BooleanQuery
-    params.zipWithIndex.foreach { paramAndIndex =>
-      val (param, index) = paramAndIndex
-      if (param._1.nonEmpty && param._2.nonEmpty) {
-        val (field, clause) = determineBooleanClause(param._1)
-        val query = addParamToQuery((field, param._2), booleanQuery)
-        booleanQuery.add(query, clause)
-      }
-    }
-    doQuery(booleanQuery)
+    val query = queryBuilder.build(params)
+    doQuery(query)
   }
 
-  protected def determineBooleanClause(field: String): (String, Occur) = {
-    if (field.endsWith("~")) {
-      (field.dropRight(1), BooleanClause.Occur.SHOULD)
-    } else if (field.endsWith("!")) {
-      (field.dropRight(1), BooleanClause.Occur.MUST_NOT)
-    } else {
-      (field, BooleanClause.Occur.MUST)
-    }
-  }
-
-  protected def addParamToQuery(param: (String, String), booleanQuery: BooleanQuery): Query = {
-    val field = s"contains." + param._1
-    val value = param._2
-
-    value match {
-      case intString if intString.forall(_.isDigit) => {
-        val intValue = value.toInt
-        NumericRangeQuery.newIntRange(field, 1, intValue, intValue, true, true)
-      }
-      case _ => {
-        val q = new PhraseQuery
-        q.add(new Term(field, value))
-        q
-      }
-    }
-  }
 
   protected def doQuery(query: Query): Seq[String] = {
     indexRefresher.waitForGeneration(reopenToken)

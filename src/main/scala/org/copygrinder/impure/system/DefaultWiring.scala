@@ -22,7 +22,7 @@ import org.copygrinder.impure.copybean.persistence.{FileRepositoryBuilderWrapper
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.pure.copybean.model.Copybean
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
-import org.copygrinder.pure.copybean.search.DocumentBuilder
+import org.copygrinder.pure.copybean.search.{QueryBuilder, DocumentBuilder}
 import spray.caching.{Cache, LruCache}
 
 class DefaultWiring {
@@ -68,7 +68,9 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val documentBuilder = new DocumentBuilder()
 
-  lazy val indexer = new Indexer(globalModule.configuration, documentBuilder)
+  lazy val queryBuilder = new QueryBuilder()
+
+  lazy val indexer = new Indexer(globalModule.configuration, documentBuilder, queryBuilder)
 
   lazy val cache: Cache[Copybean] = LruCache()
 
