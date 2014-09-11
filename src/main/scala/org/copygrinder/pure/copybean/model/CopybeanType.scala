@@ -11,9 +11,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean
+package org.copygrinder.pure.copybean.model
 
-object PrimitiveType extends Enumeration {
-  type PrimitiveType = Value
-  val String, Numeric, Boolean, Blob = Value
+case class CopybeanType(id: String, singularTypeName: String, pluralTypeName: String = "", beanDescFormat: String,
+  fieldDefs: Seq[CopybeanFieldDef], validators: Seq[CopybeanValidator]) {
+
 }

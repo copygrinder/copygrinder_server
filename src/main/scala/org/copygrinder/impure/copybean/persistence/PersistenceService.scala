@@ -20,7 +20,7 @@ import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.impure.system.Configuration
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
+import org.copygrinder.pure.copybean.model.{CopybeanType, AnonymousCopybean, Copybean}
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 import spray.caching.Cache
@@ -30,17 +30,23 @@ import scala.concurrent.Future
 
 class PersistenceService(
   config: Configuration, hashedFileResolver: HashedFileResolver, copybeanFactory: CopybeanFactory, indexer: Indexer,
-  cache: Cache[Copybean], gitRepoFactory: (File) => GitRepo
+  beanCache: Cache[Copybean], typeCache: Cache[CopybeanType], gitRepoFactory: (File) => GitRepo
   ) {
 
-  protected lazy val repoDir = new File(config.copybeanRepoRoot + "/" + config.copybeanDefaultRepo + "/")
+  protected lazy val repoDir = new File(config.copybeanDataRoot + "/default/")
 
-  protected lazy val gitRepo = gitRepoFactory(repoDir)
+  protected lazy val beanDir = new File(repoDir, "copybeans")
+
+  protected lazy val beanGitRepo = gitRepoFactory(beanDir)
+
+  protected lazy val typesDir = new File(repoDir, "types")
+
+  protected lazy val typeGitRepo = gitRepoFactory(typesDir)
 
   protected implicit def json4sJacksonFormats: Formats = DefaultFormats
 
   def fetch(id: String): Copybean = {
-    val file = hashedFileResolver.locate(id, "json", repoDir)
+    val file = hashedFileResolver.locate(id, "json", beanDir)
 
     if (!file.exists()) {
       throw new CopybeanNotFound()
@@ -50,7 +56,7 @@ class PersistenceService(
     }
   }
 
-  def cachedFetch(id: String): Future[Copybean] = cache(id) {
+  def cachedFetch(id: String): Future[Copybean] = beanCache(id) {
     fetch(id)
   }
 
@@ -60,10 +66,10 @@ class PersistenceService(
   }
 
   def store(copybean: Copybean): Future[_] = {
-    gitRepo.createIfNonExistant()
-    val file = hashedFileResolver.locate(copybean.id, "json", repoDir)
     Future {
-      gitRepo.add(file, write(copybean))
+      beanGitRepo.createIfNonExistant()
+      val file = hashedFileResolver.locate(copybean.id, "json", beanDir)
+      beanGitRepo.add(file, write(copybean))
     }.zip(Future {
       indexer.addCopybean(copybean)
     })
@@ -85,4 +91,15 @@ class PersistenceService(
     })
     Future.sequence(futures)
   }
+
+  def store(copybeanType: CopybeanType): Future[(Unit, Unit)] = {
+    Future {
+      typeGitRepo.createIfNonExistant()
+      val file = new File(typesDir, "/" + copybeanType.id + ".json")
+      typeGitRepo.add(file, write(copybeanType))
+    }.zip(Future {
+      indexer.addType(copybeanType)
+    })
+  }
+
 }

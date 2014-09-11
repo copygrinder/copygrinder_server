@@ -20,7 +20,7 @@ import org.copygrinder.impure.api.CopygrinderApi
 import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.copybean.persistence.{FileRepositoryBuilderWrapper, GitRepo, HashedFileResolver, PersistenceService}
 import org.copygrinder.impure.copybean.search.Indexer
-import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.pure.copybean.model.{CopybeanType, Copybean}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.copygrinder.pure.copybean.search.{QueryBuilder, DocumentBuilder}
 import spray.caching.{Cache, LruCache}
@@ -72,7 +72,9 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val indexer = new Indexer(globalModule.configuration, documentBuilder, queryBuilder)
 
-  lazy val cache: Cache[Copybean] = LruCache()
+  lazy val beanCache: Cache[Copybean] = LruCache()
+
+  lazy val typeCache: Cache[CopybeanType] = LruCache()
 
   lazy val fileRepositoryBuilderWrapper = new FileRepositoryBuilderWrapper()
 
@@ -81,7 +83,7 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
   }
 
   lazy val persistenceService = new PersistenceService(
-    globalModule.configuration, hashedFileResolver, copybeanFactory, indexer, cache, gitRepoFactory
+    globalModule.configuration, hashedFileResolver, copybeanFactory, indexer, beanCache, typeCache, gitRepoFactory
   )
 
 }

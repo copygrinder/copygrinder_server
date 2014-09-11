@@ -21,14 +21,14 @@ import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
 import org.copygrinder.impure.system.Configuration
-import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.pure.copybean.model.{CopybeanType, Copybean}
 import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 
 class Indexer(config: Configuration, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder) {
 
   protected lazy val analyzer = new KeywordAnalyzer()
 
-  protected lazy val indexDirectory = FSDirectory.open(new File(config.indexRoot))
+  protected lazy val indexDirectory = FSDirectory.open(new File(config.copybeanDataRoot, "default/index"))
 
   protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_10_0, analyzer)
 
@@ -87,5 +87,8 @@ class Indexer(config: Configuration, documentBuilder: DocumentBuilder, queryBuil
     }
   }
 
+  def addType(copybeanType: CopybeanType): Unit = {
+
+  }
 
 }

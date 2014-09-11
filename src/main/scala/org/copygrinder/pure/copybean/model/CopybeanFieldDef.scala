@@ -11,21 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean
+package org.copygrinder.pure.copybean.model
 
-import org.copygrinder.pure.copybean.PrimitiveType.PrimitiveType
-
-sealed trait CopybeanFieldDef {
-  type T
-  val fieldType: T
-  val name: String
+case class CopybeanFieldDef(id: String, fieldType: String) {
 }
-
-case class PrimitiveCopybeanFieldDef(name: String, fieldType: PrimitiveType) extends CopybeanFieldDef {
-  type T = PrimitiveType
-}
-
-case class ComplexCopybeanFieldDef(name: String, fieldType: CopybeanType) extends CopybeanFieldDef {
-  type T = CopybeanType
-}
-

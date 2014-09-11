@@ -35,11 +35,7 @@ class Configuration {
 
   lazy val serviceThreads = Try(config.getInt("service.threads")).getOrElse(Runtime.getRuntime.availableProcessors())
 
-  lazy val copybeanRepoRoot = Try(config.getString("copybeans.repoRoot")).getOrElse("data/copybeans")
-
-  lazy val copybeanDefaultRepo = Try(config.getString("copybeans.defaultRepo")).getOrElse("default")
-
-  lazy val indexRoot = Try(config.getString("index.root")).getOrElse("data/index")
+  lazy val copybeanDataRoot = Try(config.getString("copybeans.dataRoot")).getOrElse("data")
 
   lazy val indexMaxResults = Try(config.getInt("index.maxResults")).getOrElse(defaultMaxResults)
 

@@ -11,10 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean
+package org.copygrinder.pure.copybean.model
 
-import org.copygrinder.pure.copybean.model.validator.CopybeanValidator
-
-case class CopybeanType(name: String, fieldDefs: Seq[CopybeanFieldDef], validators: Seq[CopybeanValidator]) {
+case class CopybeanValidator(id: String, validatorType: String, arguments: Seq[String]) {
 
 }

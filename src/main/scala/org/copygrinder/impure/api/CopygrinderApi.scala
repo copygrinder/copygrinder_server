@@ -19,7 +19,7 @@ import akka.actor.ActorContext
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
+import org.copygrinder.pure.copybean.model.{CopybeanType, AnonymousCopybean, Copybean}
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
@@ -90,15 +90,26 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService) e
 
   protected val copybeanWriteRoute = handleExceptions(copybeanExceptionHandler) {
     pathPrefix("copybeans") {
-      post {
-        entity(as[AnonymousCopybean]) { anonBean =>
-          complete {
-            Future {
-              persistenceService.store(anonBean).map(("key", _))
+      pathPrefix("types") {
+        post {
+          entity(as[CopybeanType]) { copybeanType =>
+            complete {
+              Future {
+                persistenceService.store(copybeanType)
+              }
             }
           }
         }
-      }
+      } ~
+        post {
+          entity(as[AnonymousCopybean]) { anonBean =>
+            complete {
+              Future {
+                persistenceService.store(anonBean).map(("key", _))
+              }
+            }
+          }
+        }
     }
   }
 
