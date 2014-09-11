@@ -24,26 +24,8 @@ class GitRepo(repoDir: File, fileRepositoryBuilderWrapper: FileRepositoryBuilder
 
   protected lazy val repository = buildRepository()
 
-  def create(overwrite: Boolean = false): Unit = {
-
-    if (overwrite) {
-      FileUtils.deleteDirectory(repoDir)
-    }
-
-    repository.create()
-    repository.close()
-  }
-
-  def createIfNonExistant(): Unit = {
-    if (!repoDir.exists()) {
-      create(overwrite = false)
-    }
-  }
-
   def add(file: File, content: String): Unit = {
-
     FileUtils.forceMkdir(file.getParentFile)
-
     file.createNewFile()
     val out = new FileWriter(file)
     out.write(content)
@@ -67,8 +49,16 @@ class GitRepo(repoDir: File, fileRepositoryBuilderWrapper: FileRepositoryBuilder
   }
 
   protected def buildRepository(): Repository = {
-    FileUtils.forceMkdir(repoDir)
-    fileRepositoryBuilderWrapper.setGitDir(new File(repoDir, ".git")).setup().build()
+    val gitDir: File = new File(repoDir, ".git")
+    if (!gitDir.exists()) {
+      FileUtils.forceMkdir(repoDir)
+      val repo = fileRepositoryBuilderWrapper.setGitDir(gitDir).setup().build()
+      Thread.sleep(100)
+      repo.create()
+      repo
+    } else {
+      fileRepositoryBuilderWrapper.setGitDir(gitDir).build()
+    }
   }
 
 }

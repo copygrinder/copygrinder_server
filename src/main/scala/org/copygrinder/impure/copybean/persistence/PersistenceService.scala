@@ -33,13 +33,13 @@ class PersistenceService(
   beanCache: Cache[Copybean], typeCache: Cache[CopybeanType], gitRepoFactory: (File) => GitRepo
   ) {
 
-  protected lazy val repoDir = new File(config.copybeanDataRoot + "/default/")
+  protected lazy val repoDir = new File(config.copybeanDataRoot + "/default/").getAbsoluteFile
 
-  protected lazy val beanDir = new File(repoDir, "copybeans")
+  protected lazy val beanDir = new File(repoDir, "copybeans/")
 
   protected lazy val beanGitRepo = gitRepoFactory(beanDir)
 
-  protected lazy val typesDir = new File(repoDir, "types")
+  protected lazy val typesDir = new File(repoDir, "types/")
 
   protected lazy val typeGitRepo = gitRepoFactory(typesDir)
 
@@ -67,7 +67,6 @@ class PersistenceService(
 
   def store(copybean: Copybean): Future[_] = {
     Future {
-      beanGitRepo.createIfNonExistant()
       val file = hashedFileResolver.locate(copybean.id, "json", beanDir)
       beanGitRepo.add(file, write(copybean))
     }.zip(Future {
@@ -94,7 +93,6 @@ class PersistenceService(
 
   def store(copybeanType: CopybeanType): Future[(Unit, Unit)] = {
     Future {
-      typeGitRepo.createIfNonExistant()
       val file = new File(typesDir, "/" + copybeanType.id + ".json")
       typeGitRepo.add(file, write(copybeanType))
     }.zip(Future {

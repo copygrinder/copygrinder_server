@@ -76,10 +76,8 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val typeCache: Cache[CopybeanType] = LruCache()
 
-  lazy val fileRepositoryBuilderWrapper = new FileRepositoryBuilderWrapper()
-
   def gitRepoFactory(file: File): GitRepo = {
-    new GitRepo(file, fileRepositoryBuilderWrapper)
+    new GitRepo(file, new FileRepositoryBuilderWrapper())
   }
 
   lazy val persistenceService = new PersistenceService(

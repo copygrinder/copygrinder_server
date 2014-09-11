@@ -90,7 +90,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService) e
 
   protected val copybeanWriteRoute = handleExceptions(copybeanExceptionHandler) {
     pathPrefix("copybeans") {
-      pathPrefix("types") {
+      path("types") {
         post {
           entity(as[CopybeanType]) { copybeanType =>
             complete {
