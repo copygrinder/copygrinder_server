@@ -32,7 +32,7 @@ class Startup extends FlatSpec with Matchers {
       override lazy val configuration = new Configuration {
         override lazy val serviceReadPort = 9999
         override lazy val serviceWritePort = 9999
-        override lazy val serviceThreads = 2
+        override lazy val serviceThreads = 1
       }
     }
     override lazy val serverModule = new ServerModule(globalModule, persistenceServiceModule) {
@@ -43,16 +43,20 @@ class Startup extends FlatSpec with Matchers {
             path("longpause") {
               get {
                 complete {
-                  Thread.sleep(500)
-                  "LONG"
+                  Future {
+                    Thread.sleep(500)
+                    "LONG"
+                  }
                 }
               }
             } ~
             path("shortpause") {
               get {
                 complete {
-                  Thread.sleep(100)
-                  "SHORT"
+                  Future {
+                    Thread.sleep(100)
+                    "SHORT"
+                  }
                 }
               }
             }
