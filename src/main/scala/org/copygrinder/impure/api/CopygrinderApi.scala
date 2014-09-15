@@ -18,8 +18,9 @@ import java.io.IOException
 import akka.actor.ActorContext
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
+import org.copygrinder.impure.system.ScopedFactory
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
-import org.copygrinder.pure.copybean.model.{CopybeanType, AnonymousCopybean, Copybean}
+import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType}
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
@@ -29,7 +30,7 @@ import spray.routing._
 
 import scala.concurrent._
 
-class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService) extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
+class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, scopedFactory: ScopedFactory) extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
 
   override implicit def json4sJacksonFormats: Formats = DefaultFormats
 
@@ -61,27 +62,31 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService) e
   }
 
   protected val copybeanReadRoute = handleExceptions(copybeanExceptionHandler) {
-    pathPrefix("copybeans") {
-      get {
-        parameterSeq { params =>
-          if (params.isEmpty || params.head._1.isEmpty) {
-            reject
-          } else {
-            complete {
-              Future {
-                persistenceService.find(params)
+
+    pathPrefix(Segment) { siloId =>
+      implicit val scope = scopedFactory.build(siloId)
+      pathPrefix("copybeans") {
+        get {
+          parameterSeq { params =>
+            if (params.isEmpty || params.head._1.isEmpty) {
+              reject
+            } else {
+              complete {
+                Future {
+                  persistenceService.find(params)
+                }
               }
             }
-          }
-        } ~ path(Segment) { id =>
-          complete {
-            Future {
-              persistenceService.cachedFetch(id)
+          } ~ path(Segment) { id =>
+            complete {
+              Future {
+                persistenceService.cachedFetch(id)
+              }
             }
-          }
-        } ~ complete {
-          Future {
-            persistenceService.find()
+          } ~ complete {
+            Future {
+              persistenceService.find()
+            }
           }
         }
       }
@@ -89,13 +94,16 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService) e
   }
 
   protected val copybeanWriteRoute = handleExceptions(copybeanExceptionHandler) {
-    pathPrefix("copybeans") {
-      path("types") {
-        post {
-          entity(as[CopybeanType]) { copybeanType =>
-            complete {
-              Future {
-                persistenceService.store(copybeanType)
+    pathPrefix(Segment) { siloId =>
+      implicit val scope = scopedFactory.build(siloId)
+      pathPrefix("copybeans") {
+        path("types") {
+          post {
+            entity(as[CopybeanType]) { copybeanType =>
+              complete {
+                Future {
+                  persistenceService.store(copybeanType)
+                }
               }
             }
           }

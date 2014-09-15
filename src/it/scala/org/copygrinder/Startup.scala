@@ -38,7 +38,7 @@ class Startup extends FlatSpec with Matchers {
     override lazy val serverModule = new ServerModule(globalModule, persistenceServiceModule) {
 
       override def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-        new CopygrinderApi(ac, persistenceServiceModule.persistenceService) {
+        new CopygrinderApi(ac, persistenceServiceModule.persistenceService, scopedFactory) {
           override val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes ~
             path("longpause") {
               get {

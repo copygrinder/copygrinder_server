@@ -18,12 +18,14 @@ import java.io.File
 import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
 import org.copygrinder.impure.copybean.CopybeanFactory
-import org.copygrinder.impure.copybean.persistence.{FileRepositoryBuilderWrapper, GitRepo, HashedFileResolver, PersistenceService}
+import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.search.Indexer
-import org.copygrinder.pure.copybean.model.{CopybeanType, Copybean}
+import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
-import org.copygrinder.pure.copybean.search.{QueryBuilder, DocumentBuilder}
+import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 import spray.caching.{Cache, LruCache}
+
+import scala.concurrent.ExecutionContext
 
 class DefaultWiring {
 
@@ -45,8 +47,12 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
 
   implicit val actorSystem = actorSystemInit.init()
 
+  val scopedFactory = new ScopedFactory(
+    persistenceServiceModule.documentBuilder, persistenceServiceModule.queryBuilder, globalModule.configuration
+  )
+
   def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-    new CopygrinderApi(ac, persistenceServiceModule.persistenceService)
+    new CopygrinderApi(ac, persistenceServiceModule.persistenceService, scopedFactory)
   }
 
   lazy val routeExecutingActor = Props(new RouteExecutingActor(copygrinderApiFactory))
@@ -70,18 +76,42 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val queryBuilder = new QueryBuilder()
 
-  lazy val indexer = new Indexer(globalModule.configuration, documentBuilder, queryBuilder)
+  lazy val persistenceService = new PersistenceService(
+    globalModule.configuration, hashedFileResolver, copybeanFactory
+  )
+
+}
+
+class Scoped(siloId: String, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, config: Configuration) {
+
+  lazy val root = new File(new File(config.copybeanDataRoot), siloId).getAbsolutePath
+
+  lazy val indexDir = new File(root,  "index/")
+
+  lazy val indexer = new Indexer(indexDir, documentBuilder, queryBuilder, config.indexMaxResults)
 
   lazy val beanCache: Cache[Copybean] = LruCache()
 
   lazy val typeCache: Cache[CopybeanType] = LruCache()
 
-  def gitRepoFactory(file: File): GitRepo = {
-    new GitRepo(file, new FileRepositoryBuilderWrapper())
-  }
+  lazy val beanDir = new File(root, "copybeans/")
 
-  lazy val persistenceService = new PersistenceService(
-    globalModule.configuration, hashedFileResolver, copybeanFactory, indexer, beanCache, typeCache, gitRepoFactory
-  )
+  lazy val beanGitRepo = new GitRepo(beanDir, new FileRepositoryBuilderWrapper())
+
+  lazy val typesDir = new File(root, "types/")
+
+  lazy val typeGitRepo = new GitRepo(typesDir, new FileRepositoryBuilderWrapper())
+
+}
+
+class ScopedFactory(documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, config: Configuration) {
+
+  lazy val scopedCache: Cache[Scoped] = LruCache()
+
+  def build(siloId: String)(implicit ex: ExecutionContext): Scoped = {
+    scopedCache(siloId) {
+      new Scoped(siloId, documentBuilder, queryBuilder, config)
+    }.value.get.get
+  }
 
 }

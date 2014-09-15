@@ -62,7 +62,7 @@ object CopygrinderBuild extends Build {
       fork := true,
       test in AssemblyKeys.assembly := {},
       itJacoco.reportFormats in itJacoco.Config := Seq(XMLReport(encoding = "utf-8"), HTMLReport()),
-      ideaExcludeFolders := ".idea" :: ".idea_modules" :: "target" :: Nil
+      ideaExcludeFolders := ".idea" :: ".idea_modules" :: "target" :: "data" :: "gatling" :: Nil
     ).settings(
       Revolver.settings: _*
     ).settings(
