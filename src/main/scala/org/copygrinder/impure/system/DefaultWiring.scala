@@ -47,12 +47,12 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
 
   implicit val actorSystem = actorSystemInit.init()
 
-  val scopedFactory = new ScopedFactory(
+  val siloScopeFactory = new SiloScopeFactory(
     persistenceServiceModule.documentBuilder, persistenceServiceModule.queryBuilder, globalModule.configuration
   )
 
   def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-    new CopygrinderApi(ac, persistenceServiceModule.persistenceService, scopedFactory)
+    new CopygrinderApi(ac, persistenceServiceModule.persistenceService, siloScopeFactory)
   }
 
   lazy val routeExecutingActor = Props(new RouteExecutingActor(copygrinderApiFactory))
@@ -82,7 +82,7 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
 }
 
-class Scoped(siloId: String, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, config: Configuration) {
+class SiloScope(siloId: String, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, config: Configuration) {
 
   lazy val root = new File(new File(config.copybeanDataRoot), siloId).getAbsolutePath
 
@@ -104,13 +104,13 @@ class Scoped(siloId: String, documentBuilder: DocumentBuilder, queryBuilder: Que
 
 }
 
-class ScopedFactory(documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, config: Configuration) {
+class SiloScopeFactory(documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, config: Configuration) {
 
-  lazy val scopedCache: Cache[Scoped] = LruCache()
+  lazy val siloScopeCache: Cache[SiloScope] = LruCache()
 
-  def build(siloId: String)(implicit ex: ExecutionContext): Scoped = {
-    scopedCache(siloId) {
-      new Scoped(siloId, documentBuilder, queryBuilder, config)
+  def build(siloId: String)(implicit ex: ExecutionContext): SiloScope = {
+    siloScopeCache(siloId) {
+      new SiloScope(siloId, documentBuilder, queryBuilder, config)
     }.value.get.get
   }
 

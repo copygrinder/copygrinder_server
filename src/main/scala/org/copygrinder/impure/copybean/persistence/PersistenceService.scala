@@ -17,7 +17,7 @@ import java.io.File
 
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.CopybeanFactory
-import org.copygrinder.impure.system.{Configuration, Scoped}
+import org.copygrinder.impure.system.{Configuration, SiloScope}
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType}
 import org.json4s.jackson.Serialization._
@@ -31,8 +31,8 @@ class PersistenceService(
 
   protected implicit def json4sJacksonFormats: Formats = DefaultFormats
 
-  def fetch(id: String)(implicit scoped: Scoped): Copybean = {
-    val file = hashedFileResolver.locate(id, "json", scoped.beanDir)
+  def fetch(id: String)(implicit siloScope: SiloScope): Copybean = {
+    val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
 
     if (!file.exists()) {
       throw new CopybeanNotFound()
@@ -42,47 +42,47 @@ class PersistenceService(
     }
   }
 
-  def cachedFetch(id: String)(implicit scoped: Scoped): Future[Copybean] = scoped.beanCache(id) {
+  def cachedFetch(id: String)(implicit siloScope: SiloScope): Future[Copybean] = siloScope.beanCache(id) {
     fetch(id)
   }
 
-  def store(anonCopybean: AnonymousCopybean)(implicit scoped: Scoped): Future[String] = {
+  def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Future[String] = {
     val copybean = copybeanFactory.create(anonCopybean)
     store(copybean).map(_ => copybean.id)
   }
 
-  def store(copybean: Copybean)(implicit scoped: Scoped): Future[_] = {
+  def store(copybean: Copybean)(implicit siloScope: SiloScope): Future[_] = {
     Future {
-      val file = hashedFileResolver.locate(copybean.id, "json", scoped.beanDir)
-      scoped.beanGitRepo.add(file, write(copybean))
+      val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
+      siloScope.beanGitRepo.add(file, write(copybean))
     }.zip(Future {
-      scoped.indexer.addCopybean(copybean)
+      siloScope.indexer.addCopybean(copybean)
     })
   }
 
-  def find()(implicit scoped: Scoped): Future[Seq[Copybean]] = {
-    val copybeanIds = scoped.indexer.findCopybeanIds()
+  def find()(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {
+    val copybeanIds = siloScope.indexer.findCopybeanIds()
     fetchCopybeans(copybeanIds)
   }
 
-  def find(params: Seq[(String, String)])(implicit scoped: Scoped): Future[Seq[Copybean]] = {
-    val copybeanIds = scoped.indexer.findCopybeanIds(params)
+  def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {
+    val copybeanIds = siloScope.indexer.findCopybeanIds(params)
     fetchCopybeans(copybeanIds)
   }
 
-  protected def fetchCopybeans(copybeanIds: Seq[String])(implicit scoped: Scoped): Future[Seq[Copybean]] = {
+  protected def fetchCopybeans(copybeanIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {
     val futures = copybeanIds.map(id => {
       cachedFetch(id)
     })
     Future.sequence(futures)
   }
 
-  def store(copybeanType: CopybeanType)(implicit scoped: Scoped): Future[(Unit, Unit)] = {
+  def store(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Future[(Unit, Unit)] = {
     Future {
-      val file = new File(scoped.typesDir, "/" + copybeanType.id + ".json")
-      scoped.typeGitRepo.add(file, write(copybeanType))
+      val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
+      siloScope.typeGitRepo.add(file, write(copybeanType))
     }.zip(Future {
-      scoped.indexer.addType(copybeanType)
+      siloScope.indexer.addType(copybeanType)
     })
   }
 
