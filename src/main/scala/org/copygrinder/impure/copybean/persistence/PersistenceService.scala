@@ -19,7 +19,8 @@ import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.system.{Configuration, SiloScope}
 import org.copygrinder.pure.copybean.exception.CopybeanNotFound
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType}
+import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType, FieldType}
+import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 
@@ -29,7 +30,7 @@ import scala.concurrent.Future
 class PersistenceService(
   config: Configuration, hashedFileResolver: HashedFileResolver, copybeanFactory: CopybeanFactory) {
 
-  protected implicit def json4sJacksonFormats: Formats = DefaultFormats
+  implicit def json4sJacksonFormats: Formats = DefaultFormats + new EnumNameSerializer(FieldType)
 
   def fetch(id: String)(implicit siloScope: SiloScope): Copybean = {
     val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
