@@ -32,7 +32,7 @@ import scala.concurrent._
 
 class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, siloScopeFactory: SiloScopeFactory) extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
 
-  override implicit def json4sJacksonFormats: Formats = DefaultFormats
+  override implicit def json4sJacksonFormats: Formats = persistenceService.json4sJacksonFormats
 
   private implicit def executionContext = ac.dispatcher
 
@@ -107,9 +107,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
               }
             }
           }
-        }
-      } ~
-        post {
+        } ~ post {
           entity(as[AnonymousCopybean]) { anonBean =>
             complete {
               Future {
@@ -118,6 +116,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
             }
           }
         }
+      }
     }
   }
 
