@@ -18,7 +18,7 @@ import java.io.File
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.system.{Configuration, SiloScope}
-import org.copygrinder.pure.copybean.exception.CopybeanNotFound
+import org.copygrinder.pure.copybean.exception.{SiloNotInitialized, CopybeanNotFound}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType, FieldType}
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization._
@@ -92,7 +92,7 @@ class PersistenceService(
 
   protected def checkSiloExists()(implicit siloScope: SiloScope) = {
     if (!siloScope.root.exists) {
-      throw new RuntimeException("Silo not initialized")
+      throw new SiloNotInitialized()
     }
   }
 

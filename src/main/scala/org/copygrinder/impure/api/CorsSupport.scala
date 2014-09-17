@@ -13,9 +13,9 @@
  */
 package org.copygrinder.impure.api
 
-import spray.http.{HttpMethods, HttpMethod, HttpResponse, AllOrigins}
 import spray.http.HttpHeaders._
 import spray.http.HttpMethods._
+import spray.http.{AllOrigins, HttpMethods, HttpResponse}
 import spray.routing._
 
 trait CorsSupport {

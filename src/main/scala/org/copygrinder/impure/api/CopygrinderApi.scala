@@ -19,7 +19,7 @@ import akka.actor.ActorContext
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.impure.system.SiloScopeFactory
-import org.copygrinder.pure.copybean.exception.CopybeanNotFound
+import org.copygrinder.pure.copybean.exception.{SiloNotInitialized, CopybeanNotFound}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType}
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
@@ -40,11 +40,18 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
   protected def copybeanExceptionHandler() =
     ExceptionHandler {
       case e: CopybeanNotFound =>
-        pathPrefix("copybeans") {
-          path(Segment) { id =>
-            logger.debug(s"Copybean with id=$id was not found")
-            complete(NotFound, s"Copy bean with id '$id' was not found.")
+        pathPrefix(Segment) { siloId =>
+          pathPrefix("copybeans") {
+            path(Segment) { id =>
+              logger.debug(s"Copybean with id=$id was not found")
+              complete(NotFound, s"Copybean with id '$id' was not found.")
+            }
           }
+        }
+      case e: SiloNotInitialized =>
+        pathPrefix(Segment) { siloId =>
+          logger.debug(s"Silo with id=$siloId has not been initialized")
+          complete(NotFound, s"Silo with id '$siloId' has not been initialized.")
         }
       case e: IOException =>
         requestUri { uri =>
