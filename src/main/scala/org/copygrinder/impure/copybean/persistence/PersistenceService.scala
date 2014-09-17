@@ -33,6 +33,7 @@ class PersistenceService(
   implicit def json4sJacksonFormats: Formats = DefaultFormats + new EnumNameSerializer(FieldType)
 
   def fetch(id: String)(implicit siloScope: SiloScope): Copybean = {
+    checkSiloExists()
     val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
 
     if (!file.exists()) {
@@ -62,11 +63,13 @@ class PersistenceService(
   }
 
   def find()(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {
+    checkSiloExists()
     val copybeanIds = siloScope.indexer.findCopybeanIds()
     fetchCopybeans(copybeanIds)
   }
 
   def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {
+    checkSiloExists()
     val copybeanIds = siloScope.indexer.findCopybeanIds(params)
     fetchCopybeans(copybeanIds)
   }
@@ -85,6 +88,12 @@ class PersistenceService(
     }.zip(Future {
       siloScope.indexer.addType(copybeanType)
     })
+  }
+
+  protected def checkSiloExists()(implicit siloScope: SiloScope) = {
+    if (!siloScope.root.exists) {
+      throw new RuntimeException("Silo not initialized")
+    }
   }
 
 }

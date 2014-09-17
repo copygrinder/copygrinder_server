@@ -30,7 +30,8 @@ import spray.routing._
 
 import scala.concurrent._
 
-class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, siloScopeFactory: SiloScopeFactory) extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
+class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, siloScopeFactory: SiloScopeFactory)
+  extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
 
   override implicit def json4sJacksonFormats: Formats = persistenceService.json4sJacksonFormats
 

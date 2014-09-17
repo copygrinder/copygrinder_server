@@ -53,7 +53,6 @@ class GitRepo(repoDir: File, fileRepositoryBuilderWrapper: FileRepositoryBuilder
     if (!gitDir.exists()) {
       FileUtils.forceMkdir(repoDir)
       val repo = fileRepositoryBuilderWrapper.setGitDir(gitDir).setup().build()
-      Thread.sleep(100)
       repo.create()
       repo
     } else {
