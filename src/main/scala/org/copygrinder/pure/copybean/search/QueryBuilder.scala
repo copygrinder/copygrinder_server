@@ -14,8 +14,8 @@
 package org.copygrinder.pure.copybean.search
 
 import org.apache.lucene.index.Term
-import org.apache.lucene.search._
 import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search._
 
 class QueryBuilder {
 
@@ -34,7 +34,7 @@ class QueryBuilder {
         case "not" => BooleanClause.Occur.MUST_NOT
       }
 
-      val booleanQuery = new BooleanQuery
+      val booleanQuery = new BooleanQuery()
       booleanQuery.add(headQuery, clause)
       booleanQuery.add(build(paramTail.tail), clause)
       booleanQuery
@@ -45,7 +45,7 @@ class QueryBuilder {
 
 
   protected def createQuery(params: Seq[(String, String)]): Query = {
-    val booleanQuery = new BooleanQuery
+    val booleanQuery = new BooleanQuery()
     params.foreach { param =>
       if (param._1.nonEmpty && param._2.nonEmpty) {
         val (field, clause) = determineBooleanClause(param._1)
@@ -72,7 +72,12 @@ class QueryBuilder {
     value match {
       case intString if intString.forall(_.isDigit) => {
         val intValue = value.toInt
-        NumericRangeQuery.newIntRange(scopedField, 1, intValue, intValue, true, true)
+        val query = new BooleanQuery()
+        val numericQuery = NumericRangeQuery.newIntRange(scopedField, 1, intValue, intValue, true, true)
+        val termQuery = new TermQuery(new Term(scopedField, value))
+        query.add(numericQuery, BooleanClause.Occur.SHOULD)
+        query.add(termQuery, BooleanClause.Occur.SHOULD)
+        query
       }
       case _ => {
         val q = new PhraseQuery

@@ -19,11 +19,11 @@ import akka.actor.ActorContext
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.impure.system.SiloScopeFactory
-import org.copygrinder.pure.copybean.exception.{SiloNotInitialized, CopybeanNotFound}
+import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, SiloNotInitialized}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType}
+import org.json4s.Formats
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
-import org.json4s.{DefaultFormats, Formats}
 import spray.http.StatusCodes._
 import spray.httpx.Json4sJacksonSupport
 import spray.routing._
@@ -118,7 +118,16 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
             }
           }
         } ~ post {
-          entity(as[AnonymousCopybean]) { anonBean =>
+          entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
+            complete {
+              Future {
+                implicit val siloScope = siloScopeFactory.build(siloId)
+                anonBeans.map { anonBean =>
+                  persistenceService.store(anonBean).map(("key", _))
+                }
+              }
+            }
+          } ~ entity(as[AnonymousCopybean]) { anonBean =>
             complete {
               Future {
                 implicit val siloScope = siloScopeFactory.build(siloId)

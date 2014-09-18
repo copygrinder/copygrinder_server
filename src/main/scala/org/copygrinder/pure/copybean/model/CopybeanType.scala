@@ -13,7 +13,11 @@
  */
 package org.copygrinder.pure.copybean.model
 
-case class CopybeanType(id: String, singularTypeNoun: String, pluralTypeNoun: String = "", beanDescFormat: String,
-  fieldDefs: Seq[CopybeanFieldDef], validators: Seq[CopybeanValidator]) {
-
-}
+case class CopybeanType(
+  id: String,
+  singularTypeNoun: String,
+  pluralTypeNoun: String = "",
+  beanDescFormat: String = "",
+  fieldDefs: Seq[CopybeanFieldDef] = Seq(),
+  validatorDefs: Seq[CopybeanValidatorDef] = Seq()
+  )

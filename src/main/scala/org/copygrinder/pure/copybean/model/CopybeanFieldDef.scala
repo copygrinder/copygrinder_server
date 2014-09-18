@@ -13,8 +13,7 @@
  */
 package org.copygrinder.pure.copybean.model
 
-case class CopybeanFieldDef(id: String, fieldType: FieldType.FieldType) {
-}
+case class CopybeanFieldDef(id: String, fieldType: FieldType.FieldType)
 
 object FieldType extends Enumeration {
 

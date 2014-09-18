@@ -13,6 +13,14 @@
  */
 package org.copygrinder.pure.copybean.model
 
-case class CopybeanValidator(id: String, validatorType: String, arguments: Seq[String]) {
+case class CopybeanValidatorDef(id: String, validatorType: String, arguments: Seq[String]) {
+
+}
+
+object Validator extends Enumeration {
+
+  type FieldType = Value
+
+  val String, Integer, Reference = Value
 
 }

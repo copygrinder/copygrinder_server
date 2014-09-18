@@ -15,20 +15,23 @@ package org.copygrinder.impure.copybean.persistence
 
 import java.io.File
 
+import akka.actor.Status.Success
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.system.{Configuration, SiloScope}
-import org.copygrinder.pure.copybean.exception.{SiloNotInitialized, CopybeanNotFound}
+import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, SiloNotInitialized}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType, FieldType}
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 class PersistenceService(
-  config: Configuration, hashedFileResolver: HashedFileResolver, copybeanFactory: CopybeanFactory) {
+  config: Configuration, hashedFileResolver: HashedFileResolver, copybeanFactory: CopybeanFactory) extends LazyLogging {
 
   implicit def json4sJacksonFormats: Formats = DefaultFormats + new EnumNameSerializer(FieldType)
 
@@ -48,18 +51,22 @@ class PersistenceService(
     fetch(id)
   }
 
-  def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Future[String] = {
+  def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): String = {
     val copybean = copybeanFactory.create(anonCopybean)
-    store(copybean).map(_ => copybean.id)
+    store(copybean)
   }
 
-  def store(copybean: Copybean)(implicit siloScope: SiloScope): Future[_] = {
-    Future {
+  def store(copybean: Copybean)(implicit siloScope: SiloScope): String = {
+    val f = Future {
       val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
       siloScope.beanGitRepo.add(file, write(copybean))
     }.zip(Future {
       siloScope.indexer.addCopybean(copybean)
     })
+
+    Await.ready(f, 5 seconds)
+
+    copybean.id
   }
 
   def find()(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {

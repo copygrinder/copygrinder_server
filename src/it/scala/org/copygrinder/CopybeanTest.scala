@@ -15,6 +15,7 @@ package org.copygrinder
 
 import java.io.File
 
+import com.ning.http.client.Response
 import dispatch.Defaults._
 import dispatch._
 import org.apache.commons.io.FileUtils
@@ -30,7 +31,11 @@ class CopybeanTest extends FlatSpec with Matchers {
 
   val wiring = TestWiring.wiring
 
-  "Copygrinder" should "create a new silo and create a type" in {
+  val copybeansTypesUrl = url(s"http://localhost:9999/$siloId/copybeans/types")
+
+  val copybeansUrl = url(s"http://localhost:9999/$siloId/copybeans")
+
+  "Copygrinder" should "create a new silo and POST a type" in {
 
     val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
 
@@ -39,28 +44,89 @@ class CopybeanTest extends FlatSpec with Matchers {
     val json =
       """
         |{
-        |  "id":"page3",
-        |  "singularTypeNoun":"Page",
-        |  "beanDescFormat": "name",
+        |  "id":"testtype",
+        |  "singularTypeNoun":"TestType",
         |  "fieldDefs": [],
         |  "validators": []
         |}""".stripMargin
 
-    val copybeansReq = url(s"http://localhost:9999/$siloId/copybeans/types")
-      .POST.setContentType("application/json", "UTF8")
-      .setBody(json)
+    val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
-    val responseFuture = Http(copybeansReq).map { response =>
+    val responseFuture = Http(req).map { response =>
 
-      println("RESPONSE " + response.getResponseBody)
-
-      assert(response.getStatusCode == 200)
+      checkStatus(response)
 
       assert(siloDir.exists)
     }
 
     Await.result(responseFuture, 1 second)
-
   }
+
+  it should "POST new copybeans" in {
+
+    val json =
+      """
+        |[{
+        |  "enforcedTypeIds": [
+        |    "testtype"
+        |  ],
+        |  "contains": {
+        |    "testfield1":"1",
+        |    "testfield2":2
+        |  }
+        |},{
+        |  "enforcedTypeIds": [
+        |    "testtype"
+        |  ],
+        |  "contains": {
+        |    "testfield1":"3",
+        |    "testfield2":4
+        |  }
+        |}]""".stripMargin
+
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response)
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
+  it should "GET all copybeans" in {
+
+    val req = copybeansUrl.GET
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response)
+      assert(response.getResponseBody.contains("testfield2\":2"))
+      assert(response.getResponseBody.contains("testfield2\":4"))
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
+  it should "GET specific copybeans" in {
+
+    val req = copybeansUrl.GET.setQueryParameters(Map("testfield1" -> Seq("3")))
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response)
+      assert(response.getResponseBody.contains("testfield1\":\"3"))
+      assert(!response.getResponseBody.contains("testfield2\":2"))
+
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
+  def checkStatus(response: Response, code: Int = 200) = {
+    val status = response.getStatusCode
+    if (status != 200) {
+      println("RESPONSE: " + response.getResponseBody)
+      assert(status == 200)
+    }
+  }
+
 
 }

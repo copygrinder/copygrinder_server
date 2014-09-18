@@ -15,6 +15,7 @@ package org.copygrinder.impure.copybean.search
 
 import java.io.File
 
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.index._
 import org.apache.lucene.search._
@@ -23,7 +24,8 @@ import org.apache.lucene.util.Version
 import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
 import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 
-class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, defaultMaxResults: Int) {
+class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, defaultMaxResults: Int)
+  extends LazyLogging {
 
   protected lazy val analyzer = new KeywordAnalyzer()
 
@@ -38,7 +40,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
   protected lazy val searcherManager = new SearcherManager(indexWriter, true, new SearcherFactory())
 
   protected lazy val indexRefresher = new ControlledRealTimeReopenThread[IndexSearcher](
-    trackingIndexWriter, searcherManager, 60.00, 0.1
+    trackingIndexWriter, searcherManager, 60, 0
   )
 
   protected var reopenToken = 0L
@@ -55,6 +57,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   def addCopybean(copybean: Copybean): Unit = {
     val doc = documentBuilder.buildDocument(copybean)
+    logger.debug("Adding doc to index: " + doc)
     reopenToken = trackingIndexWriter.addDocument(doc)
     indexWriter.commit()
   }
