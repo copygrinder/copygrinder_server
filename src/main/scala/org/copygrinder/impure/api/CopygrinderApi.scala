@@ -72,7 +72,6 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
   protected val copybeanReadRoute = handleExceptions(copybeanExceptionHandler) {
 
     pathPrefix(Segment) { siloId =>
-      implicit val siloScope = siloScopeFactory.build(siloId)
       pathPrefix("copybeans") {
         get {
           parameterSeq { params =>
@@ -81,6 +80,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
             } else {
               complete {
                 Future {
+                  implicit val siloScope = siloScopeFactory.build(siloId)
                   persistenceService.find(params)
                 }
               }
@@ -88,11 +88,13 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
           } ~ path(Segment) { id =>
             complete {
               Future {
+                implicit val siloScope = siloScopeFactory.build(siloId)
                 persistenceService.cachedFetch(id)
               }
             }
           } ~ complete {
             Future {
+              implicit val siloScope = siloScopeFactory.build(siloId)
               persistenceService.find()
             }
           }
@@ -103,13 +105,13 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
 
   protected val copybeanWriteRoute = handleExceptions(copybeanExceptionHandler) {
     pathPrefix(Segment) { siloId =>
-      implicit val siloScope = siloScopeFactory.build(siloId)
       pathPrefix("copybeans") {
         path("types") {
           post {
             entity(as[CopybeanType]) { copybeanType =>
               complete {
                 Future {
+                  implicit val siloScope = siloScopeFactory.build(siloId)
                   persistenceService.store(copybeanType)
                 }
               }
@@ -119,6 +121,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
           entity(as[AnonymousCopybean]) { anonBean =>
             complete {
               Future {
+                implicit val siloScope = siloScopeFactory.build(siloId)
                 persistenceService.store(anonBean).map(("key", _))
               }
             }
