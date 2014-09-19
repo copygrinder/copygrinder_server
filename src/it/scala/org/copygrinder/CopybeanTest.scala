@@ -35,7 +35,7 @@ class CopybeanTest extends FlatSpec with Matchers {
 
   val copybeansUrl = url(s"http://localhost:9999/$siloId/copybeans")
 
-  "Copygrinder" should "create a new silo and POST a type" in {
+  "Copygrinder" should "create a new silo and POST types" in {
 
     val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
 
@@ -43,12 +43,17 @@ class CopybeanTest extends FlatSpec with Matchers {
 
     val json =
       """
-        |{
-        |  "id":"testtype",
-        |  "singularTypeNoun":"TestType",
+        |[{
+        |  "id":"testtype1",
+        |  "singularTypeNoun":"TestTypeOne",
         |  "fieldDefs": [],
         |  "validators": []
-        |}""".stripMargin
+        |},{
+        |  "id":"testtype2",
+        |  "singularTypeNoun":"TestTypeTwo",
+        |  "fieldDefs": [],
+        |  "validators": []
+        |}]""".stripMargin
 
     val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -68,7 +73,7 @@ class CopybeanTest extends FlatSpec with Matchers {
       """
         |[{
         |  "enforcedTypeIds": [
-        |    "testtype"
+        |    "testtype1"
         |  ],
         |  "contains": {
         |    "testfield1":"1",
@@ -122,9 +127,9 @@ class CopybeanTest extends FlatSpec with Matchers {
 
   def checkStatus(response: Response, code: Int = 200) = {
     val status = response.getStatusCode
-    if (status != 200) {
+    if (status != code) {
       println("RESPONSE: " + response.getResponseBody)
-      assert(status == 200)
+      assert(status == code)
     }
   }
 

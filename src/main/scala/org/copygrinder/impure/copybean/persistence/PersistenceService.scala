@@ -15,7 +15,6 @@ package org.copygrinder.impure.copybean.persistence
 
 import java.io.File
 
-import akka.actor.Status.Success
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.CopybeanFactory
@@ -27,8 +26,8 @@ import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class PersistenceService(
   config: Configuration, hashedFileResolver: HashedFileResolver, copybeanFactory: CopybeanFactory) extends LazyLogging {
@@ -88,13 +87,15 @@ class PersistenceService(
     Future.sequence(futures)
   }
 
-  def store(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Future[(Unit, Unit)] = {
-    Future {
+  def store(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
+    val f = Future {
       val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
       siloScope.typeGitRepo.add(file, write(copybeanType))
     }.zip(Future {
       siloScope.indexer.addType(copybeanType)
     })
+
+    Await.ready(f, 5 seconds)
   }
 
   protected def checkSiloExists()(implicit siloScope: SiloScope) = {

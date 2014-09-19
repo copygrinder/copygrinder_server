@@ -115,6 +115,15 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
                   persistenceService.store(copybeanType)
                 }
               }
+            } ~ entity(as[Seq[CopybeanType]]) { copybeanTypes =>
+              complete {
+                Future {
+                  implicit val siloScope = siloScopeFactory.build(siloId)
+                  copybeanTypes.map { copybeanType =>
+                    persistenceService.store(copybeanType)
+                  }
+                }
+              }
             }
           }
         } ~ post {
