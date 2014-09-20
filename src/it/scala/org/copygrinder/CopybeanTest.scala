@@ -119,7 +119,6 @@ class CopybeanTest extends FlatSpec with Matchers {
       checkStatus(response)
       assert(response.getResponseBody.contains("testfield1\":\"3"))
       assert(!response.getResponseBody.contains("testfield2\":2"))
-
     }
 
     Await.result(responseFuture, 1 second)

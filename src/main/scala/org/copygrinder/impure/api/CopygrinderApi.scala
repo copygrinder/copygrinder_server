@@ -72,8 +72,8 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
   protected val copybeanReadRoute = handleExceptions(copybeanExceptionHandler) {
 
     pathPrefix(Segment) { siloId =>
-      pathPrefix("copybeans") {
-        get {
+      get {
+        pathPrefix("copybeans") {
           parameterSeq { params =>
             if (params.isEmpty || params.head._1.isEmpty) {
               reject
@@ -105,9 +105,9 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
 
   protected val copybeanWriteRoute = handleExceptions(copybeanExceptionHandler) {
     pathPrefix(Segment) { siloId =>
-      pathPrefix("copybeans") {
-        path("types") {
-          post {
+      post {
+        pathPrefix("copybeans") {
+          path("types") {
             entity(as[CopybeanType]) { copybeanType =>
               complete {
                 Future {
@@ -125,9 +125,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
                 }
               }
             }
-          }
-        } ~ post {
-          entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
+          } ~ entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
             complete {
               Future {
                 implicit val siloScope = siloScopeFactory.build(siloId)

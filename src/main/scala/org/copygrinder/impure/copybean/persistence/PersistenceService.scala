@@ -92,7 +92,7 @@ class PersistenceService(
       val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
       siloScope.typeGitRepo.add(file, write(copybeanType))
     }.zip(Future {
-      siloScope.indexer.addType(copybeanType)
+      siloScope.indexer.addCopybeanType(copybeanType)
     })
 
     Await.ready(f, 5 seconds)

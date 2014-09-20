@@ -22,7 +22,7 @@ import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
 import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
-import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
+import org.copygrinder.pure.copybean.search.{DocTypes, DocumentBuilder, QueryBuilder}
 
 class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, defaultMaxResults: Int)
   extends LazyLogging {
@@ -39,8 +39,10 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   protected lazy val searcherManager = new SearcherManager(indexWriter, true, new SearcherFactory())
 
+  protected val indexRefreshTime = 60
+
   protected lazy val indexRefresher = new ControlledRealTimeReopenThread[IndexSearcher](
-    trackingIndexWriter, searcherManager, 60, 0
+    trackingIndexWriter, searcherManager, indexRefreshTime, 0
   )
 
   protected var reopenToken = 0L
@@ -57,13 +59,12 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   def addCopybean(copybean: Copybean): Unit = {
     val doc = documentBuilder.buildDocument(copybean)
-    logger.debug("Adding doc to index: " + doc)
     reopenToken = trackingIndexWriter.addDocument(doc)
     indexWriter.commit()
   }
 
   def findCopybeanIds(): Seq[String] = {
-    val query = new MatchAllDocsQuery
+    val query = NumericRangeQuery.newIntRange("doctype", 1, DocTypes.Copybean.id, DocTypes.Copybean.id, true, true)
     doQuery(query)
   }
 
@@ -89,8 +90,10 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     }
   }
 
-  def addType(copybeanType: CopybeanType): Unit = {
-
+  def addCopybeanType(copybeanType: CopybeanType): Unit = {
+    val doc = documentBuilder.buildDocument(copybeanType)
+    reopenToken = trackingIndexWriter.addDocument(doc)
+    indexWriter.commit()
   }
 
 }
