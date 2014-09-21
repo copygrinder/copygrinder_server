@@ -19,7 +19,7 @@ import akka.actor.ActorContext
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
-import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, SiloNotInitialized}
+import org.copygrinder.pure.copybean.exception.{CopybeanTypeNotFound, CopybeanNotFound, SiloNotInitialized}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType}
 import org.json4s.Formats
 import org.json4s.JsonAST.JObject
@@ -44,6 +44,10 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         val id = e.id
         logger.debug(s"Copybean with id=$id was not found")
         complete(NotFound, s"Copybean with id '$id' was not found.")
+      case e: CopybeanTypeNotFound =>
+        val id = e.id
+        logger.debug(s"Copybean Type with id=$id was not found")
+        complete(NotFound, s"Copybean Type with id '$id' was not found.")
       case e: SiloNotInitialized =>
         val siloId = e.siloId
         logger.debug(s"Silo with id=$siloId has not been initialized")
@@ -77,7 +81,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
   }
 
   protected def typesReadRoute(siloId: String) =
-    path("types") {
+    pathPrefix("types") {
       path(Segment) {
         id =>
           ScopedComplete(siloId) { implicit siloScope =>
@@ -145,7 +149,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
   }
 
   protected object ScopedComplete {
-    def apply[T](siloId: String)(body: => (SiloScope) => ToResponseMarshallable) = {
+    def apply[T](siloId: String)(body: => (SiloScope) => ToResponseMarshallable): StandardRoute = {
       lazy val siloScope = siloScopeFactory.build(siloId)
       futureComplete(body(siloScope))
     }

@@ -106,7 +106,7 @@ class PersistenceService(
 
   def fetchCopybeanType(id: String)(implicit siloScope: SiloScope): CopybeanType = {
     checkSiloExists()
-    val file = hashedFileResolver.locate(id, "json", siloScope.typesDir)
+    val file = new File(siloScope.typesDir, "/" + id + ".json")
 
     if (!file.exists()) {
       throw new CopybeanTypeNotFound(id)
