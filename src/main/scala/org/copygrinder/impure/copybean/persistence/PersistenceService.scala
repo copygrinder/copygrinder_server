@@ -19,7 +19,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.system.{Configuration, SiloScope}
-import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, SiloNotInitialized}
+import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, CopybeanTypeNotFound, SiloNotInitialized}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType, FieldType}
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization._
@@ -34,20 +34,20 @@ class PersistenceService(
 
   implicit def json4sJacksonFormats: Formats = DefaultFormats + new EnumNameSerializer(FieldType)
 
-  def fetch(id: String)(implicit siloScope: SiloScope): Copybean = {
+  def fetchCopybean(id: String)(implicit siloScope: SiloScope): Copybean = {
     checkSiloExists()
     val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
 
     if (!file.exists()) {
-      throw new CopybeanNotFound()
+      throw new CopybeanNotFound(id)
     } else {
       val json = FileUtils.readFileToString(file)
       read[Copybean](json)
     }
   }
 
-  def cachedFetch(id: String)(implicit siloScope: SiloScope): Future[Copybean] = siloScope.beanCache(id) {
-    fetch(id)
+  def cachedFetchCopybean(id: String)(implicit siloScope: SiloScope): Future[Copybean] = siloScope.beanCache(id) {
+    fetchCopybean(id)
   }
 
   def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): String = {
@@ -82,7 +82,7 @@ class PersistenceService(
 
   protected def fetchCopybeans(copybeanIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {
     val futures = copybeanIds.map(id => {
-      cachedFetch(id)
+      cachedFetchCopybean(id)
     })
     Future.sequence(futures)
   }
@@ -100,7 +100,19 @@ class PersistenceService(
 
   protected def checkSiloExists()(implicit siloScope: SiloScope) = {
     if (!siloScope.root.exists) {
-      throw new SiloNotInitialized()
+      throw new SiloNotInitialized(siloScope.thisSiloId)
+    }
+  }
+
+  def fetchCopybeanType(id: String)(implicit siloScope: SiloScope): CopybeanType = {
+    checkSiloExists()
+    val file = hashedFileResolver.locate(id, "json", siloScope.typesDir)
+
+    if (!file.exists()) {
+      throw new CopybeanTypeNotFound(id)
+    } else {
+      val json = FileUtils.readFileToString(file)
+      read[CopybeanType](json)
     }
   }
 

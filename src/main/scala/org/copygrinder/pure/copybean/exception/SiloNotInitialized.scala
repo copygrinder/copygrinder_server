@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-class SiloNotInitialized extends Exception {
+case class SiloNotInitialized(siloId: String) extends Exception {
 
 }

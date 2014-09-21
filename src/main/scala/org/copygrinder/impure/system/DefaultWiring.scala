@@ -84,6 +84,8 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
 class SiloScope(siloId: String, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, config: Configuration) {
 
+  val thisSiloId = siloId
+
   lazy val root = new File(new File(config.copybeanDataRoot), siloId)
 
   lazy val indexDir = new File(root,  "index/")
