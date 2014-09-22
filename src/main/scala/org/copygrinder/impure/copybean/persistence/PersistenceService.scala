@@ -104,7 +104,7 @@ class PersistenceService(
     }
   }
 
-  def fetchCopybeanType(id: String)(implicit siloScope: SiloScope): CopybeanType = {
+  protected def fetchCopybeanType(id: String)(implicit siloScope: SiloScope): CopybeanType = {
     checkSiloExists()
     val file = new File(siloScope.typesDir, "/" + id + ".json")
 
@@ -115,5 +115,19 @@ class PersistenceService(
       read[CopybeanType](json)
     }
   }
+
+  def cachedFetchCopybeanType(id: String)(implicit siloScope: SiloScope): Future[CopybeanType] = siloScope.typeCache(id) {
+    fetchCopybeanType(id)
+  }
+
+  def fetchAllCopybeanTypes()(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
+    checkSiloExists()
+    val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds()
+    val futures = copybeanTypeIds.map(id => {
+      cachedFetchCopybeanType(id)
+    })
+    Future.sequence(futures)
+  }
+
 
 }

@@ -68,21 +68,19 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     doQuery(query)
   }
 
-
   def findCopybeanIds(params: Seq[(String, String)]): Seq[String] = {
     val query = queryBuilder.build(params)
     doQuery(query)
   }
 
-
-  protected def doQuery(query: Query): Seq[String] = {
+  protected def doQuery(query: Query, idField: String = "id"): Seq[String] = {
     indexRefresher.waitForGeneration(reopenToken)
     val indexSearcher = searcherManager.acquire()
     try {
       val docs = indexSearcher.search(query, defaultMaxResults)
       val copybeanIds = docs.scoreDocs.map(scoreDoc => {
         val doc = indexSearcher.getIndexReader.document(scoreDoc.doc)
-        doc.get("id")
+        doc.get(idField)
       })
       copybeanIds
     } finally {
@@ -94,6 +92,11 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     val doc = documentBuilder.buildDocument(copybeanType)
     reopenToken = trackingIndexWriter.addDocument(doc)
     indexWriter.commit()
+  }
+
+  def findCopybeanTypeIds(): Seq[String] = {
+    val query = NumericRangeQuery.newIntRange("doctype", 1, DocTypes.CopybeanType.id, DocTypes.CopybeanType.id, true, true)
+    doQuery(query, "type.id")
   }
 
 }
