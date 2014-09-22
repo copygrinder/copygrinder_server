@@ -67,13 +67,14 @@ class DocumentBuilder {
   def buildDocument(copybeanType: CopybeanType): Document = {
     val doc = new Document
     doc.add(new IntField("doctype", DocTypes.CopybeanType.id, Field.Store.NO))
-    doc.add(new TextField("type.id", copybeanType.id, Field.Store.YES))
-    doc.add(new TextField("type.singularTypeNoun", copybeanType.singularTypeNoun, Field.Store.NO))
-    doc.add(new TextField("type.pluralTypeNoun", copybeanType.pluralTypeNoun, Field.Store.NO))
-    doc.add(new TextField("type.beanDescFormat", copybeanType.beanDescFormat, Field.Store.NO))
+    doc.add(new TextField("types.id", copybeanType.id, Field.Store.YES))
+    doc.add(new TextField("types.singularTypeNoun", copybeanType.singularTypeNoun, Field.Store.NO))
+    doc.add(new TextField("types.pluralTypeNoun", copybeanType.pluralTypeNoun, Field.Store.NO))
+    doc.add(new TextField("types.beanDescFormat", copybeanType.beanDescFormat, Field.Store.NO))
 
     copybeanType.fieldDefs.foreach { fieldDef =>
-      doc.add(new TextField("type.fieldDef." + fieldDef.id + ".type", fieldDef.fieldType.toString, Field.Store.NO))
+      doc.add(new TextField("types.fieldDef.id", fieldDef.id, Field.Store.NO))
+      doc.add(new TextField("types.fieldDef." + fieldDef.id + ".type", fieldDef.fieldType.toString, Field.Store.NO))
     }
 
     doc

@@ -78,7 +78,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
             pathPrefix("types") {
               queryableRoute(
                 siloId,
-                persistenceService.find(_)(_),
+                persistenceService.findCopybeanTypes(_)(_),
                 persistenceService.cachedFetchCopybeanType(_)(_),
                 persistenceService.fetchAllCopybeanTypes()(_)
               )

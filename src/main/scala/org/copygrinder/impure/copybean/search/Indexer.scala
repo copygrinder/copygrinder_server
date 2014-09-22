@@ -96,7 +96,12 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   def findCopybeanTypeIds(): Seq[String] = {
     val query = NumericRangeQuery.newIntRange("doctype", 1, DocTypes.CopybeanType.id, DocTypes.CopybeanType.id, true, true)
-    doQuery(query, "type.id")
+    doQuery(query, "types.id")
+  }
+
+  def findCopybeanTypeIds(params: Seq[(String, String)]): Seq[String] = {
+    val query = queryBuilder.build(params, "types")
+    doQuery(query, "types.id")
   }
 
 }

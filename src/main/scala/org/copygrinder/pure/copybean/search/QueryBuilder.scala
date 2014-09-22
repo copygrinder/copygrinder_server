@@ -13,19 +13,27 @@
  */
 package org.copygrinder.pure.copybean.search
 
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 
-class QueryBuilder {
+class QueryBuilder extends LazyLogging {
 
-  def build(params: Seq[(String, String)]): Query = {
+
+  def build(params: Seq[(String, String)], prefix: String = "contains"): Query = {
+    val query = doBuild(params, prefix)
+    logger.debug("Built Query " + query)
+    query
+  }
+
+  protected def doBuild(params: Seq[(String, String)], prefix: String): Query = {
     val (paramHead, paramTail) = params.span(param => {
       val field = param._1.toLowerCase
       val operator = field == "or" || field == "and" || field == "not"
       !operator || (operator && param._2.nonEmpty)
     })
-    val headQuery = createQuery(paramHead)
+    val headQuery = createQuery(paramHead, prefix)
     if (paramTail.nonEmpty) {
 
       val clause = paramTail.head._1.toLowerCase match {
@@ -36,7 +44,7 @@ class QueryBuilder {
 
       val booleanQuery = new BooleanQuery()
       booleanQuery.add(headQuery, clause)
-      booleanQuery.add(build(paramTail.tail), clause)
+      booleanQuery.add(doBuild(paramTail.tail, prefix), clause)
       booleanQuery
     } else {
       headQuery
@@ -44,12 +52,12 @@ class QueryBuilder {
   }
 
 
-  protected def createQuery(params: Seq[(String, String)]): Query = {
+  protected def createQuery(params: Seq[(String, String)], prefix: String): Query = {
     val booleanQuery = new BooleanQuery()
     params.foreach { param =>
       if (param._1.nonEmpty && param._2.nonEmpty) {
         val (field, clause) = determineBooleanClause(param._1)
-        val query = addParamToQuery(field, param._2, booleanQuery)
+        val query = addParamToQuery(field, param._2, booleanQuery, prefix)
         booleanQuery.add(query, clause)
       }
     }
@@ -66,8 +74,8 @@ class QueryBuilder {
     }
   }
 
-  protected def addParamToQuery(field: String, value: String, booleanQuery: BooleanQuery): Query = {
-    val scopedField = s"contains." + field
+  protected def addParamToQuery(field: String, value: String, booleanQuery: BooleanQuery, prefix: String): Query = {
+    val scopedField = s"$prefix." + field
 
     value match {
       case intString if intString.forall(_.isDigit) => {
