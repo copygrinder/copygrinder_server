@@ -21,7 +21,7 @@ import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
-import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
+import org.copygrinder.pure.copybean.persistence.{CopybeanTypeEnforcer, IdEncoderDecoder}
 import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 import spray.caching.{Cache, LruCache}
 
@@ -76,8 +76,10 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val queryBuilder = new QueryBuilder()
 
+  lazy val copybeanTypeEnforcer = new CopybeanTypeEnforcer()
+
   lazy val persistenceService = new PersistenceService(
-    globalModule.configuration, hashedFileResolver, copybeanFactory
+    globalModule.configuration, hashedFileResolver, copybeanFactory, copybeanTypeEnforcer
   )
 
 }
@@ -88,7 +90,7 @@ class SiloScope(siloId: String, documentBuilder: DocumentBuilder, queryBuilder: 
 
   lazy val root = new File(new File(config.copybeanDataRoot), siloId)
 
-  lazy val indexDir = new File(root,  "index/")
+  lazy val indexDir = new File(root, "index/")
 
   lazy val indexer = new Indexer(indexDir, documentBuilder, queryBuilder, config.indexMaxResults)
 

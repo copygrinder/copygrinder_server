@@ -44,13 +44,19 @@ class CopybeanTest extends FlatSpec with Matchers {
     val json =
       """
         |[{
-        |  "id":"testtype1",
-        |  "singularTypeNoun":"TestTypeOne",
-        |  "fieldDefs": [],
+        |  "id": "testtype1",
+        |  "singularTypeNoun": "TestTypeOne",
+        |  "fieldDefs": [{
+        |      "id": "testfield1",
+        |      "type": "String"
+        |    },{
+        |      "id": "testfield2",
+        |      "type": "Integer"
+        |  }],
         |  "validators": []
         |},{
-        |  "id":"testtype2",
-        |  "singularTypeNoun":"TestTypeTwo",
+        |  "id": "testtype2",
+        |  "singularTypeNoun": "TestTypeTwo",
         |  "fieldDefs": [],
         |  "validators": []
         |}]""".stripMargin
@@ -81,7 +87,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  }
         |},{
         |  "enforcedTypeIds": [
-        |    "testtype"
+        |    "testtype2"
         |  ],
         |  "contains": {
         |    "testfield1":"3",

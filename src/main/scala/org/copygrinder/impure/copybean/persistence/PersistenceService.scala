@@ -21,16 +21,21 @@ import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.system.{Configuration, SiloScope}
 import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, CopybeanTypeNotFound, SiloNotInitialized}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType, FieldType}
+import org.copygrinder.pure.copybean.persistence.CopybeanTypeEnforcer
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ExecutionContext, Await, Future}
 
 class PersistenceService(
-  config: Configuration, hashedFileResolver: HashedFileResolver, copybeanFactory: CopybeanFactory) extends LazyLogging {
+  config: Configuration,
+  hashedFileResolver: HashedFileResolver,
+  copybeanFactory: CopybeanFactory,
+  copybeanTypeEnforcer: CopybeanTypeEnforcer
+  ) extends LazyLogging {
 
   implicit def json4sJacksonFormats: Formats = DefaultFormats + new EnumNameSerializer(FieldType)
 
@@ -56,6 +61,9 @@ class PersistenceService(
   }
 
   def store(copybean: Copybean)(implicit siloScope: SiloScope): String = {
+
+    enforceTypes(copybean)
+
     val f = Future {
       val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
       siloScope.beanGitRepo.add(file, write(copybean))
@@ -136,9 +144,17 @@ class PersistenceService(
   def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
     checkSiloExists()
     val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds(params)
-    logger.debug("Found copybeanTypeIds: " + copybeanTypeIds)
     fetchCopybeanTypes(copybeanTypeIds)
   }
 
+  protected def enforceTypes(copybean: Copybean)(implicit siloScope: SiloScope, ec: ExecutionContext): Unit = {
+    val future = copybean.enforcedTypeIds.map { typeId =>
+      cachedFetchCopybeanType(typeId).map { copybeanType =>
+        copybeanTypeEnforcer.enforceType(copybeanType, copybean)
+      }
+    }
+    val futureSeq = Future.sequence(future)
+    Await.result(futureSeq, 5 seconds)
+  }
 
 }

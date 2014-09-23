@@ -11,14 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.model
+package org.copygrinder.pure.copybean.exception
 
-case class CopybeanFieldDef(id: String, `type`: FieldType.FieldType)
-
-object FieldType extends Enumeration {
-
-  type FieldType = Value
-
-  val String, Integer, Reference = Value
+class TypeValidationException(message: String) extends Exception(message) {
 
 }

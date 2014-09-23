@@ -37,7 +37,6 @@ class DocumentBuilderTest extends UnitTest {
     doc.getField("contains.nested.nestedField").numericValue() should be(123)
     doc.getField("contains.nested.decField").numericValue() should be(1.1)
     doc.getField("contains.nested.nullField").stringValue() should be("null")
-    println(doc.getField("contains.array[1]"))
     doc.getFields("contains.array").map(_.stringValue()) should be(Array("false", "3.14"))
   }
 
