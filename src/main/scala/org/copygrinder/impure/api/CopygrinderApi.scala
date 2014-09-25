@@ -19,7 +19,7 @@ import akka.actor.ActorContext
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
-import org.copygrinder.pure.copybean.exception.{CopybeanTypeNotFound, CopybeanNotFound, SiloNotInitialized}
+import org.copygrinder.pure.copybean.exception.{TypeValidationException, CopybeanTypeNotFound, CopybeanNotFound, SiloNotInitialized}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType}
 import org.json4s.Formats
 import org.json4s.JsonAST.JObject
@@ -53,6 +53,8 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         val siloId = e.siloId
         logger.debug(s"Silo with id=$siloId has not been initialized")
         complete(NotFound, s"Silo with id '$siloId' has not been initialized.")
+      case e: TypeValidationException =>
+        complete(BadRequest, e.getMessage)
       case e: IOException =>
         requestUri { uri =>
           logger.error(s"Error occurred while processing request to $uri", e)
@@ -124,17 +126,17 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         post {
           pathPrefix("copybeans") {
             path("types") {
-              entity(as[CopybeanType]) { copybeanType =>
-                scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.store(copybeanType)
-                  ""
-                }
-              } ~ entity(as[Seq[CopybeanType]]) { copybeanTypes =>
+              entity(as[Seq[CopybeanType]]) { copybeanTypes =>
                 scopedComplete(siloId) { implicit siloScope =>
                   copybeanTypes.map {
                     copybeanType =>
                       persistenceService.store(copybeanType)
                   }
+                }
+              } ~ entity(as[CopybeanType]) { copybeanType =>
+                scopedComplete(siloId) { implicit siloScope =>
+                  persistenceService.store(copybeanType)
+                  ""
                 }
               }
             } ~ entity(as[Seq[AnonymousCopybean]]) {

@@ -18,6 +18,6 @@ case class CopybeanType(
   singularTypeNoun: String,
   pluralTypeNoun: String = "",
   beanDescFormat: String = "",
-  fieldDefs: Seq[CopybeanFieldDef] = Seq(),
-  validatorDefs: Seq[CopybeanValidatorDef] = Seq()
+  fields: Seq[CopybeanFieldDef] = Seq(),
+  validators: Seq[CopybeanValidatorDef] = Seq()
   )

@@ -13,14 +13,8 @@
  */
 package org.copygrinder.pure.copybean.model
 
-case class CopybeanValidatorDef(id: String, validatorType: String, arguments: Seq[String]) {
+import org.json4s.JsonAST.JValue
 
-}
-
-object Validator extends Enumeration {
-
-  type FieldType = Value
-
-  val String, Integer, Reference = Value
+case class CopybeanValidatorDef(id: String = "", `type`: String, args: Map[String, JValue]) {
 
 }

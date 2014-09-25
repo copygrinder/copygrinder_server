@@ -15,13 +15,17 @@ package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.TypeValidationException
 import org.copygrinder.pure.copybean.model.{Copybean, CopybeanFieldDef, CopybeanType, FieldType}
+import org.copygrinder.pure.copybean.validator.RequiredValidator
 
 class CopybeanTypeEnforcer() {
 
+  val requiredValidator = new RequiredValidator
+
   def enforceType(copybeanType: CopybeanType, copybean: Copybean): Unit = {
-    copybeanType.fieldDefs.map { fieldDef =>
+    copybeanType.fields.map { fieldDef =>
       checkField(fieldDef, copybean)
     }
+    checkValidators(copybeanType, copybean)
   }
 
   protected def checkField(fieldDef: CopybeanFieldDef, copybean: Copybean) = {
@@ -48,6 +52,18 @@ class CopybeanTypeEnforcer() {
       }
     }
 
+  }
+
+  protected def checkValidators(copybeanType: CopybeanType, copybean: Copybean): Unit = {
+    copybeanType.validators.map { validatorDef =>
+      val vType = validatorDef.`type`
+      vType match {
+        case "required" =>
+          requiredValidator.validate(copybean, validatorDef.args)
+        case _ =>
+          throw new TypeValidationException("Unkown validator type '$vType'")
+      }
+    }
   }
 
 }

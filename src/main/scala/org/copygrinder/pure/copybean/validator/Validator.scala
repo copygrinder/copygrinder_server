@@ -11,23 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.model
+package org.copygrinder.pure.copybean.validator
 
-import org.json4s.JsonAST.{JObject, JValue}
+import org.copygrinder.pure.copybean.model.Copybean
+import org.json4s.JsonAST.JValue
 
+trait Validator {
 
-trait CoreCopybean {
-  val enforcedTypeIds: Set[String]
-  val contains: JObject
-}
-
-case class AnonymousCopybean(enforcedTypeIds: Set[String], contains: JObject) extends CoreCopybean {
+  def validate(copybean: Copybean, args: Map[String, JValue]): Unit
 
 }
-
-case class Copybean(id: String, val enforcedTypeIds: Set[String], val contains: JObject) extends CoreCopybean {
-
-  lazy val containsMap = contains.obj.toMap
-
-}
-

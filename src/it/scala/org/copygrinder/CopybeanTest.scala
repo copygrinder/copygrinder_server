@@ -46,18 +46,23 @@ class CopybeanTest extends FlatSpec with Matchers {
         |[{
         |  "id": "testtype1",
         |  "singularTypeNoun": "TestTypeOne",
-        |  "fieldDefs": [{
+        |  "fields": [{
         |      "id": "testfield1",
         |      "type": "String"
         |    },{
         |      "id": "testfield2",
         |      "type": "Integer"
         |  }],
-        |  "validators": []
+        |  "validators": [{
+        |    "type": "required",
+        |    "args": {
+        |      "testfield1": "true"
+        |    }
+        |  }]
         |},{
         |  "id": "testtype2",
         |  "singularTypeNoun": "TestTypeTwo",
-        |  "fieldDefs": [],
+        |  "fields": [],
         |  "validators": []
         |}]""".stripMargin
 
@@ -130,6 +135,29 @@ class CopybeanTest extends FlatSpec with Matchers {
     Await.result(responseFuture, 1 second)
   }
 
+  it should "POST a copybean that fails validation" in {
+
+    val json =
+      """
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "contains": {
+        |    "testfield1": ""
+        |  }
+        |}""".stripMargin
+
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response, 400)
+      assert(response.getResponseBody.contains("required"))
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
   def checkStatus(response: Response, code: Int = 200) = {
     val status = response.getStatusCode
     if (status != code) {
@@ -137,6 +165,5 @@ class CopybeanTest extends FlatSpec with Matchers {
       assert(status == code)
     }
   }
-
 
 }
