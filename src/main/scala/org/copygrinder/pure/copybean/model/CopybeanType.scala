@@ -13,11 +13,23 @@
  */
 package org.copygrinder.pure.copybean.model
 
+import org.copygrinder.pure.copybean.model.Cardinality.Cardinality
+
 case class CopybeanType(
   id: String,
   singularTypeNoun: String,
   pluralTypeNoun: String = "",
   beanDescFormat: String = "",
   fields: Seq[CopybeanFieldDef] = Seq(),
-  validators: Seq[CopybeanValidatorDef] = Seq()
+  validators: Seq[CopybeanValidatorDef] = Seq(),
+  cardinality: Option[Cardinality]
   )
+
+
+object Cardinality extends Enumeration {
+
+  type Cardinality = Value
+
+  val One, Many = Value
+
+}

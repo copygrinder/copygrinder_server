@@ -37,6 +37,8 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
 
   override implicit def json4sJacksonFormats: Formats = persistenceService.json4sJacksonFormats
 
+  override implicit def json4sUnmarshaller[T: Manifest] = new ValidatingUnmarshaller().json4sUnmarshaller
+
   private implicit def executionContext = ac.dispatcher
 
   protected def copybeanExceptionHandler() =
@@ -126,19 +128,24 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         post {
           pathPrefix("copybeans") {
             path("types") {
-              entity(as[Seq[CopybeanType]]) { copybeanTypes =>
+              entity(as[CopybeanType]) { copybeanType =>
+                scopedComplete(siloId) { implicit siloScope =>
+                  persistenceService.store(copybeanType)
+                  ""
+                }
+              } ~ entity(as[Seq[CopybeanType]]) { copybeanTypes =>
                 scopedComplete(siloId) { implicit siloScope =>
                   copybeanTypes.map {
                     copybeanType =>
                       persistenceService.store(copybeanType)
                   }
                 }
-              } ~ entity(as[CopybeanType]) { copybeanType =>
-                scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.store(copybeanType)
-                  ""
-                }
               }
+            } ~ entity(as[AnonymousCopybean]) {
+              anonBean =>
+                scopedComplete(siloId) { implicit siloScope =>
+                  persistenceService.store(anonBean).map(("key", _))
+                }
             } ~ entity(as[Seq[AnonymousCopybean]]) {
               anonBeans =>
                 scopedComplete(siloId) { implicit siloScope =>
@@ -146,11 +153,6 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
                     anonBean =>
                       persistenceService.store(anonBean).map(("key", _))
                   }
-                }
-            } ~ entity(as[AnonymousCopybean]) {
-              anonBean =>
-                scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.store(anonBean).map(("key", _))
                 }
             }
           }

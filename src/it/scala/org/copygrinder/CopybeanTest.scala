@@ -75,7 +75,7 @@ class CopybeanTest extends FlatSpec with Matchers {
       assert(siloDir.exists)
     }
 
-    Await.result(responseFuture, 1 second)
+    Await.result(responseFuture, 2 second)
   }
 
   it should "POST new copybeans" in {
@@ -153,6 +153,25 @@ class CopybeanTest extends FlatSpec with Matchers {
     val responseFuture = Http(req).map { response =>
       checkStatus(response, 400)
       assert(response.getResponseBody.contains("required"))
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
+  it should "reject a Copybean POST that has unknown fields" in {
+
+    val json =
+      """
+        |{
+        |  "contains": {},
+        |  "bogus": "noWay"
+        |}""".stripMargin
+
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response, 400)
+      assert(response.getResponseBody.contains("invalid: bogus"))
     }
 
     Await.result(responseFuture, 1 second)
