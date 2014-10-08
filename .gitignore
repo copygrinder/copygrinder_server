@@ -16,3 +16,4 @@ log
 .DS_Store
 data
 gatling/.idea
+copygrinder.conf

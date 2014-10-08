@@ -75,7 +75,8 @@ class CopybeanTest extends FlatSpec with Matchers {
       assert(siloDir.exists)
     }
 
-    Await.result(responseFuture, 2 second)
+    //TODO:  The slow performance of the ValidatingUnmarshaller is causing this
+    Await.result(responseFuture, 3 second)
   }
 
   it should "POST new copybeans" in {

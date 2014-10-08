@@ -58,6 +58,7 @@ object CopygrinderBuild extends Build {
 
       ScoverageKeys.highlighting := true,
       unmanagedSourceDirectories in Test := (scalaSource in Test).value :: Nil,
+      unmanagedSourceDirectories in IntegrationTest := (scalaSource in IntegrationTest).value :: Nil,
       EclipseKeys.withSource := true,
       incOptions := incOptions.value.withNameHashing(true),
       fork := true,

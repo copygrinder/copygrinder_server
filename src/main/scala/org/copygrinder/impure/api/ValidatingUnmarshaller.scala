@@ -23,7 +23,7 @@ import spray.httpx.unmarshalling.Unmarshaller
 
 class ValidatingUnmarshaller(implicit formats: Formats) {
 
-  def json4sUnmarshaller[T: Manifest] = Unmarshaller[T](MediaTypes.`application/json`) {
+  def json4sUnmarshaller[T: Manifest]: Unmarshaller[T] = Unmarshaller[T](MediaTypes.`application/json`) {
     case x: HttpEntity.NonEmpty =>
 
       val str = x.asString(defaultCharset = HttpCharsets.`UTF-8`)
@@ -34,12 +34,13 @@ class ValidatingUnmarshaller(implicit formats: Formats) {
         case MappingException("unknown error", ite: InvocationTargetException) => throw ite.getCause
       }
 
+
       validateUnknownProperties(json)
 
       result
   }
 
-  def validateUnknownProperties[T: Manifest](json: JValue) {
+  protected def validateUnknownProperties[T: Manifest](json: JValue) {
     import scala.reflect.runtime.universe._
     if (json.isInstanceOf[JObject]) {
 
