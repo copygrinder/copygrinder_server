@@ -53,7 +53,7 @@ A function is consider pure if does not:
   deeply-immutable.
 - read/write from mutable parameters
 - read/write from mutable static properties / singleton objects
-- spwan threads which call semi-pure functions.  Semi-pure objects are pure objects that contain mutable state.  A
+- spawn threads which call semi-pure functions.  Semi-pure objects are pure objects that contain mutable state.  A
   semi-pure function is a pure function with exception that it may read/write from mutable properties of its object.
   Thus, these functions are effectively pure in a single-threaded environment, and hence why they are not allowed to be
   multi-threaded.  An example of a semi-pure object is an Array.
