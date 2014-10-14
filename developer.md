@@ -51,12 +51,11 @@ A function is consider pure if does not:
 - get the current time.
 - read/write mutable properties on its object.  A property is considered mutable if it is a var or is a val but not
   deeply-immutable.
-- read/write from mutable parameters
 - read/write from mutable static properties / singleton objects
 - spawn threads which call semi-pure functions.  Semi-pure objects are pure objects that contain mutable state.  A
-  semi-pure function is a pure function with exception that it may read/write from mutable properties of its object.
+  semi-pure function is a pure function with exception that it reads or writes the mutable properties of its object.
   Thus, these functions are effectively pure in a single-threaded environment, and hence why they are not allowed to be
   multi-threaded.  An example of a semi-pure object is an Array.
-- make calls to semi-pure objects that are not fresh.  A variable is considered fresh if the current thread is the only
+- read/write from semi-pure parameter objects that are not fresh.  A variable is considered fresh if the current thread is the only
   thread that is able to make reference to it.  This means a semi-pure object created within a pure function is fresh.
   However, a semi-pure object returned from a pure function is no longer fresh if impure code is a potentially caller.
