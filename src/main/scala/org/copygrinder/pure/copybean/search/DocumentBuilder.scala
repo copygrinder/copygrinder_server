@@ -71,6 +71,7 @@ class DocumentBuilder {
     doc.add(new TextField("types.singularTypeNoun", copybeanType.singularTypeNoun, Field.Store.NO))
     doc.add(new TextField("types.pluralTypeNoun", copybeanType.pluralTypeNoun, Field.Store.NO))
     doc.add(new TextField("types.beanDescFormat", copybeanType.beanDescFormat, Field.Store.NO))
+    doc.add(new TextField("types.cardinality", copybeanType.cardinality.toString, Field.Store.NO))
 
     copybeanType.fields.foreach { fieldDef =>
       doc.add(new TextField("types.fieldDef.id", fieldDef.id, Field.Store.NO))

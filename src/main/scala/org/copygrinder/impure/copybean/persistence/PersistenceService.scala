@@ -77,12 +77,14 @@ class PersistenceService(
   }
 
   def find()(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {
+    logger.debug("Finding all copybeans")
     checkSiloExists()
     val copybeanIds = siloScope.indexer.findCopybeanIds()
     fetchCopybeans(copybeanIds)
   }
 
   def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[Copybean]] = {
+    logger.debug("Finding copybeans")
     checkSiloExists()
     val copybeanIds = siloScope.indexer.findCopybeanIds(params)
     fetchCopybeans(copybeanIds)
@@ -125,16 +127,18 @@ class PersistenceService(
   }
 
   def cachedFetchCopybeanType(id: String)(implicit siloScope: SiloScope): Future[CopybeanType] = siloScope.typeCache(id) {
+    logger.debug("Finding copybean type")
     fetchCopybeanType(id)
   }
 
   def fetchAllCopybeanTypes()(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
+    logger.debug("Finding all copybean types")
     checkSiloExists()
     val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds()
     fetchCopybeanTypes(copybeanTypeIds)
   }
 
-  def fetchCopybeanTypes(copybeanTypeIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
+  protected def fetchCopybeanTypes(copybeanTypeIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
     val futures = copybeanTypeIds.map(id => {
       cachedFetchCopybeanType(id)
     })
@@ -142,6 +146,7 @@ class PersistenceService(
   }
 
   def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
+    logger.debug("Finding copybean types")
     checkSiloExists()
     val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds(params)
     fetchCopybeanTypes(copybeanTypeIds)

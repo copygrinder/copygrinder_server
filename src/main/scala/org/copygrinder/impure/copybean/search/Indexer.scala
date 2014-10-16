@@ -78,11 +78,12 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     val indexSearcher = searcherManager.acquire()
     try {
       val docs = indexSearcher.search(query, defaultMaxResults)
-      val copybeanIds = docs.scoreDocs.map(scoreDoc => {
+      logger.debug("Query found " + docs.scoreDocs.toList)
+      val ids = docs.scoreDocs.map(scoreDoc => {
         val doc = indexSearcher.getIndexReader.document(scoreDoc.doc)
         doc.get(idField)
       })
-      copybeanIds
+      ids
     } finally {
       searcherManager.release(indexSearcher)
     }
@@ -90,6 +91,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   def addCopybeanType(copybeanType: CopybeanType): Unit = {
     val doc = documentBuilder.buildDocument(copybeanType)
+    logger.debug("Adding doc: " + doc)
     reopenToken = trackingIndexWriter.addDocument(doc)
     indexWriter.commit()
   }
