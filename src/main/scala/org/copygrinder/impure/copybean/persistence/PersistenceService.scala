@@ -20,7 +20,7 @@ import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.system.{Configuration, SiloScope}
 import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, CopybeanTypeNotFound, SiloNotInitialized}
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType, FieldType}
+import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence.CopybeanTypeEnforcer
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization._
@@ -37,7 +37,7 @@ class PersistenceService(
   copybeanTypeEnforcer: CopybeanTypeEnforcer
   ) extends LazyLogging {
 
-  implicit def json4sJacksonFormats: Formats = DefaultFormats + new EnumNameSerializer(FieldType)
+  implicit def json4sJacksonFormats: Formats = DefaultFormats + new EnumNameSerializer(FieldType) + new EnumNameSerializer(Cardinality)
 
   def fetchCopybean(id: String)(implicit siloScope: SiloScope): Copybean = {
     checkSiloExists()

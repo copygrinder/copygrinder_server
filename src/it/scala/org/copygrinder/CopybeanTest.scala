@@ -64,7 +64,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "singularTypeNoun": "TestTypeTwo",
         |  "fields": [],
         |  "validators": [],
-        |  "cardinality": "Singleton"
+        |  "cardinality": "One"
         |}]""".stripMargin
 
     val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)

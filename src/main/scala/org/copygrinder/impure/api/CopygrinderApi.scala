@@ -128,17 +128,17 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         post {
           pathPrefix("copybeans") {
             path("types") {
-              entity(as[CopybeanType]) { copybeanType =>
-                scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.store(copybeanType)
-                  ""
-                }
-              } ~ entity(as[Seq[CopybeanType]]) { copybeanTypes =>
+              entity(as[Seq[CopybeanType]]) { copybeanTypes =>
                 scopedComplete(siloId) { implicit siloScope =>
                   copybeanTypes.map {
                     copybeanType =>
                       persistenceService.store(copybeanType)
                   }
+                }
+              } ~ entity(as[CopybeanType]) { copybeanType =>
+                scopedComplete(siloId) { implicit siloScope =>
+                  persistenceService.store(copybeanType)
+                  ""
                 }
               }
             } ~ entity(as[AnonymousCopybean]) {
