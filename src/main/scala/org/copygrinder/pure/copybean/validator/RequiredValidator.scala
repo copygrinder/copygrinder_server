@@ -14,14 +14,14 @@
 package org.copygrinder.pure.copybean.validator
 
 import org.copygrinder.pure.copybean.exception.TypeValidationException
-import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.pure.copybean.model.CopybeanImpl
 import org.json4s.JsonAST._
 
 class RequiredValidator extends Validator {
 
   protected val falseyValues = Seq(0, false, "false", "0", "f", "no", "n")
 
-  override def validate(copybean: Copybean, args: Map[String, JValue]): Unit = {
+  override def validate(copybean: CopybeanImpl, args: Map[String, JValue]): Unit = {
 
     args.foreach { arg =>
       val (field, argValue) = arg

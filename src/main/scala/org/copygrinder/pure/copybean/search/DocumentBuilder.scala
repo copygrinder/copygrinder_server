@@ -14,12 +14,12 @@
 package org.copygrinder.pure.copybean.search
 
 import org.apache.lucene.document._
-import org.copygrinder.pure.copybean.model.{CopybeanType, Copybean}
+import org.copygrinder.pure.copybean.model.{CopybeanType, CopybeanImpl}
 import org.json4s.JsonAST._
 
 class DocumentBuilder {
 
-  def buildDocument(copybean: Copybean): Document = {
+  def buildDocument(copybean: CopybeanImpl): Document = {
     val doc = new Document
     doc.add(new IntField("doctype", DocTypes.Copybean.id, Field.Store.NO))
 
@@ -65,13 +65,14 @@ class DocumentBuilder {
   }
 
   def buildDocument(copybeanType: CopybeanType): Document = {
-    val doc = new Document
+    implicit val doc = new Document
     doc.add(new IntField("doctype", DocTypes.CopybeanType.id, Field.Store.NO))
     doc.add(new TextField("types.id", copybeanType.id, Field.Store.YES))
     doc.add(new TextField("types.singularTypeNoun", copybeanType.singularTypeNoun, Field.Store.NO))
-    doc.add(new TextField("types.pluralTypeNoun", copybeanType.pluralTypeNoun, Field.Store.NO))
-    doc.add(new TextField("types.beanDescFormat", copybeanType.beanDescFormat, Field.Store.NO))
     doc.add(new TextField("types.cardinality", copybeanType.cardinality.toString, Field.Store.NO))
+
+    addOption("types.pluralTypeNoun", copybeanType.pluralTypeNoun)
+    addOption("types.beanDescFormat", copybeanType.instanceNameFormat)
 
     copybeanType.fields.foreach { fieldDef =>
       doc.add(new TextField("types.fieldDef.id", fieldDef.id, Field.Store.NO))
@@ -79,6 +80,13 @@ class DocumentBuilder {
     }
 
     doc
+  }
+
+
+  protected def addOption(id: String, value: Option[String])(implicit doc: Document) = {
+    if (value.isDefined) {
+      doc.add(new TextField(id, value.get, Field.Store.NO))
+    }
   }
 
 }

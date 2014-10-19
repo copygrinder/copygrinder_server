@@ -18,8 +18,8 @@ import org.copygrinder.pure.copybean.model.Cardinality.Cardinality
 case class CopybeanType(
   id: String,
   singularTypeNoun: String,
-  pluralTypeNoun: String = "",
-  beanDescFormat: String = "",
+  pluralTypeNoun: Option[String],
+  instanceNameFormat: Option[String],
   fields: Seq[CopybeanFieldDef] = Seq(),
   validators: Seq[CopybeanValidatorDef] = Seq(),
   cardinality: Cardinality = Cardinality.Many

@@ -17,10 +17,9 @@ import java.io.File
 
 import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
-import org.copygrinder.impure.copybean.CopybeanFactory
 import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.search.Indexer
-import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
+import org.copygrinder.pure.copybean.model.{CopybeanImpl, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{CopybeanTypeEnforcer, IdEncoderDecoder}
 import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 import spray.caching.{Cache, LruCache}
@@ -70,8 +69,6 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val idEncoderDecoder = new IdEncoderDecoder()
 
-  lazy val copybeanFactory = new CopybeanFactory(idEncoderDecoder)
-
   lazy val documentBuilder = new DocumentBuilder()
 
   lazy val queryBuilder = new QueryBuilder()
@@ -79,7 +76,7 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
   lazy val copybeanTypeEnforcer = new CopybeanTypeEnforcer()
 
   lazy val persistenceService = new PersistenceService(
-    globalModule.configuration, hashedFileResolver, copybeanFactory, copybeanTypeEnforcer
+    globalModule.configuration, hashedFileResolver, copybeanTypeEnforcer, idEncoderDecoder
   )
 
 }
@@ -94,7 +91,7 @@ class SiloScope(siloId: String, documentBuilder: DocumentBuilder, queryBuilder: 
 
   lazy val indexer = new Indexer(indexDir, documentBuilder, queryBuilder, config.indexMaxResults)
 
-  lazy val beanCache: Cache[Copybean] = LruCache()
+  lazy val beanCache: Cache[CopybeanImpl] = LruCache()
 
   lazy val typeCache: Cache[CopybeanType] = LruCache()
 

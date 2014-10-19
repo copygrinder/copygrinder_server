@@ -20,7 +20,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
 import org.copygrinder.pure.copybean.exception.{TypeValidationException, CopybeanTypeNotFound, CopybeanNotFound, SiloNotInitialized}
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean, CopybeanType}
+import org.copygrinder.pure.copybean.model.{AnonymousCopybeanImpl, CopybeanImpl, CopybeanType}
 import org.json4s.Formats
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
@@ -67,8 +67,7 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
   protected val rootRoute = path("") {
     get {
       complete {
-        val jsonValues = parse( """{"name":"joe","age":15}""").extract[JObject]
-        new Copybean("bean1", Set("hi"), jsonValues)
+        "Copygrinder is running.  Check out the apis under /copybeans"
       }
     }
   }
@@ -141,12 +140,12 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
                   ""
                 }
               }
-            } ~ entity(as[AnonymousCopybean]) {
+            } ~ entity(as[AnonymousCopybeanImpl]) {
               anonBean =>
                 scopedComplete(siloId) { implicit siloScope =>
                   persistenceService.store(anonBean).map(("key", _))
                 }
-            } ~ entity(as[Seq[AnonymousCopybean]]) {
+            } ~ entity(as[Seq[AnonymousCopybeanImpl]]) {
               anonBeans =>
                 scopedComplete(siloId) { implicit siloScope =>
                   anonBeans.map {

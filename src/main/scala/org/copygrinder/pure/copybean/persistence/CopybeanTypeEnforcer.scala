@@ -14,21 +14,21 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.TypeValidationException
-import org.copygrinder.pure.copybean.model.{Copybean, CopybeanFieldDef, CopybeanType, FieldType}
+import org.copygrinder.pure.copybean.model.{CopybeanImpl, CopybeanFieldDef, CopybeanType, FieldType}
 import org.copygrinder.pure.copybean.validator.RequiredValidator
 
 class CopybeanTypeEnforcer() {
 
   val requiredValidator = new RequiredValidator
 
-  def enforceType(copybeanType: CopybeanType, copybean: Copybean): Unit = {
+  def enforceType(copybeanType: CopybeanType, copybean: CopybeanImpl): Unit = {
     copybeanType.fields.map { fieldDef =>
       checkField(fieldDef, copybean)
     }
     checkValidators(copybeanType, copybean)
   }
 
-  protected def checkField(fieldDef: CopybeanFieldDef, copybean: Copybean) = {
+  protected def checkField(fieldDef: CopybeanFieldDef, copybean: CopybeanImpl) = {
 
     val fieldId = fieldDef.id
 
@@ -54,7 +54,7 @@ class CopybeanTypeEnforcer() {
 
   }
 
-  protected def checkValidators(copybeanType: CopybeanType, copybean: Copybean): Unit = {
+  protected def checkValidators(copybeanType: CopybeanType, copybean: CopybeanImpl): Unit = {
     copybeanType.validators.map { validatorDef =>
       val vType = validatorDef.`type`
       vType match {

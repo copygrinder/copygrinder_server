@@ -21,7 +21,7 @@ import org.apache.lucene.index._
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
-import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
+import org.copygrinder.pure.copybean.model.{CopybeanImpl, CopybeanType}
 import org.copygrinder.pure.copybean.search.{DocTypes, DocumentBuilder, QueryBuilder}
 
 class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, defaultMaxResults: Int)
@@ -57,7 +57,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     indexWriter.close()
   }
 
-  def addCopybean(copybean: Copybean): Unit = {
+  def addCopybean(copybean: CopybeanImpl): Unit = {
     val doc = documentBuilder.buildDocument(copybean)
     reopenToken = trackingIndexWriter.addDocument(doc)
     indexWriter.commit()
@@ -102,7 +102,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
   }
 
   def findCopybeanTypeIds(params: Seq[(String, String)]): Seq[String] = {
-    val query = queryBuilder.build(params, "types")
+    val query = queryBuilder.build(params, "types.")
     doQuery(query, "types.id")
   }
 

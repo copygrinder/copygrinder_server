@@ -21,7 +21,7 @@ import org.apache.lucene.search._
 class QueryBuilder extends LazyLogging {
 
 
-  def build(params: Seq[(String, String)], prefix: String = "contains"): Query = {
+  def build(params: Seq[(String, String)], prefix: String = "contains."): Query = {
     val query = doBuild(params, prefix)
     logger.debug("Built Query " + query)
     query
@@ -75,7 +75,10 @@ class QueryBuilder extends LazyLogging {
   }
 
   protected def addParamToQuery(field: String, value: String, booleanQuery: BooleanQuery, prefix: String): Query = {
-    val scopedField = s"$prefix." + field
+
+    val namespace = determineNamespace(field, prefix)
+
+    val scopedField = s"$namespace" + field
 
     value match {
       case intString if intString.forall(_.isDigit) => {
@@ -92,6 +95,14 @@ class QueryBuilder extends LazyLogging {
         q.add(new Term(scopedField, value))
         q
       }
+    }
+  }
+
+  protected def determineNamespace(field:String, prefix:String):String = {
+    if (field equalsIgnoreCase "enforcedTypeIds") {
+      ""
+    } else {
+      prefix
     }
   }
 

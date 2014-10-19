@@ -13,11 +13,11 @@
  */
 package org.copygrinder.pure.copybean.validator
 
-import org.copygrinder.pure.copybean.model.Copybean
+import org.copygrinder.pure.copybean.model.CopybeanImpl
 import org.json4s.JsonAST.JValue
 
 trait Validator {
 
-  def validate(copybean: Copybean, args: Map[String, JValue]): Unit
+  def validate(copybean: CopybeanImpl, args: Map[String, JValue]): Unit
 
 }
