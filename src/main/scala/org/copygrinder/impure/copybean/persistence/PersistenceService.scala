@@ -19,39 +19,48 @@ import java.util.UUID
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.system.{Configuration, SiloScope}
+import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, CopybeanTypeNotFound, SiloNotInitialized}
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.{IdEncoderDecoder, CopybeanTypeEnforcer}
+import org.copygrinder.pure.copybean.persistence.{CopybeanTypeEnforcer, IdEncoderDecoder}
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class PersistenceService(
   config: Configuration,
   hashedFileResolver: HashedFileResolver,
   copybeanTypeEnforcer: CopybeanTypeEnforcer,
-  idEncoderDecoder: IdEncoderDecoder
+  idEncoderDecoder: IdEncoderDecoder,
+  copybeanReifier: CopybeanReifier
   ) extends LazyLogging {
 
   implicit def json4sJacksonFormats: Formats = DefaultFormats + new EnumNameSerializer(FieldType) + new EnumNameSerializer(Cardinality)
 
-  def fetchCopybean(id: String)(implicit siloScope: SiloScope): CopybeanImpl = {
+  def fetchCopybean(id: String)(implicit siloScope: SiloScope): ReifiedCopybean = {
     checkSiloExists()
     val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
 
-    if (!file.exists()) {
+    val copybean = if (!file.exists()) {
       throw new CopybeanNotFound(id)
     } else {
       val json = FileUtils.readFileToString(file)
       read[CopybeanImpl](json)
     }
+
+    val future = copybean.enforcedTypeIds.map { typeId =>
+      cachedFetchCopybeanType(typeId)
+    }
+    val futureSeq = Future.sequence(future)
+    val types = Await.result(futureSeq, 5 seconds)
+    copybeanReifier.reify(copybean, types)
   }
 
-  def cachedFetchCopybean(id: String)(implicit siloScope: SiloScope): Future[CopybeanImpl] = siloScope.beanCache(id) {
+  def cachedFetchCopybean(id: String)(implicit siloScope: SiloScope): Future[ReifiedCopybean] = siloScope.beanCache(id) {
     fetchCopybean(id)
   }
 
@@ -77,21 +86,21 @@ class PersistenceService(
     copybean.id
   }
 
-  def find()(implicit siloScope: SiloScope): Future[Seq[CopybeanImpl]] = {
+  def find()(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     logger.debug("Finding all copybeans")
     checkSiloExists()
     val copybeanIds = siloScope.indexer.findCopybeanIds()
     fetchCopybeans(copybeanIds)
   }
 
-  def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[CopybeanImpl]] = {
+  def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     logger.debug("Finding copybeans")
     checkSiloExists()
     val copybeanIds = siloScope.indexer.findCopybeanIds(params)
     fetchCopybeans(copybeanIds)
   }
 
-  protected def fetchCopybeans(copybeanIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[CopybeanImpl]] = {
+  protected def fetchCopybeans(copybeanIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     val futures = copybeanIds.map(id => {
       cachedFetchCopybean(id)
     })

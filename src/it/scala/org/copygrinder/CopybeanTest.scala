@@ -47,7 +47,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "id": "testtype1",
         |  "singularTypeNoun": "TestTypeOne",
         |  "pluralTypeNoun": "TestTypeOnes",
-        |  "instanceNameFormat": "This bean is named $testfield1$",
+        |  "instanceNameFormat": "This bean is named $testfield2$ $testfield1$.",
         |  "fields": [{
         |      "id": "testfield1",
         |      "type": "String"

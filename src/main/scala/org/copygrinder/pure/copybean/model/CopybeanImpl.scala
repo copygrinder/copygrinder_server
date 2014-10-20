@@ -26,7 +26,7 @@ trait Copybean extends AnonymousCopybean {
 }
 
 trait ReifiedCopybean extends Copybean {
-  val name: String
+  val names: Map[String, String]
 }
 
 case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], contains: JObject) extends AnonymousCopybean {
@@ -43,7 +43,7 @@ case class CopybeanImpl(anonCopybean: AnonymousCopybeanImpl, id: String) extends
 
 }
 
-case class ReifiedCopybeanImpl(copybean: CopybeanImpl, name: String) extends ReifiedCopybean {
+case class ReifiedCopybeanImpl(copybean: CopybeanImpl, names: Map[String, String]) extends ReifiedCopybean {
 
   override val enforcedTypeIds = copybean.enforcedTypeIds
 
