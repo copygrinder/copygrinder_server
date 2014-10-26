@@ -17,7 +17,7 @@ import org.copygrinder.pure.copybean.model._
 
 class CopybeanReifier {
 
-  def reify(copybean: CopybeanImpl, types: Set[CopybeanType]): ReifiedCopybean = {
+  def reify(copybean: CopybeanImpl, types: Set[CopybeanTypeImpl]): ReifiedCopybean = {
 
     val names = types.map(t => {
       if (t.instanceNameFormat.isDefined) {

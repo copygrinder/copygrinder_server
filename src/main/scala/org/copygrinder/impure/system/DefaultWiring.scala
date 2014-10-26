@@ -20,8 +20,8 @@ import org.copygrinder.impure.api.CopygrinderApi
 import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.pure.copybean.CopybeanReifier
-import org.copygrinder.pure.copybean.model.{CopybeanType, ReifiedCopybean}
-import org.copygrinder.pure.copybean.persistence.{CopybeanTypeEnforcer, IdEncoderDecoder}
+import org.copygrinder.pure.copybean.model.{CopybeanTypeImpl, ReifiedCopybean}
+import org.copygrinder.pure.copybean.persistence.{PredefinedCopybeanTypes, CopybeanTypeEnforcer, IdEncoderDecoder}
 import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 import spray.caching.{Cache, LruCache}
 
@@ -78,8 +78,15 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val copybeanReifier = new CopybeanReifier()
 
+  lazy val predefinedCopybeanTypes = new PredefinedCopybeanTypes()
+
   lazy val persistenceService = new PersistenceService(
-    globalModule.configuration, hashedFileResolver, copybeanTypeEnforcer, idEncoderDecoder, copybeanReifier
+    globalModule.configuration,
+    hashedFileResolver,
+    copybeanTypeEnforcer,
+    idEncoderDecoder,
+    copybeanReifier,
+    predefinedCopybeanTypes
   )
 
 }
@@ -96,7 +103,7 @@ class SiloScope(siloId: String, documentBuilder: DocumentBuilder, queryBuilder: 
 
   lazy val beanCache: Cache[ReifiedCopybean] = LruCache()
 
-  lazy val typeCache: Cache[CopybeanType] = LruCache()
+  lazy val typeCache: Cache[CopybeanTypeImpl] = LruCache()
 
   lazy val beanDir = new File(root, "copybeans/")
 

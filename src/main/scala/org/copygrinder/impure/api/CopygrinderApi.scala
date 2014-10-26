@@ -20,7 +20,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
 import org.copygrinder.pure.copybean.exception.{TypeValidationException, CopybeanTypeNotFound, CopybeanNotFound, SiloNotInitialized}
-import org.copygrinder.pure.copybean.model.{AnonymousCopybeanImpl, CopybeanImpl, CopybeanType}
+import org.copygrinder.pure.copybean.model.{CopybeanTypeWithAnonValDefsImpl, AnonymousCopybeanImpl, CopybeanImpl, CopybeanTypeImpl}
 import org.json4s.Formats
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods._
@@ -127,14 +127,14 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         post {
           pathPrefix("copybeans") {
             path("types") {
-              entity(as[Seq[CopybeanType]]) { copybeanTypes =>
+              entity(as[Seq[CopybeanTypeWithAnonValDefsImpl]]) { copybeanTypes =>
                 scopedComplete(siloId) { implicit siloScope =>
                   copybeanTypes.map {
                     copybeanType =>
                       persistenceService.store(copybeanType)
                   }
                 }
-              } ~ entity(as[CopybeanType]) { copybeanType =>
+              } ~ entity(as[CopybeanTypeWithAnonValDefsImpl]) { copybeanType =>
                 scopedComplete(siloId) { implicit siloScope =>
                   persistenceService.store(copybeanType)
                   ""

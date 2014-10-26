@@ -14,7 +14,7 @@
 package org.copygrinder.pure.copybean.search
 
 import org.apache.lucene.document._
-import org.copygrinder.pure.copybean.model.{CopybeanType, CopybeanImpl}
+import org.copygrinder.pure.copybean.model.{CopybeanTypeImpl, CopybeanImpl}
 import org.json4s.JsonAST._
 
 class DocumentBuilder {
@@ -64,7 +64,7 @@ class DocumentBuilder {
 
   }
 
-  def buildDocument(copybeanType: CopybeanType): Document = {
+  def buildDocument(copybeanType: CopybeanTypeImpl): Document = {
     implicit val doc = new Document
     doc.add(new IntField("doctype", DocTypes.CopybeanType.id, Field.Store.NO))
     doc.add(new TextField("types.id", copybeanType.id, Field.Store.YES))
