@@ -179,6 +179,28 @@ class CopybeanTest extends FlatSpec with Matchers {
     Await.result(responseFuture, 1 second)
   }
 
+  it should "accept predefined types" in {
+
+    val json =
+      """
+        |{
+        |  "enforcedTypeIds": [
+        |    "copygrinderAdminMetatype"
+        |  ],
+        |  "contains": {
+        |    "siloName": "IntegrationTest Website"
+        |  }
+        |}""".stripMargin
+
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response)
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
   def checkStatus(response: Response, code: Int = 200) = {
     val status = response.getStatusCode
     if (status != code) {
