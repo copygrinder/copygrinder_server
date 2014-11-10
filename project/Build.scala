@@ -26,7 +26,8 @@ object CopygrinderBuild extends Build {
       resolvers ++= Seq(
         "spray repo" at "http://repo.spray.io/",
         "JGit repo" at "https://repo.eclipse.org/content/groups/releases/",
-        "sonatype-releases" at "https://oss.sonatype.org/content/repositories/releases/"
+        "sonatype-releases" at "https://oss.sonatype.org/content/repositories/releases/",
+        "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
       ),
 
       /* SCALA LIBS */
@@ -34,10 +35,9 @@ object CopygrinderBuild extends Build {
         "io.spray" %% "spray-caching" % "1.3.1",
         "io.spray" %% "spray-can" % "1.3.1",
         "io.spray" %% "spray-routing" % "1.3.1",
-        "org.json4s" %% "json4s-jackson" % "3.2.10",
-        "org.json4s" %% "json4s-ext" % "3.2.10",
         "com.typesafe.akka" %% "akka-slf4j" % "2.3.5",
-        "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
+        "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
+        "com.typesafe.play" %% "play-json" % "2.3.5"
       ),
 
       /* JAVA LIBS */

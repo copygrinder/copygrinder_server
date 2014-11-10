@@ -11,13 +11,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.validator
+package org.copygrinder.pure.copybean.model
 
-import org.copygrinder.pure.copybean.model.Copybean
-import play.api.libs.json.JsValue
+import org.copygrinder.pure.copybean.model.Cardinality.Cardinality
 
-trait Validator {
+case class CopybeanType(
+  id: String,
+  singularTypeNoun: Option[String] = None,
+  pluralTypeNoun: Option[String] = None,
+  instanceNameFormat: Option[String] = None,
+  fields: Option[Seq[CopybeanFieldDef]] = None,
+  validators: Option[Seq[CopybeanValidatorDef]] = None,
+  cardinality: Option[Cardinality] = Some(Cardinality.Many)
+  ) {}
 
-  def validate(copybean: Copybean, args: Map[String, JsValue]): Unit
+
+object Cardinality extends Enumeration {
+
+  type Cardinality = Value
+
+  val One, Many = Value
 
 }

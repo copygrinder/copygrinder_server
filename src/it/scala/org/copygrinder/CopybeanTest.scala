@@ -76,8 +76,7 @@ class CopybeanTest extends FlatSpec with Matchers {
       assert(siloDir.exists)
     }
 
-    //TODO:  The slow performance of the ValidatingUnmarshaller is causing this
-    Await.result(responseFuture, 3 second)
+    Await.result(responseFuture, 1 second)
   }
 
   it should "POST new copybeans" in {
@@ -165,6 +164,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val json =
       """
         |{
+        |  "enforcedTypeIds": [],
         |  "contains": {},
         |  "bogus": "noWay"
         |}""".stripMargin
@@ -173,7 +173,7 @@ class CopybeanTest extends FlatSpec with Matchers {
 
     val responseFuture = Http(req).map { response =>
       checkStatus(response, 400)
-      assert(response.getResponseBody.contains("invalid: bogus"))
+      assert(response.getResponseBody.contains("bogus"))
     }
 
     Await.result(responseFuture, 1 second)

@@ -16,30 +16,38 @@ package org.copygrinder.impure.api
 import java.io.IOException
 
 import akka.actor.ActorContext
+import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
-import org.copygrinder.pure.copybean.exception.{TypeValidationException, CopybeanTypeNotFound, CopybeanNotFound, SiloNotInitialized}
-import org.copygrinder.pure.copybean.model.{CopybeanTypeWithAnonValDefsImpl, AnonymousCopybeanImpl, CopybeanImpl, CopybeanTypeImpl}
-import org.json4s.Formats
-import org.json4s.JsonAST.JObject
-import org.json4s.jackson.JsonMethods._
+import org.copygrinder.pure.copybean.exception._
+import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
+import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
+import play.api.libs.json._
+import spray.http.HttpRequest
 import spray.http.StatusCodes._
-import spray.httpx.Json4sJacksonSupport
-import spray.httpx.marshalling.{ToResponseMarshaller, ToResponseMarshallable}
-import spray.httpx.unmarshalling.FromRequestUnmarshaller
+import spray.httpx.PlayJsonSupport
+import spray.httpx.marshalling.ToResponseMarshallable
+import spray.httpx.unmarshalling.{Deserialized, FromRequestUnmarshaller, MalformedContent}
 import spray.routing._
 
 import scala.concurrent._
 
 class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, siloScopeFactory: SiloScopeFactory)
-  extends Directives with Json4sJacksonSupport with LazyLogging with CorsSupport {
-
-  override implicit def json4sJacksonFormats: Formats = persistenceService.json4sJacksonFormats
-
-  override implicit def json4sUnmarshaller[T: Manifest] = new ValidatingUnmarshaller().json4sUnmarshaller
+  extends Directives with PlayJsonSupport with JsonWrites with JsonReads with LazyLogging with CorsSupport {
 
   private implicit def executionContext = ac.dispatcher
+
+
+  protected implicit def unmarshaller[T](implicit r: Reads[T]) = new FromRequestUnmarshaller[T] {
+    override def apply(req: HttpRequest): Deserialized[T] = {
+      val json = Json.parse(req.entity.data.toByteArray)
+      r.reads(json) match {
+        case s: JsSuccess[T] => Right(s.get)
+        case e: JsError => Left(new MalformedContent(JsError.toFlatJson(e).toString()))
+      }
+    }
+  }
 
   protected def copybeanExceptionHandler() =
     ExceptionHandler {
@@ -56,6 +64,10 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         logger.debug(s"Silo with id=$siloId has not been initialized")
         complete(NotFound, s"Silo with id '$siloId' has not been initialized.")
       case e: TypeValidationException =>
+        complete(BadRequest, e.getMessage)
+      case e: JsonInputException =>
+        complete(BadRequest, e.getMessage)
+      case e: JsonParseException =>
         complete(BadRequest, e.getMessage)
       case e: IOException =>
         requestUri { uri =>
@@ -79,45 +91,42 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         get {
           pathPrefix("copybeans") {
             pathPrefix("types") {
-              queryableRoute(
-                siloId,
-                persistenceService.findCopybeanTypes(_)(_),
-                persistenceService.cachedFetchCopybeanType(_)(_),
-                persistenceService.fetchAllCopybeanTypes()(_)
-              )
-            } ~ queryableRoute(
-              siloId,
-              persistenceService.find(_)(_),
-              persistenceService.cachedFetchCopybean(_)(_),
-              persistenceService.find()(_)
-            )
+              parameterSeq {
+                params =>
+                  if (params.isEmpty || params.head._1.isEmpty) {
+                    reject
+                  } else {
+                    scopedComplete(siloId) { implicit siloScope =>
+                      persistenceService.findCopybeanTypes(params)
+                    }
+                  }
+              } ~ path(Segment) {
+                id =>
+                  scopedComplete(siloId) { implicit siloScope =>
+                    persistenceService.cachedFetchCopybeanType(id)
+                  }
+              } ~ scopedComplete(siloId) { implicit siloScope =>
+                persistenceService.fetchAllCopybeanTypes()
+              }
+            } ~ parameterSeq {
+              params =>
+                if (params.isEmpty || params.head._1.isEmpty) {
+                  reject
+                } else {
+                  scopedComplete(siloId) { implicit siloScope =>
+                    persistenceService.find(params)
+                  }
+                }
+            } ~ path(Segment) {
+              id =>
+                scopedComplete(siloId) { implicit siloScope =>
+                  persistenceService.cachedFetchCopybean(id)
+                }
+            } ~ scopedComplete(siloId) { implicit siloScope =>
+              persistenceService.find()
+            }
           }
         }
-    }
-  }
-
-  protected def queryableRoute(
-    siloId: String,
-    queryFunction: (Seq[(String, String)], SiloScope) => ToResponseMarshallable,
-    fetchFunction: (String, SiloScope) => ToResponseMarshallable,
-    fetchAllFunction: (SiloScope) => ToResponseMarshallable
-    ) = {
-    parameterSeq {
-      params =>
-        if (params.isEmpty || params.head._1.isEmpty) {
-          reject
-        } else {
-          scopedComplete(siloId) { implicit siloScope =>
-            queryFunction(params, siloScope)
-          }
-        }
-    } ~ path(Segment) {
-      id =>
-        scopedComplete(siloId) { implicit siloScope =>
-          fetchFunction(id, siloScope)
-        }
-    } ~ scopedComplete(siloId) { implicit siloScope =>
-      fetchAllFunction(siloScope)
     }
   }
 
@@ -127,30 +136,31 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
         post {
           pathPrefix("copybeans") {
             path("types") {
-              entity(as[Seq[CopybeanTypeWithAnonValDefsImpl]]) { copybeanTypes =>
+              entity(as[Seq[CopybeanType]]) { copybeanTypes =>
                 scopedComplete(siloId) { implicit siloScope =>
                   copybeanTypes.map {
                     copybeanType =>
                       persistenceService.store(copybeanType)
                   }
+                  ""
                 }
-              } ~ entity(as[CopybeanTypeWithAnonValDefsImpl]) { copybeanType =>
+              } ~ entity(as[CopybeanType]) { copybeanType =>
                 scopedComplete(siloId) { implicit siloScope =>
                   persistenceService.store(copybeanType)
                   ""
                 }
               }
-            } ~ entity(as[AnonymousCopybeanImpl]) {
+            } ~ entity(as[AnonymousCopybean]) {
               anonBean =>
                 scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.store(anonBean).map(("key", _))
+                  persistenceService.store(anonBean)
                 }
-            } ~ entity(as[Seq[AnonymousCopybeanImpl]]) {
+            } ~ entity(as[Seq[AnonymousCopybean]]) {
               anonBeans =>
                 scopedComplete(siloId) { implicit siloScope =>
                   anonBeans.map {
                     anonBean =>
-                      persistenceService.store(anonBean).map(("key", _))
+                      persistenceService.store(anonBean)
                   }
                 }
             }
@@ -159,12 +169,12 @@ class CopygrinderApi(ac: ActorContext, persistenceService: PersistenceService, s
     }
   }
 
-  def scopedComplete[T](siloId: String)(body: => (SiloScope) => ToResponseMarshallable): StandardRoute = {
+  def scopedComplete[T](siloId: String)(body: => (SiloScope) => T)(implicit w: Writes[T]): StandardRoute = {
     lazy val siloScope = siloScopeFactory.build(siloId)
-    futureComplete(body(siloScope))
+    futureComplete(Json.toJson(body(siloScope)))
   }
 
-  def futureComplete: (=> ToResponseMarshallable) => StandardRoute = (marshallable) => {
+  def futureComplete[T]: (=> ToResponseMarshallable) => StandardRoute = (marshallable) => {
     complete(
       Future {
         marshallable

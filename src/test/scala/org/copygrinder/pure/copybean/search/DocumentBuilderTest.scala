@@ -15,22 +15,21 @@ package org.copygrinder.pure.copybean.search
 
 import org.copygrinder.UnitTest
 import org.copygrinder.pure.copybean.model.{AnonymousCopybeanImpl, CopybeanImpl}
-import org.json4s.JsonAST._
+import play.api.libs.json._
 
 class DocumentBuilderTest extends UnitTest {
 
   val documentBuilder = new DocumentBuilder()
 
   "buildDocument" should "return a Document object that matches the supplied CopybeanImpl" in {
-    val nestedObject = JField("nested", JObject(
-      JField("nestedField", JInt(123)),
-      JField("decField", JDecimal(1.1)),
-      JField("nullField", JNull)
-    ))
-    val array = JField("array", JArray(List(JBool(false), JDouble(3.14))))
-    val values = JObject(JField("stringField", JString("true")), nestedObject, array)
-    val anonBean = new AnonymousCopybeanImpl(Set("someType"), values)
-    val doc = documentBuilder.buildDocument(CopybeanImpl(anonBean, "876"))
+    val nestedObject = ("nested", JsObject(Seq(
+      ("nestedField", JsNumber(123)),
+      ("decField", JsNumber(1.1)),
+      ("nullField", JsNull)
+    )))
+    val array = ("array", JsArray(List(JsBoolean(false), JsNumber(3.14))))
+    val values = JsObject(Seq(("stringField", JsString("true")), nestedObject, array))
+    val doc = documentBuilder.buildDocument(CopybeanImpl(Set("someType"), values, "876"))
 
     doc.getField("id").stringValue() should be("876")
     doc.getField("enforcedTypeIds").stringValue() should be("someType")

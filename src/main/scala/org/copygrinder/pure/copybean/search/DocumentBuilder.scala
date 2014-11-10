@@ -14,12 +14,12 @@
 package org.copygrinder.pure.copybean.search
 
 import org.apache.lucene.document._
-import org.copygrinder.pure.copybean.model.{CopybeanTypeImpl, CopybeanImpl}
-import org.json4s.JsonAST._
+import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
+import play.api.libs.json._
 
 class DocumentBuilder {
 
-  def buildDocument(copybean: CopybeanImpl): Document = {
+  def buildDocument(copybean: Copybean): Document = {
     val doc = new Document
     doc.add(new IntField("doctype", DocTypes.Copybean.id, Field.Store.NO))
 
@@ -36,48 +36,44 @@ class DocumentBuilder {
     doc
   }
 
-  protected def addFieldsToDoc(doc: Document, jValue: JValue, prefix: String): Unit = {
+  protected def addFieldsToDoc(doc: Document, jValue: JsValue, prefix: String): Unit = {
 
     jValue match {
-      case string: JString =>
-        doc.add(new TextField(prefix, string.s, Field.Store.NO))
-      case int: JInt =>
-        doc.add(new IntField(prefix, int.num.toInt, Field.Store.NO))
-      case dec: JDecimal =>
-        doc.add(new DoubleField(prefix, dec.num.toDouble, Field.Store.NO))
-      case bool: JBool =>
+      case s: JsString =>
+        doc.add(new TextField(prefix, s.value, Field.Store.NO))
+      case dec: JsNumber =>
+        doc.add(new DoubleField(prefix, dec.value.toDouble, Field.Store.NO))
+      case bool: JsBoolean =>
         doc.add(new StringField(prefix, bool.value.toString, Field.Store.NO))
-      case double: JDouble =>
-        doc.add(new DoubleField(prefix, double.num, Field.Store.NO))
-      case JNull =>
+      case JsNull =>
         doc.add(new StringField(prefix, "null", Field.Store.NO))
-      case array: JArray =>
-        array.arr.foreach(arrayValue => {
+      case array: JsArray =>
+        array.value.foreach(arrayValue => {
           addFieldsToDoc(doc, arrayValue, prefix)
         })
-      case jObj: JObject =>
-        jObj.obj.foreach(value => {
+      case jObj: JsObject =>
+        jObj.value.foreach(value => {
           addFieldsToDoc(doc, value._2, prefix + "." + value._1)
         })
-      case JNothing =>
+      case u: JsUndefined =>
     }
 
   }
 
-  def buildDocument(copybeanType: CopybeanTypeImpl): Document = {
+  def buildDocument(copybeanType: CopybeanType): Document = {
     implicit val doc = new Document
     doc.add(new IntField("doctype", DocTypes.CopybeanType.id, Field.Store.NO))
     doc.add(new TextField("types.id", copybeanType.id, Field.Store.YES))
-    doc.add(new TextField("types.singularTypeNoun", copybeanType.singularTypeNoun, Field.Store.NO))
-    doc.add(new TextField("types.cardinality", copybeanType.cardinality.toString, Field.Store.NO))
 
     addOption("types.pluralTypeNoun", copybeanType.pluralTypeNoun)
     addOption("types.beanDescFormat", copybeanType.instanceNameFormat)
+    addOption("types.singularTypeNoun", copybeanType.singularTypeNoun)
+    addOption("types.cardinality", copybeanType.cardinality.map(_.toString))
 
-    copybeanType.fields.foreach { fieldDef =>
+    copybeanType.fields.map(_.foreach { fieldDef =>
       doc.add(new TextField("types.fieldDef.id", fieldDef.id, Field.Store.NO))
       doc.add(new TextField("types.fieldDef." + fieldDef.id + ".type", fieldDef.`type`.toString, Field.Store.NO))
-    }
+    })
 
     doc
   }

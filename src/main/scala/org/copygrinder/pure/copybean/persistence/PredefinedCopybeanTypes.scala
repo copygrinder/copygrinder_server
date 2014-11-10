@@ -14,23 +14,25 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.model._
-import org.json4s.JsonAST.JBool
+import play.api.libs.json.JsBoolean
 
 class PredefinedCopybeanTypes {
 
+  implicit def value2option[T](v: T): Option[T] = Option(v)
+
   lazy val predefinedTypes = Map(copygrinderAdminType.id -> copygrinderAdminType)
 
-  val copygrinderAdminType = new CopybeanTypeImpl(
-    new CopybeanTypeWithAnonValDefsImpl(
-      id = "copygrinderAdminMetatype",
-      singularTypeNoun = "Copygrinder Admin Metabean",
-      fields = Seq(
-        new CopybeanFieldDef("siloName", FieldType.String)
-      ),
-      cardinality = Cardinality.One
-    ), Seq(
-      new CopybeanValidatorDefImpl(
-        "requiredId", "required", Map("siloName" -> JBool(true))
+  val copygrinderAdminType = new CopybeanType(
+    id = "copygrinderAdminMetatype",
+    singularTypeNoun = "Copygrinder Admin Metabean",
+    fields = Seq(
+      new CopybeanFieldDef("siloName", FieldType.String)
+    ),
+    cardinality = Cardinality.One,
+    validators = Seq(
+      new CopybeanValidatorDef(
+        "requiredId", "required", Map("siloName" -> JsBoolean(true))
       )
-    ))
+    )
+  )
 }

@@ -17,7 +17,7 @@ import org.copygrinder.pure.copybean.model._
 
 class CopybeanReifier {
 
-  def reify(copybean: CopybeanImpl, types: Set[CopybeanTypeImpl]): ReifiedCopybean = {
+  def reify(copybean: CopybeanImpl, types: Set[CopybeanType]): ReifiedCopybean = {
 
     val names = types.map(t => {
       if (t.instanceNameFormat.isDefined) {
@@ -27,7 +27,7 @@ class CopybeanReifier {
       }
     }).flatten.toMap
 
-    new ReifiedCopybeanImpl(copybean, names)
+    new ReifiedCopybeanImpl(copybean.enforcedTypeIds, copybean.contains, copybean.id, names)
   }
 
   protected def resolveName(format: String, copybean: CopybeanImpl): String = {
@@ -36,9 +36,9 @@ class CopybeanReifier {
     variables.foldLeft(format)((result, variable) => {
       val variableString = variable.toString()
       val strippedVariable = variableString.substring(1, variableString.length - 1)
-      val valueOpt = copybean.containsMap.get(strippedVariable)
+      val valueOpt = copybean.contains.fields.find(field => field._1 == strippedVariable)
       valueOpt match {
-        case Some(value) => result.replace(variableString, value.values.toString)
+        case Some(value) => result.replace(variableString, value._2.toString)
         case _ => result
       }
     })

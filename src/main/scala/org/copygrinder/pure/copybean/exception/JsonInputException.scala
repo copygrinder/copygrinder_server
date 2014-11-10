@@ -11,13 +11,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.validator
+package org.copygrinder.pure.copybean.exception
 
-import org.copygrinder.pure.copybean.model.Copybean
-import play.api.libs.json.JsValue
+class JsonInputException(message: String) extends Exception(message) {
 
-trait Validator {
-
-  def validate(copybean: Copybean, args: Map[String, JsValue]): Unit
 
 }

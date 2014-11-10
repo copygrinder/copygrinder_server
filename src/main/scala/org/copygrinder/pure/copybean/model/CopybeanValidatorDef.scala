@@ -13,29 +13,11 @@
  */
 package org.copygrinder.pure.copybean.model
 
-import org.json4s.JsonAST.JValue
+import play.api.libs.json.JsValue
 
-trait AnonymousCopybeanValidatorDef {
-  val `type`: String
-  val args: Map[String, JValue]
-}
-
-trait CopybeanValidatorDef extends AnonymousCopybeanValidatorDef {
-  val id: String
-}
-
-case class AnonymousCopybeanValidatorDefImpl(`type`: String, args: Map[String, JValue]) extends AnonymousCopybeanValidatorDef {
-
-}
-
-case class CopybeanValidatorDefImpl(id: String, anonDef: AnonymousCopybeanValidatorDefImpl) extends CopybeanValidatorDef {
-
-  def this(id: String, `type`: String, args: Map[String, JValue]) = {
-    this(id, new AnonymousCopybeanValidatorDefImpl(`type`, args))
-  }
-
-  override val `type` = anonDef.`type`
-
-  override val args = anonDef.args
+case class CopybeanValidatorDef(
+  id: Option[String],
+  `type`: String,
+  args: Map[String, JsValue]) {
 
 }

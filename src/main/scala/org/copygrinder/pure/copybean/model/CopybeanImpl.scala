@@ -13,12 +13,12 @@
  */
 package org.copygrinder.pure.copybean.model
 
-import org.json4s.JsonAST.JObject
+import play.api.libs.json.JsObject
 
 
 trait AnonymousCopybean {
   val enforcedTypeIds: Set[String]
-  val contains: JObject
+  val contains: JsObject
 }
 
 trait Copybean extends AnonymousCopybean {
@@ -29,26 +29,14 @@ trait ReifiedCopybean extends Copybean {
   val names: Map[String, String]
 }
 
-case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], contains: JObject) extends AnonymousCopybean {
+case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], contains: JsObject) extends AnonymousCopybean {
 
 }
 
-case class CopybeanImpl(anonCopybean: AnonymousCopybeanImpl, id: String) extends Copybean {
-
-  override val enforcedTypeIds = anonCopybean.enforcedTypeIds
-
-  override val contains = anonCopybean.contains
-
-  lazy val containsMap = contains.obj.toMap
+case class CopybeanImpl(enforcedTypeIds: Set[String], contains: JsObject, id: String) extends Copybean {
 
 }
 
-case class ReifiedCopybeanImpl(copybean: CopybeanImpl, names: Map[String, String]) extends ReifiedCopybean {
-
-  override val enforcedTypeIds = copybean.enforcedTypeIds
-
-  override val contains = copybean.contains
-
-  override val id = copybean.id
+case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], contains: JsObject, id: String, names: Map[String, String]) extends ReifiedCopybean {
 
 }

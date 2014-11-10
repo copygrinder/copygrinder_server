@@ -21,7 +21,7 @@ import org.apache.lucene.index._
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
-import org.copygrinder.pure.copybean.model.{CopybeanTypeWithAnonValDefsImpl, CopybeanImpl, CopybeanTypeImpl}
+import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
 import org.copygrinder.pure.copybean.search.{DocTypes, DocumentBuilder, QueryBuilder}
 
 class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, defaultMaxResults: Int)
@@ -57,7 +57,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     indexWriter.close()
   }
 
-  def addCopybean(copybean: CopybeanImpl): Unit = {
+  def addCopybean(copybean: Copybean): Unit = {
     val doc = documentBuilder.buildDocument(copybean)
     reopenToken = trackingIndexWriter.addDocument(doc)
     indexWriter.commit()
@@ -89,7 +89,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     }
   }
 
-  def addCopybeanType(copybeanType: CopybeanTypeImpl): Unit = {
+  def addCopybeanType(copybeanType: CopybeanType): Unit = {
     val doc = documentBuilder.buildDocument(copybeanType)
     logger.debug("Adding doc: " + doc)
     reopenToken = trackingIndexWriter.addDocument(doc)
