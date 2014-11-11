@@ -21,11 +21,12 @@ import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.model.{CopybeanType, ReifiedCopybean}
-import org.copygrinder.pure.copybean.persistence.{PredefinedCopybeanTypes, CopybeanTypeEnforcer, IdEncoderDecoder}
+import org.copygrinder.pure.copybean.persistence.{CopybeanTypeEnforcer, IdEncoderDecoder, PredefinedCopybeanTypes}
 import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 import spray.caching.{Cache, LruCache}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 
 class DefaultWiring {
 
@@ -120,9 +121,10 @@ class SiloScopeFactory(documentBuilder: DocumentBuilder, queryBuilder: QueryBuil
   lazy val siloScopeCache: Cache[SiloScope] = LruCache()
 
   def build(siloId: String)(implicit ex: ExecutionContext): SiloScope = {
-    siloScopeCache(siloId) {
+    val future = siloScopeCache(siloId) {
       new SiloScope(siloId, documentBuilder, queryBuilder, config)
-    }.value.get.get
+    }
+    Await.result(future, 5 seconds)
   }
 
 }

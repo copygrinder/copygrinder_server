@@ -25,7 +25,7 @@ import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
 import org.copygrinder.pure.copybean.search.{DocTypes, DocumentBuilder, QueryBuilder}
 
 class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, defaultMaxResults: Int)
-  extends LazyLogging {
+ extends LazyLogging {
 
   protected lazy val analyzer = new KeywordAnalyzer()
 

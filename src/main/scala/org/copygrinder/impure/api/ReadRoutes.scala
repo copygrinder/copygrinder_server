@@ -63,47 +63,47 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
 
   protected val copybeanReadRoute = handleExceptions(readExceptionHandler) {
 
-    pathPrefix(Segment) {
-      siloId =>
-        get {
-          pathPrefix("copybeans") {
-            pathPrefix("types") {
-              parameterSeq {
-                params =>
-                  if (params.isEmpty || params.head._1.isEmpty) {
-                    reject
-                  } else {
-                    scopedComplete(siloId) { implicit siloScope =>
-                      persistenceService.findCopybeanTypes(params)
-                    }
-                  }
-              } ~ path(Segment) {
-                id =>
-                  scopedComplete(siloId) { implicit siloScope =>
-                    persistenceService.cachedFetchCopybeanType(id)
-                  }
-              } ~ scopedComplete(siloId) { implicit siloScope =>
-                persistenceService.fetchAllCopybeanTypes()
-              }
-            } ~ parameterSeq {
-              params =>
-                if (params.isEmpty || params.head._1.isEmpty) {
-                  reject
-                } else {
-                  scopedComplete(siloId) { implicit siloScope =>
-                    persistenceService.find(params)
-                  }
-                }
-            } ~ path(Segment) {
-              id =>
+    pathPrefix(Segment) { siloId =>
+      get {
+        pathPrefix("copybeans") {
+          pathPrefix("types") {
+            parameterSeq { params =>
+              if (params.isEmpty || params.head._1.isEmpty) {
+                reject
+              } else {
                 scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.cachedFetchCopybean(id)
+                  persistenceService.findCopybeanTypes(params)
                 }
-            } ~ scopedComplete(siloId) { implicit siloScope =>
-              persistenceService.find()
-            }
-          }
+              }
+            } ~
+             path(Segment) { id =>
+               scopedComplete(siloId) { implicit siloScope =>
+                 persistenceService.cachedFetchCopybeanType(id)
+               }
+             } ~
+             scopedComplete(siloId) { implicit siloScope =>
+               persistenceService.fetchAllCopybeanTypes()
+             }
+          } ~
+           parameterSeq { params =>
+             if (params.isEmpty || params.head._1.isEmpty) {
+               reject
+             } else {
+               scopedComplete(siloId) { implicit siloScope =>
+                 persistenceService.find(params)
+               }
+             }
+           } ~
+           path(Segment) { id =>
+             scopedComplete(siloId) { implicit siloScope =>
+               persistenceService.cachedFetchCopybean(id)
+             }
+           } ~
+           scopedComplete(siloId) { implicit siloScope =>
+             persistenceService.find()
+           }
         }
+      }
     }
   }
 

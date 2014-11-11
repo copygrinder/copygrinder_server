@@ -30,13 +30,13 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class PersistenceService(
-  config: Configuration,
-  hashedFileResolver: HashedFileResolver,
-  copybeanTypeEnforcer: CopybeanTypeEnforcer,
-  idEncoderDecoder: IdEncoderDecoder,
-  copybeanReifier: CopybeanReifier,
-  predefinedCopybeanTypes: PredefinedCopybeanTypes
-  ) extends LazyLogging with JsonReads with JsonWrites {
+ config: Configuration,
+ hashedFileResolver: HashedFileResolver,
+ copybeanTypeEnforcer: CopybeanTypeEnforcer,
+ idEncoderDecoder: IdEncoderDecoder,
+ copybeanReifier: CopybeanReifier,
+ predefinedCopybeanTypes: PredefinedCopybeanTypes
+ ) extends LazyLogging with JsonReads with JsonWrites {
 
   def fetchCopybean(id: String)(implicit siloScope: SiloScope): ReifiedCopybean = {
     checkSiloExists()

@@ -54,45 +54,43 @@ trait WriteRoutes extends RouteSupport with JsonReads {
         }
     }
 
-  protected val copybeanWriteRoute = handleExceptions(writeExceptionHandler) {
-    pathPrefix(Segment) {
-      siloId =>
-        post {
-          pathPrefix("copybeans") {
-            path("types") {
-              entity(as[Seq[CopybeanType]]) { copybeanTypes =>
-                scopedComplete(siloId) { implicit siloScope =>
-                  copybeanTypes.map {
-                    copybeanType =>
-                      persistenceService.store(copybeanType)
-                  }
-                  ""
-                }
-              } ~ entity(as[CopybeanType]) { copybeanType =>
-                scopedComplete(siloId) { implicit siloScope =>
+  protected val postRoutes = handleExceptions(writeExceptionHandler) {
+    pathPrefix(Segment) { siloId =>
+      post {
+        pathPrefix("copybeans") {
+          path("types") {
+            entity(as[Seq[CopybeanType]]) { copybeanTypes =>
+              scopedComplete(siloId) { implicit siloScope =>
+                copybeanTypes.map { copybeanType =>
                   persistenceService.store(copybeanType)
-                  ""
                 }
+                ""
               }
-            } ~ entity(as[AnonymousCopybean]) {
-              anonBean =>
-                scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.store(anonBean)
-                }
-            } ~ entity(as[Seq[AnonymousCopybean]]) {
-              anonBeans =>
-                scopedComplete(siloId) { implicit siloScope =>
-                  anonBeans.map {
-                    anonBean =>
-                      persistenceService.store(anonBean)
-                  }
-                }
-            }
-          }
+            } ~
+             entity(as[CopybeanType]) { copybeanType =>
+               scopedComplete(siloId) { implicit siloScope =>
+                 persistenceService.store(copybeanType)
+                 ""
+               }
+             }
+          } ~
+           entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
+             scopedComplete(siloId) { implicit siloScope =>
+               anonBeans.map { anonBean =>
+                 persistenceService.store(anonBean)
+               }
+             }
+           } ~
+           entity(as[AnonymousCopybean]) { anonBean =>
+             scopedComplete(siloId) { implicit siloScope =>
+               persistenceService.store(anonBean)
+             }
+           }
         }
+      }
     }
   }
 
-  val copygrinderWriteRoutes: Route = cors(copybeanWriteRoute)
+  val copygrinderWriteRoutes: Route = cors(postRoutes)
 
 }

@@ -64,5 +64,4 @@ trait JsonWrites extends DefaultWrites {
   implicit val ReifiedCopybeanWrites = Json.writes[ReifiedCopybeanImpl]
 
 
-
 }

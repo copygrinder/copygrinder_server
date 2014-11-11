@@ -1,4 +1,5 @@
-/.idea/
+/.idea/*
+!/.idea/codeStyleSettings.xml
 /project/boot/
 /project/plugins/project
 target/

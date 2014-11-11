@@ -98,7 +98,7 @@ class QueryBuilder extends LazyLogging {
     }
   }
 
-  protected def determineNamespace(field:String, prefix:String):String = {
+  protected def determineNamespace(field: String, prefix: String): String = {
     if (field equalsIgnoreCase "enforcedTypeIds") {
       ""
     } else {

@@ -38,7 +38,7 @@ trait CorsSupport {
         })
         ctx.complete(HttpResponse().withHeaders(
           `Access-Control-Allow-Methods`(OPTIONS, allowedMethods: _*) :: allowOriginHeader ::
-            optionsCorsHeaders
+           optionsCorsHeaders
         ))
       }
     }).withHttpResponseHeadersMapped { headers =>

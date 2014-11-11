@@ -16,14 +16,14 @@ package org.copygrinder.pure.copybean.model
 import org.copygrinder.pure.copybean.model.Cardinality.Cardinality
 
 case class CopybeanType(
-  id: String,
-  singularTypeNoun: Option[String] = None,
-  pluralTypeNoun: Option[String] = None,
-  instanceNameFormat: Option[String] = None,
-  fields: Option[Seq[CopybeanFieldDef]] = None,
-  validators: Option[Seq[CopybeanValidatorDef]] = None,
-  cardinality: Option[Cardinality] = Some(Cardinality.Many)
-  ) {}
+ id: String,
+ singularTypeNoun: Option[String] = None,
+ pluralTypeNoun: Option[String] = None,
+ instanceNameFormat: Option[String] = None,
+ fields: Option[Seq[CopybeanFieldDef]] = None,
+ validators: Option[Seq[CopybeanValidatorDef]] = None,
+ cardinality: Option[Cardinality] = Some(Cardinality.Many)
+ ) {}
 
 
 object Cardinality extends Enumeration {

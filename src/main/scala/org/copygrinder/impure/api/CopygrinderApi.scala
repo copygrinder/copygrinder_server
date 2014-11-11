@@ -21,7 +21,7 @@ import spray.routing._
 import scala.concurrent.ExecutionContext
 
 class CopygrinderApi(ac: ActorContext, persistence: PersistenceService, siloScope: SiloScopeFactory)
-  extends ReadRoutes with WriteRoutes {
+ extends ReadRoutes with WriteRoutes {
 
   override implicit def executionContext: ExecutionContext = ac.dispatcher
 

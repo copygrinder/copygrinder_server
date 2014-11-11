@@ -16,8 +16,8 @@ package org.copygrinder.pure.copybean.model
 import play.api.libs.json.JsValue
 
 case class CopybeanValidatorDef(
-  id: Option[String],
-  `type`: String,
-  args: Map[String, JsValue]) {
+ id: Option[String],
+ `type`: String,
+ args: Map[String, JsValue]) {
 
 }
