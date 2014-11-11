@@ -14,7 +14,7 @@
 package org.copygrinder.pure.copybean.search
 
 import org.copygrinder.UnitTest
-import org.copygrinder.pure.copybean.model.{AnonymousCopybeanImpl, CopybeanImpl}
+import org.copygrinder.pure.copybean.model.CopybeanImpl
 import play.api.libs.json._
 
 class DocumentBuilderTest extends UnitTest {
