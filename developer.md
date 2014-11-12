@@ -56,6 +56,7 @@ A function is consider pure if does not:
   semi-pure function is a pure function with exception that it reads or writes the mutable properties of its object.
   Thus, these functions are effectively pure in a single-threaded environment, and hence why they are not allowed to be
   multi-threaded.  An example of a semi-pure object is an Array.
-- read/write from semi-pure parameter objects that are not fresh.  A variable is considered fresh if the current thread is the only
-  thread that is able to make reference to it.  This means a semi-pure object created within a pure function is fresh.
-  However, a semi-pure object returned from a pure function is no longer fresh if impure code is a potentially caller.
+- read/write from semi-pure parameter objects that are not fresh.  A variable is considered fresh if the current thread
+  is the only thread that is able to make reference to it.  This means a semi-pure object created within a pure function
+  is fresh.  However, a semi-pure object returned from a pure function is no longer fresh if impure code is a
+  potentially caller.
