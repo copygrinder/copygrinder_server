@@ -18,12 +18,12 @@ import java.io.IOException
 import com.fasterxml.jackson.core.JsonParseException
 import org.copygrinder.impure.copybean.persistence.PersistenceService
 import org.copygrinder.pure.copybean.exception._
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
-import org.copygrinder.pure.copybean.persistence.JsonReads
+import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanImpl, CopybeanType}
+import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import spray.http.StatusCodes._
 import spray.routing._
 
-trait WriteRoutes extends RouteSupport with JsonReads {
+trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
   val persistenceService: PersistenceService
 
@@ -91,6 +91,23 @@ trait WriteRoutes extends RouteSupport with JsonReads {
     }
   }
 
-  val copygrinderWriteRoutes: Route = cors(postRoutes)
+  protected val putRoutes = handleExceptions(writeExceptionHandler) {
+    pathPrefix(Segment) { siloId =>
+      put {
+        pathPrefix("copybeans") {
+          path(Segment) { id =>
+            entity(as[AnonymousCopybean]) { copybean =>
+              scopedComplete(siloId) { implicit siloScope =>
+                persistenceService.update(id, copybean)
+                ""
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  val copygrinderWriteRoutes: Route = cors(postRoutes ~ putRoutes)
 
 }

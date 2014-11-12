@@ -13,7 +13,7 @@
  */
 package org.copygrinder.impure.system
 
-import akka.actor.{ActorSystem, DeadLetter, Props}
+import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout

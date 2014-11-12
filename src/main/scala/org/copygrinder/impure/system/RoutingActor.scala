@@ -13,7 +13,7 @@
  */
 package org.copygrinder.impure.system
 
-import akka.actor.{ActorContext, Actor, Props}
+import akka.actor.{Actor, ActorContext, Props}
 import akka.routing.BalancingPool
 import org.copygrinder.impure.api.CopygrinderApi
 import spray.http.{HttpRequest, HttpResponse, StatusCodes, Timedout}

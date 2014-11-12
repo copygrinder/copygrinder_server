@@ -13,7 +13,7 @@
  */
 package org.copygrinder.impure.system
 
-import akka.actor.{ActorLogging, Actor, DeadLetter, Props}
+import akka.actor.{Actor, ActorLogging, DeadLetter}
 
 class DeadLetterActor extends Actor with ActorLogging {
   def receive: Actor.Receive = {

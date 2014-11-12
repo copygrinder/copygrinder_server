@@ -14,7 +14,6 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.JsonInputException
-import play.api.data.validation.ValidationError
 import play.api.libs.json._
 
 import scala.collection.{Seq, mutable}

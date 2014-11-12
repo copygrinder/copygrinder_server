@@ -20,7 +20,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.system.{Configuration, SiloScope}
 import org.copygrinder.pure.copybean.CopybeanReifier
-import org.copygrinder.pure.copybean.exception.{CopybeanNotFound, CopybeanTypeNotFound, SiloNotInitialized}
+import org.copygrinder.pure.copybean.exception.{JsonInputException, CopybeanNotFound, CopybeanTypeNotFound, SiloNotInitialized}
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence._
 import play.api.libs.json._
@@ -180,6 +180,24 @@ class PersistenceService(
     }
     val futureSeq = Future.sequence(future)
     Await.result(futureSeq, 5 seconds)
+  }
+
+  def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Unit = {
+
+    val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.contains, id)
+
+    enforceTypes(copybean)
+
+    val f = Future {
+      val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
+      val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
+      siloScope.beanGitRepo.update(copybean.id, file, json)
+      siloScope.beanCache.remove(id)
+    }.zip(Future {
+      siloScope.indexer.updateCopybean(copybean)
+    })
+
+    Await.ready(f, 5 seconds)
   }
 
 }

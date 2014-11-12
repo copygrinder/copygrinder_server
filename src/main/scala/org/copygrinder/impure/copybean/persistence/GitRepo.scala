@@ -16,6 +16,7 @@ package org.copygrinder.impure.copybean.persistence
 import java.io.{File, FileWriter}
 
 import org.apache.commons.io.FileUtils
+import org.copygrinder.pure.copybean.exception.CopybeanNotFound
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
@@ -34,6 +35,17 @@ class GitRepo(repoDir: File, fileRepositoryBuilderWrapper: FileRepositoryBuilder
     doGitAction((git: Git) => {
       git.add().addFilepattern(".").call()
     })
+  }
+
+  def update(id: String, file: File, content: String): Unit = {
+    if (!file.exists()) {
+      throw new CopybeanNotFound(id)
+    }
+    val out = new FileWriter(file)
+    out.write(content)
+    out.close()
+
+    commit("Update")
   }
 
   def commit(message: String): Unit = {
