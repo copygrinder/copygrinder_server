@@ -60,7 +60,8 @@ class CopybeanTest extends FlatSpec with Matchers {
         |    "args": {
         |      "testfield1": "true"
         |    }
-        |  }]
+        |  }],
+        |  "cardinality": "Many"
         |},{
         |  "id": "testtype2",
         |  "singularTypeNoun": "TestTypeTwo",

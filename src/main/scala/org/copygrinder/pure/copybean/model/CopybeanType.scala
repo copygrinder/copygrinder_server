@@ -22,7 +22,7 @@ case class CopybeanType(
  instanceNameFormat: Option[String] = None,
  fields: Option[Seq[CopybeanFieldDef]] = None,
  validators: Option[Seq[CopybeanValidatorDef]] = None,
- cardinality: Option[Cardinality] = Some(Cardinality.Many)
+ cardinality: Cardinality
  ) {}
 
 

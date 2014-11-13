@@ -64,11 +64,11 @@ class DocumentBuilder {
     implicit val doc = new Document
     doc.add(new IntField("doctype", DocTypes.CopybeanType.id, Field.Store.NO))
     doc.add(new TextField("types.id", copybeanType.id, Field.Store.YES))
+    doc.add(new TextField("types.cardinality", copybeanType.cardinality.toString, Field.Store.NO))
 
     addOption("types.pluralTypeNoun", copybeanType.pluralTypeNoun)
     addOption("types.beanDescFormat", copybeanType.instanceNameFormat)
     addOption("types.singularTypeNoun", copybeanType.singularTypeNoun)
-    addOption("types.cardinality", copybeanType.cardinality.map(_.toString))
 
     copybeanType.fields.map(_.foreach { fieldDef =>
       doc.add(new TextField("types.fieldDef.id", fieldDef.id, Field.Store.NO))
