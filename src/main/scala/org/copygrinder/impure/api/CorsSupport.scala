@@ -37,7 +37,7 @@ trait CorsSupport {
           rejection.asInstanceOf[MethodRejection].supported
         })
         ctx.complete(HttpResponse().withHeaders(
-          `Access-Control-Allow-Methods`(OPTIONS, allowedMethods: _*) :: allowOriginHeader ::
+          `Access-Control-Allow-Methods`(OPTIONS, GET, POST, PUT, DELETE) :: allowOriginHeader ::
            optionsCorsHeaders
         ))
       }
