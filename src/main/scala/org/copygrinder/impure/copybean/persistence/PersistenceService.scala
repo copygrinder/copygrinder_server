@@ -71,15 +71,10 @@ class PersistenceService(
 
     enforceTypes(copybean)
 
-    val f = Future {
-      val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
-      val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
-      siloScope.beanGitRepo.add(file, json)
-    }.zip(Future {
-      siloScope.indexer.addCopybean(copybean)
-    })
-
-    Await.ready(f, 5 seconds)
+    val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
+    val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
+    siloScope.beanGitRepo.add(file, json)
+    siloScope.indexer.addCopybean(copybean)
 
     copybean.id
   }
@@ -107,25 +102,12 @@ class PersistenceService(
 
   def store(inputCopybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
 
-    val valDefs = inputCopybeanType.validators.map(_.map(valDef => {
-      if (valDef.id.isEmpty) {
-        valDef.copy(id = Some("placeholderId"))
-      } else {
-        valDef
-      }
-    }))
+    val copybeanType = inputCopybeanType.generateValDefIds()
 
-    val copybeanType = inputCopybeanType.copy(validators = valDefs)
-
-    val f = Future {
-      val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
-      val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
-      siloScope.typeGitRepo.add(file, json)
-    }.zip(Future {
-      siloScope.indexer.addCopybeanType(copybeanType)
-    })
-
-    Await.ready(f, 5 seconds)
+    val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
+    val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
+    siloScope.typeGitRepo.add(file, json)
+    siloScope.indexer.addCopybeanType(copybeanType)
   }
 
   protected def checkSiloExists()(implicit siloScope: SiloScope) = {
@@ -188,16 +170,30 @@ class PersistenceService(
 
     enforceTypes(copybean)
 
-    val f = Future {
-      val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
-      val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
-      siloScope.beanGitRepo.update(copybean.id, file, json)
-      siloScope.beanCache.remove(id)
-    }.zip(Future {
-      siloScope.indexer.updateCopybean(copybean)
-    })
+    val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
+    val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
+    if (!file.exists()) {
+      throw new CopybeanNotFound(id)
+    }
+    siloScope.beanGitRepo.update(file, json)
+    siloScope.beanCache.remove(id)
 
-    Await.ready(f, 5 seconds)
+    siloScope.indexer.updateCopybean(copybean)
+  }
+
+  def update(inputCopybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
+
+    val copybeanType = inputCopybeanType.generateValDefIds()
+
+    val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
+    val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
+    if (!file.exists()) {
+      throw new CopybeanTypeNotFound(copybeanType.id)
+    }
+    siloScope.typeGitRepo.update(file, json)
+    siloScope.typeCache.remove(copybeanType.id)
+
+    siloScope.indexer.updateCopybeanType(copybeanType)
   }
 
 }

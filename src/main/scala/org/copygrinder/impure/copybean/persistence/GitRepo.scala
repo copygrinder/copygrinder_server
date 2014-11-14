@@ -37,10 +37,7 @@ class GitRepo(repoDir: File, fileRepositoryBuilderWrapper: FileRepositoryBuilder
     })
   }
 
-  def update(id: String, file: File, content: String): Unit = {
-    if (!file.exists()) {
-      throw new CopybeanNotFound(id)
-    }
+  def update(file: File, content: String): Unit = {
     val out = new FileWriter(file)
     out.write(content)
     out.close()

@@ -23,7 +23,21 @@ case class CopybeanType(
  fields: Option[Seq[CopybeanFieldDef]] = None,
  validators: Option[Seq[CopybeanValidatorDef]] = None,
  cardinality: Cardinality
- ) {}
+ ) {
+
+  def generateValDefIds():CopybeanType = {
+    val valDefs = validators.map(_.map(valDef => {
+      if (valDef.id.isEmpty) {
+        valDef.copy(id = Some("placeholderId"))
+      } else {
+        valDef
+      }
+    }))
+
+    this.copy(validators = valDefs)
+  }
+
+}
 
 
 object Cardinality extends Enumeration {

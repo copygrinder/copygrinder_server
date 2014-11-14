@@ -103,6 +103,13 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     indexWriter.commit()
   }
 
+  def updateCopybeanType(copybeanType: CopybeanType): Unit = {
+    val doc = documentBuilder.buildDocument(copybeanType)
+    trackingIndexWriter.deleteDocuments(new Term("types.id", copybeanType.id))
+    reopenToken = trackingIndexWriter.addDocument(doc)
+    indexWriter.commit()
+  }
+
   def findCopybeanTypeIds(): Seq[String] = {
     val query = NumericRangeQuery.newIntRange("doctype", 1, DocTypes.CopybeanType.id, DocTypes.CopybeanType.id, true, true)
     doQuery(query, "types.id")

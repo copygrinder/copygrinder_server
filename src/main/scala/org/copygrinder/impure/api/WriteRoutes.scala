@@ -58,7 +58,18 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     pathPrefix(Segment) { siloId =>
       post {
         pathPrefix("copybeans") {
-          path("types") {
+          entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
+            scopedComplete(siloId) { implicit siloScope =>
+              anonBeans.map { anonBean =>
+                persistenceService.store(anonBean)
+              }
+            }
+          } ~
+           entity(as[AnonymousCopybean]) { anonBean =>
+             scopedComplete(siloId) { implicit siloScope =>
+               persistenceService.store(anonBean)
+             }
+           } ~ path("types") {
             entity(as[Seq[CopybeanType]]) { copybeanTypes =>
               scopedComplete(siloId) { implicit siloScope =>
                 copybeanTypes.map { copybeanType =>
@@ -73,19 +84,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
                  ""
                }
              }
-          } ~
-           entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
-             scopedComplete(siloId) { implicit siloScope =>
-               anonBeans.map { anonBean =>
-                 persistenceService.store(anonBean)
-               }
-             }
-           } ~
-           entity(as[AnonymousCopybean]) { anonBean =>
-             scopedComplete(siloId) { implicit siloScope =>
-               persistenceService.store(anonBean)
-             }
-           }
+          }
         }
       }
     }
@@ -100,6 +99,15 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
               scopedComplete(siloId) { implicit siloScope =>
                 persistenceService.update(id, copybean)
                 ""
+              }
+            }
+          } ~ pathPrefix("types") {
+            path(Segment) { id =>
+              entity(as[CopybeanType]) { copybeanTypes =>
+                scopedComplete(siloId) { implicit siloScope =>
+                  persistenceService.update(copybeanTypes)
+                  ""
+                }
               }
             }
           }

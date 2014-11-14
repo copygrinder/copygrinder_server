@@ -20,6 +20,7 @@ import dispatch.Defaults._
 import dispatch._
 import org.apache.commons.io.FileUtils
 import org.scalatest.{FlatSpec, Matchers}
+import play.api.libs.json.{JsArray, JsString, Json}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -34,6 +35,11 @@ class CopybeanTest extends FlatSpec with Matchers {
   val copybeansTypesUrl = url(s"http://localhost:9999/$siloId/copybeans/types")
 
   val copybeansUrl = url(s"http://localhost:9999/$siloId/copybeans")
+
+  def copybeanIdUrl(id: String) = url(s"http://localhost:9999/$siloId/copybeans/$id")
+
+  def copybeanTypeIdUrl(id: String) = url(s"http://localhost:9999/$siloId/copybeans/types/$id")
+
 
   "Copygrinder" should "create a new silo and POST types" in {
 
@@ -200,6 +206,78 @@ class CopybeanTest extends FlatSpec with Matchers {
     }
 
     Await.result(responseFuture, 1 second)
+  }
+
+  it should "edit existing Copybeans" in {
+
+    val req = copybeansUrl.GET
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response)
+      val json = Json.parse(response.getResponseBody).as[JsArray]
+      val bean = json.value.find { bean =>
+        val ids = bean.\("enforcedTypeIds").as[JsArray]
+        ids.value.contains(JsString("testtype1"))
+      }
+      bean.get.\("id").as[JsString].value
+    }
+
+    val id = Await.result(responseFuture, 1 second)
+
+    val json =
+      """
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "contains": {
+        |    "testfield1":"1-edited",
+        |    "testfield2":2
+        |  }
+        |}""".stripMargin
+
+    val req2 = copybeanIdUrl(id).PUT.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture2 = Http(req2).map { response =>
+      checkStatus(response)
+    }
+
+    Await.result(responseFuture2, 1 second)
+
+    val responseFuture3 = Http(req).map { response =>
+      checkStatus(response)
+      assert(response.getResponseBody.contains("1-edited"))
+    }
+
+    Await.result(responseFuture3, 1 second)
+  }
+
+  it should "edit existing Copybean Types" in {
+
+    val json =
+      """
+        |{
+        |  "id": "testtype2",
+        |  "singularTypeNoun": "TestTypeTwo-Edited",
+        |  "cardinality": "One"
+        |}""".stripMargin
+
+    val req = copybeanTypeIdUrl("testtype2").PUT.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response)
+    }
+
+    Await.result(responseFuture, 1 second)
+
+    val req2 = copybeansTypesUrl.GET.setQueryParameters(Map("id" -> Seq("testtype2")))
+
+    val responseFuture2 = Http(req2).map { response =>
+      checkStatus(response)
+      assert(response.getResponseBody.contains("TestTypeTwo-Edited"))
+    }
+
+    Await.result(responseFuture2, 1 second)
   }
 
   def checkStatus(response: Response, code: Int = 200) = {
