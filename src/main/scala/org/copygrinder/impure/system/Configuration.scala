@@ -15,7 +15,9 @@ package org.copygrinder.impure.system
 
 import java.io.File
 
+import ch.qos.logback.classic.{Level, LoggerContext}
 import com.typesafe.config.ConfigFactory
+import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
@@ -38,5 +40,12 @@ class Configuration {
   lazy val copybeanDataRoot = Try(config.getString("copybeans.dataRoot")).getOrElse("data")
 
   lazy val indexMaxResults = Try(config.getInt("index.maxResults")).getOrElse(defaultMaxResults)
+
+  val loggingLevel = Try(config.getString("logging.level")).getOrElse("WARN")
+
+  val loggingContext = LoggerFactory.getILoggerFactory().asInstanceOf[LoggerContext]
+
+  loggingContext.getLogger("org.copygrinder").setLevel(Level.toLevel(loggingLevel))
+
 
 }
