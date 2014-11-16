@@ -18,6 +18,7 @@ import java.io.File
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.index._
+import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
@@ -31,7 +32,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   protected lazy val indexDirectory = FSDirectory.open(indexDir)
 
-  protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_10_0, analyzer)
+  protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_10_2, analyzer)
 
   protected lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
@@ -76,8 +77,14 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
   }
 
   def findCopybeanIds(params: Seq[(String, String)]): Seq[String] = {
-    val query = queryBuilder.build(params)
-    doQuery(query)
+    val joinQueryBuilder = new JoinQueryBuilder(queryBuilder)
+    val indexSearcher = searcherManager.acquire()
+    try {
+      val joinQuery = joinQueryBuilder.doJoinQuery(params, indexSearcher)
+      doQuery(joinQuery)
+    } finally {
+      searcherManager.release(indexSearcher)
+    }
   }
 
   protected def doQuery(query: Query, idField: String = "id"): Seq[String] = {
