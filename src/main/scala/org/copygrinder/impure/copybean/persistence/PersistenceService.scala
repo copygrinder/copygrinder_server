@@ -20,7 +20,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.system.{Configuration, SiloScope}
 import org.copygrinder.pure.copybean.CopybeanReifier
-import org.copygrinder.pure.copybean.exception.{JsonInputException, CopybeanNotFound, CopybeanTypeNotFound, SiloNotInitialized}
+import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence._
 import play.api.libs.json._
@@ -86,9 +86,18 @@ class PersistenceService(
     fetchCopybeans(copybeanIds)
   }
 
+  protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content")
+
   def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     logger.debug("Finding copybeans")
     checkSiloExists()
+
+    params.foreach(param => {
+      if (!copybeansReservedWords.exists(reservedWord => param._1.startsWith(reservedWord))) {
+        throw new UnknownQueryParameter(param._1)
+      }
+    })
+
     val copybeanIds = siloScope.indexer.findCopybeanIds(params)
     fetchCopybeans(copybeanIds)
   }

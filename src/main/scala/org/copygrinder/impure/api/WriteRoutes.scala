@@ -39,8 +39,8 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
         complete(NotFound, s"Copybean Type with id '$id' was not found.")
       case e: SiloNotInitialized =>
         val siloId = e.siloId
-        logger.debug(s"Silo with id=$siloId has not been initialized")
-        complete(NotFound, s"Silo with id '$siloId' has not been initialized.")
+        logger.debug(s"Silo with id=$siloId does not exist.")
+        complete(NotFound, s"Silo with id=$siloId does not exist.")
       case e: TypeValidationException =>
         complete(BadRequest, e.getMessage)
       case e: JsonInputException =>

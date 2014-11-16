@@ -38,14 +38,16 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
         complete(NotFound, s"Copybean Type with id '$id' was not found.")
       case e: SiloNotInitialized =>
         val siloId = e.siloId
-        logger.debug(s"Silo with id=$siloId has not been initialized")
-        complete(NotFound, s"Silo with id '$siloId' has not been initialized.")
+        logger.debug(s"Silo with id=$siloId does not exist")
+        complete(NotFound, s"Silo with id=$siloId does not exist.")
       case e: TypeValidationException =>
         complete(BadRequest, e.getMessage)
       case e: JsonInputException =>
         complete(BadRequest, e.getMessage)
       case e: JsonParseException =>
         complete(BadRequest, e.getMessage)
+      case e: UnknownQueryParameter =>
+        complete(BadRequest, "Unknown query parameter '" + e.param + "'.  Did you mean 'content." + e.param + "'?")
       case e: IOException =>
         requestUri { uri =>
           logger.error(s"Error occurred while processing request to $uri", e)
