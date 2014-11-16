@@ -94,7 +94,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "enforcedTypeIds": [
         |    "testtype1"
         |  ],
-        |  "contains": {
+        |  "content": {
         |    "testfield1":"1",
         |    "testfield2":2
         |  }
@@ -102,7 +102,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "enforcedTypeIds": [
         |    "testtype2"
         |  ],
-        |  "contains": {
+        |  "content": {
         |    "testfield1":"3",
         |    "testfield2":4
         |  }
@@ -151,7 +151,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "enforcedTypeIds": [
         |    "testtype1"
         |  ],
-        |  "contains": {
+        |  "content": {
         |    "testfield1": ""
         |  }
         |}""".stripMargin
@@ -172,7 +172,7 @@ class CopybeanTest extends FlatSpec with Matchers {
       """
         |{
         |  "enforcedTypeIds": [],
-        |  "contains": {},
+        |  "content": {},
         |  "bogus": "noWay"
         |}""".stripMargin
 
@@ -194,7 +194,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "enforcedTypeIds": [
         |    "copygrinderAdminMetatype"
         |  ],
-        |  "contains": {
+        |  "content": {
         |    "siloName": "IntegrationTest Website"
         |  }
         |}""".stripMargin
@@ -230,7 +230,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "enforcedTypeIds": [
         |    "testtype1"
         |  ],
-        |  "contains": {
+        |  "content": {
         |    "testfield1":"1-edited",
         |    "testfield2":2
         |  }

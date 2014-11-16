@@ -31,7 +31,7 @@ class DocumentBuilder {
       doc.add(typeField)
     })
 
-    addFieldsToDoc(doc, copybean.contains, "contains")
+    addFieldsToDoc(doc, copybean.content, "content")
 
     doc
   }

@@ -63,7 +63,7 @@ class PersistenceService(
 
   def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): String = {
     val id = idEncoderDecoder.encodeUuid(UUID.randomUUID())
-    val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.contains, id)
+    val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.content, id)
     store(copybean)
   }
 
@@ -166,7 +166,7 @@ class PersistenceService(
 
   def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Unit = {
 
-    val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.contains, id)
+    val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.content, id)
 
     enforceTypes(copybean)
 

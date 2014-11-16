@@ -18,7 +18,7 @@ import play.api.libs.json.JsObject
 
 trait AnonymousCopybean {
   val enforcedTypeIds: Set[String]
-  val contains: JsObject
+  val content: JsObject
 }
 
 trait Copybean extends AnonymousCopybean {
@@ -29,14 +29,14 @@ trait ReifiedCopybean extends Copybean {
   val names: Map[String, String]
 }
 
-case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], contains: JsObject) extends AnonymousCopybean {
+case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], content: JsObject) extends AnonymousCopybean {
 
 }
 
-case class CopybeanImpl(enforcedTypeIds: Set[String], contains: JsObject, id: String) extends Copybean {
+case class CopybeanImpl(enforcedTypeIds: Set[String], content: JsObject, id: String) extends Copybean {
 
 }
 
-case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], contains: JsObject, id: String, names: Map[String, String]) extends ReifiedCopybean {
+case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: JsObject, id: String, names: Map[String, String]) extends ReifiedCopybean {
 
 }

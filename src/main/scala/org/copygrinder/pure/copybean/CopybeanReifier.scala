@@ -27,7 +27,7 @@ class CopybeanReifier {
       }
     }).flatten.toMap
 
-    new ReifiedCopybeanImpl(copybean.enforcedTypeIds, copybean.contains, copybean.id, names)
+    new ReifiedCopybeanImpl(copybean.enforcedTypeIds, copybean.content, copybean.id, names)
   }
 
   protected def resolveName(format: String, copybean: CopybeanImpl): String = {
@@ -36,7 +36,7 @@ class CopybeanReifier {
     variables.foldLeft(format)((result, variable) => {
       val variableString = variable.toString()
       val strippedVariable = variableString.substring(1, variableString.length - 1)
-      val valueOpt = copybean.contains.fields.find(field => field._1 == strippedVariable)
+      val valueOpt = copybean.content.fields.find(field => field._1 == strippedVariable)
       valueOpt match {
         case Some(value) => result.replace(variableString, value._2.toString)
         case _ => result

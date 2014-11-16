@@ -33,11 +33,11 @@ class DocumentBuilderTest extends UnitTest {
 
     doc.getField("id").stringValue() should be("876")
     doc.getField("enforcedTypeIds").stringValue() should be("someType")
-    doc.getField("contains.stringField").stringValue() should be("true")
-    doc.getField("contains.nested.nestedField").numericValue() should be(123)
-    doc.getField("contains.nested.decField").numericValue() should be(1.1)
-    doc.getField("contains.nested.nullField").stringValue() should be("null")
-    doc.getFields("contains.array").map(_.stringValue()) should be(Array("false", "3.14"))
+    doc.getField("content.stringField").stringValue() should be("true")
+    doc.getField("content.nested.nestedField").numericValue() should be(123)
+    doc.getField("content.nested.decField").numericValue() should be(1.1)
+    doc.getField("content.nested.nullField").stringValue() should be("null")
+    doc.getFields("content.array").map(_.stringValue()) should be(Array("false", "3.14"))
   }
 
 }

@@ -21,7 +21,7 @@ import org.apache.lucene.search._
 class QueryBuilder extends LazyLogging {
 
 
-  def build(params: Seq[(String, String)], prefix: String = "contains."): Query = {
+  def build(params: Seq[(String, String)], prefix: String = "content."): Query = {
     val query = doBuild(params, prefix)
     logger.debug("Built Query " + query)
     query

@@ -33,7 +33,7 @@ class CopybeanTypeEnforcer() {
 
     val fieldId = fieldDef.id
 
-    val valueOpt = copybean.contains.fields.find(field => field._1 == fieldId)
+    val valueOpt = copybean.content.fields.find(field => field._1 == fieldId)
 
     if (valueOpt.isDefined) {
       val value = valueOpt.get._2

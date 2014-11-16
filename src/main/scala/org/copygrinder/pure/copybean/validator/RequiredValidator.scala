@@ -26,7 +26,7 @@ class RequiredValidator extends Validator {
     args.foreach { arg =>
       val (field, argValue) = arg
       if (!falseyValues.contains(argValue.toString())) {
-        copybean.contains.fields.find(f => f._1 == field) match {
+        copybean.content.fields.find(f => f._1 == field) match {
           case Some(value) => value._2 match {
             case JsNull =>
               throw new TypeValidationException(s"Field '$field' is required but was null")

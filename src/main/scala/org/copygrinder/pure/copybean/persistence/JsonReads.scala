@@ -32,7 +32,7 @@ trait JsonReads extends JsonReadUtils {
 
   implicit val anonymousCopybeanReads: Reads[AnonymousCopybean] = readWrapper((
    (JsPath \ "enforcedTypeIds").read[Set[String]] and
-    (JsPath \ "contains").read[JsObject]
+    (JsPath \ "content").read[JsObject]
    )(AnonymousCopybeanImpl.apply _)
   )
 
