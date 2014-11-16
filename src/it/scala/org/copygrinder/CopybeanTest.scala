@@ -132,7 +132,7 @@ class CopybeanTest extends FlatSpec with Matchers {
 
   it should "GET specific copybeans" in {
 
-    val req = copybeansUrl.GET.setQueryParameters(Map("testfield1" -> Seq("3")))
+    val req = copybeansUrl.GET.setQueryParameters(Map("content.testfield1" -> Seq("3")))
 
     val responseFuture = Http(req).map { response =>
       checkStatus(response)

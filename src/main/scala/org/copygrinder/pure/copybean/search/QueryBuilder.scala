@@ -17,23 +17,31 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
+import org.copygrinder.pure.copybean.search.DocTypes.DocTypes
 
 class QueryBuilder extends LazyLogging {
 
 
-  def build(params: Seq[(String, String)], prefix: String = "content."): Query = {
-    val query = doBuild(params, prefix)
+  def build(params: Seq[(String, String)], docType: DocTypes): Query = {
+
+    val doctypeQuery = NumericRangeQuery.newIntRange("doctype", 1, docType.id, docType.id, true, true)
+    val query = doBuild(params)
+
+    val combinedQuery = new BooleanQuery(true)
+    combinedQuery.add(query, Occur.MUST)
+    combinedQuery.add(doctypeQuery, Occur.MUST)
+
     logger.debug("Built Query " + query)
-    query
+    combinedQuery
   }
 
-  protected def doBuild(params: Seq[(String, String)], prefix: String): Query = {
+  protected def doBuild(params: Seq[(String, String)]): Query = {
     val (paramHead, paramTail) = params.span(param => {
       val field = param._1.toLowerCase
       val operator = field == "or" || field == "and" || field == "not"
       !operator || (operator && param._2.nonEmpty)
     })
-    val headQuery = createQuery(paramHead, prefix)
+    val headQuery = createQuery(paramHead)
     if (paramTail.nonEmpty) {
 
       val clause = paramTail.head._1.toLowerCase match {
@@ -44,7 +52,7 @@ class QueryBuilder extends LazyLogging {
 
       val booleanQuery = new BooleanQuery()
       booleanQuery.add(headQuery, clause)
-      booleanQuery.add(doBuild(paramTail.tail, prefix), clause)
+      booleanQuery.add(doBuild(paramTail.tail), clause)
       booleanQuery
     } else {
       headQuery
@@ -52,12 +60,12 @@ class QueryBuilder extends LazyLogging {
   }
 
 
-  protected def createQuery(params: Seq[(String, String)], prefix: String): Query = {
+  protected def createQuery(params: Seq[(String, String)]): Query = {
     val booleanQuery = new BooleanQuery()
     params.foreach { param =>
       if (param._1.nonEmpty && param._2.nonEmpty) {
         val (field, clause) = determineBooleanClause(param._1)
-        val query = addParamToQuery(field, param._2, booleanQuery, prefix)
+        val query = addParamToQuery(field, param._2, booleanQuery)
         booleanQuery.add(query, clause)
       }
     }
@@ -74,35 +82,23 @@ class QueryBuilder extends LazyLogging {
     }
   }
 
-  protected def addParamToQuery(field: String, value: String, booleanQuery: BooleanQuery, prefix: String): Query = {
-
-    val namespace = determineNamespace(field, prefix)
-
-    val scopedField = s"$namespace" + field
+  protected def addParamToQuery(field: String, value: String, booleanQuery: BooleanQuery): Query = {
 
     value match {
       case intString if intString.forall(_.isDigit) => {
         val intValue = value.toInt
         val query = new BooleanQuery()
-        val numericQuery = NumericRangeQuery.newIntRange(scopedField, 1, intValue, intValue, true, true)
-        val termQuery = new TermQuery(new Term(scopedField, value))
+        val numericQuery = NumericRangeQuery.newIntRange(field, 1, intValue, intValue, true, true)
+        val termQuery = new TermQuery(new Term(field, value))
         query.add(numericQuery, BooleanClause.Occur.SHOULD)
         query.add(termQuery, BooleanClause.Occur.SHOULD)
         query
       }
       case _ => {
         val q = new PhraseQuery
-        q.add(new Term(scopedField, value))
+        q.add(new Term(field, value))
         q
       }
-    }
-  }
-
-  protected def determineNamespace(field: String, prefix: String): String = {
-    if (field equalsIgnoreCase "enforcedTypeIds") {
-      ""
-    } else {
-      prefix
     }
   }
 
