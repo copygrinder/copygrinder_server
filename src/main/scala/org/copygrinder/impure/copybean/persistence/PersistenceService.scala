@@ -86,7 +86,7 @@ class PersistenceService(
     fetchCopybeans(copybeanIds)
   }
 
-  protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content")
+  protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content", "type")
 
   def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     logger.debug("Finding copybeans")

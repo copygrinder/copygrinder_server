@@ -27,7 +27,8 @@ class JoinQueryBuilder(queryBuilder: QueryBuilder) {
     val nonJoinQuery = queryBuilder.build(nonJoinParams, DocTypes.Copybean)
 
     if (joinParams.nonEmpty) {
-      val fromQuery = queryBuilder.build(joinParams, DocTypes.CopybeanType)
+      val renamedParams = joinParamRenamer(joinParams)
+      val fromQuery = queryBuilder.build(renamedParams, DocTypes.CopybeanType)
 
       val joinQuery = JoinUtil.createJoinQuery("id", false, "enforcedTypeIds", fromQuery, searcher, ScoreMode.None)
 
@@ -42,6 +43,18 @@ class JoinQueryBuilder(queryBuilder: QueryBuilder) {
     } else {
       nonJoinQuery
     }
+  }
+
+  protected def joinParamRenamer(params: Seq[(String, String)]): Seq[(String, String)] = {
+
+    params.map(param => {
+      if (param._1.startsWith("type.")) {
+        (param._1.replace("type.", ""), param._2)
+      } else {
+        param
+      }
+    })
+
   }
 
 }
