@@ -19,9 +19,9 @@ class CopybeanReifier {
 
   def reify(copybean: CopybeanImpl, types: Set[CopybeanType]): ReifiedCopybean = {
 
-    val names = types.map(t => {
-      if (t.instanceNameFormat.isDefined) {
-        Option((t.id, resolveName(t.instanceNameFormat.get, copybean)))
+    val names = types.map(cbType => {
+      if (cbType.instanceNameFormat.isDefined) {
+        Option((cbType.id, resolveName(cbType.instanceNameFormat.get, copybean, cbType)))
       } else {
         None
       }
@@ -30,17 +30,25 @@ class CopybeanReifier {
     new ReifiedCopybeanImpl(copybean.enforcedTypeIds, copybean.content, copybean.id, names)
   }
 
-  protected def resolveName(format: String, copybean: CopybeanImpl): String = {
+  protected def resolveName(format: String, copybean: CopybeanImpl, cbType: CopybeanType): String = {
     val variables = """\$(.+?)\$""".r.findAllMatchIn(format)
 
     variables.foldLeft(format)((result, variable) => {
       val variableString = variable.toString()
       val strippedVariable = variableString.substring(1, variableString.length - 1)
-      val valueOpt = copybean.content.fields.find(field => field._1 == strippedVariable)
-      valueOpt match {
-        case Some(value) => result.replace(variableString, value._2.toString)
-        case _ => result
+
+      if (strippedVariable.startsWith("content.")) {
+        val valueOpt = copybean.content.fields.find(field => field._1 == strippedVariable.replace("content.", ""))
+        valueOpt match {
+          case Some(value) => result.replace(variableString, value._2.toString)
+          case _ => result
+        }
+      } else if (strippedVariable == "singularTypeNoun") {
+        result.replace(variableString, cbType.singularTypeNoun.get)
+      } else {
+        result
       }
+
     })
   }
 
