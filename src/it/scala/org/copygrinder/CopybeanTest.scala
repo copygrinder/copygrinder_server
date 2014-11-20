@@ -36,16 +36,31 @@ class CopybeanTest extends FlatSpec with Matchers {
 
   val copybeansUrl = url(s"http://localhost:9999/$siloId/copybeans")
 
+  val rootUrl = url(s"http://localhost:9999/")
+
   def copybeanIdUrl(id: String) = url(s"http://localhost:9999/$siloId/copybeans/$id")
 
   def copybeanTypeIdUrl(id: String) = url(s"http://localhost:9999/$siloId/copybeans/types/$id")
 
 
-  "Copygrinder" should "create a new silo and POST types" in {
+  "Copygrinder" should "give a basic response to root GETs" in {
 
     val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
 
     FileUtils.deleteDirectory(siloDir)
+
+    val req = rootUrl.GET
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(response)
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
+  "Copygrinder" should "create a new silo and POST types" in {
+
+    val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
 
     val json =
       """
