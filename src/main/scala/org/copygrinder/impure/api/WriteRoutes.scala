@@ -16,7 +16,7 @@ package org.copygrinder.impure.api
 import java.io.IOException
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.copygrinder.impure.copybean.persistence.PersistenceService
+import org.copygrinder.impure.copybean.persistence.{CopybeanPersistenceService, TypePersistenceService}
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanImpl, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
@@ -25,7 +25,9 @@ import spray.routing._
 
 trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
-  val persistenceService: PersistenceService
+  val typePersistenceService: TypePersistenceService
+
+  val beanPersistenceService: CopybeanPersistenceService
 
   protected def writeExceptionHandler() =
     ExceptionHandler {
@@ -61,26 +63,26 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
           entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
             scopedComplete(siloId) { implicit siloScope =>
               anonBeans.map { anonBean =>
-                persistenceService.store(anonBean)
+                beanPersistenceService.store(anonBean)
               }
             }
           } ~
            entity(as[AnonymousCopybean]) { anonBean =>
              scopedComplete(siloId) { implicit siloScope =>
-               persistenceService.store(anonBean)
+               beanPersistenceService.store(anonBean)
              }
            } ~ path("types") {
             entity(as[Seq[CopybeanType]]) { copybeanTypes =>
               scopedComplete(siloId) { implicit siloScope =>
                 copybeanTypes.map { copybeanType =>
-                  persistenceService.store(copybeanType)
+                  typePersistenceService.store(copybeanType)
                 }
                 ""
               }
             } ~
              entity(as[CopybeanType]) { copybeanType =>
                scopedComplete(siloId) { implicit siloScope =>
-                 persistenceService.store(copybeanType)
+                 typePersistenceService.store(copybeanType)
                  ""
                }
              }
@@ -97,7 +99,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
           path(Segment) { id =>
             entity(as[AnonymousCopybean]) { copybean =>
               scopedComplete(siloId) { implicit siloScope =>
-                persistenceService.update(id, copybean)
+                beanPersistenceService.update(id, copybean)
                 ""
               }
             }
@@ -105,7 +107,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
             path(Segment) { id =>
               entity(as[CopybeanType]) { copybeanTypes =>
                 scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.update(copybeanTypes)
+                  typePersistenceService.update(copybeanTypes)
                   ""
                 }
               }

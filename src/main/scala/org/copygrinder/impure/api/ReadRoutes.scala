@@ -16,7 +16,7 @@ package org.copygrinder.impure.api
 import java.io.IOException
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.copygrinder.impure.copybean.persistence.PersistenceService
+import org.copygrinder.impure.copybean.persistence.{CopybeanPersistenceService, TypePersistenceService}
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.persistence.JsonWrites
 import spray.http.StatusCodes._
@@ -24,7 +24,9 @@ import spray.routing._
 
 trait ReadRoutes extends RouteSupport with JsonWrites {
 
-  val persistenceService: PersistenceService
+  val typePersistenceService: TypePersistenceService
+
+  val beanPersistenceService: CopybeanPersistenceService
 
   protected def readExceptionHandler() =
     ExceptionHandler {
@@ -74,17 +76,17 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
                 reject
               } else {
                 scopedComplete(siloId) { implicit siloScope =>
-                  persistenceService.findCopybeanTypes(params)
+                  typePersistenceService.findCopybeanTypes(params)
                 }
               }
             } ~
              path(Segment) { id =>
                scopedComplete(siloId) { implicit siloScope =>
-                 persistenceService.cachedFetchCopybeanType(id)
+                 typePersistenceService.cachedFetchCopybeanType(id)
                }
              } ~
              scopedComplete(siloId) { implicit siloScope =>
-               persistenceService.fetchAllCopybeanTypes()
+               typePersistenceService.fetchAllCopybeanTypes()
              }
           } ~
            parameterSeq { params =>
@@ -92,17 +94,17 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
                reject
              } else {
                scopedComplete(siloId) { implicit siloScope =>
-                 persistenceService.find(params)
+                 beanPersistenceService.find(params)
                }
              }
            } ~
            path(Segment) { id =>
              scopedComplete(siloId) { implicit siloScope =>
-               persistenceService.cachedFetchCopybean(id)
+               beanPersistenceService.cachedFetchCopybean(id)
              }
            } ~
            scopedComplete(siloId) { implicit siloScope =>
-             persistenceService.find()
+             beanPersistenceService.find()
            }
         }
       }

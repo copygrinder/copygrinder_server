@@ -14,18 +14,24 @@
 package org.copygrinder.impure.api
 
 import akka.actor.ActorContext
-import org.copygrinder.impure.copybean.persistence.PersistenceService
+import org.copygrinder.impure.copybean.persistence.{CopybeanPersistenceService, TypePersistenceService}
 import org.copygrinder.impure.system.SiloScopeFactory
 import spray.routing._
 
 import scala.concurrent.ExecutionContext
 
-class CopygrinderApi(ac: ActorContext, persistence: PersistenceService, siloScope: SiloScopeFactory)
- extends ReadRoutes with WriteRoutes {
+class CopygrinderApi(
+ ac: ActorContext,
+ typePersistence: TypePersistenceService,
+ _beanPersistence: CopybeanPersistenceService,
+ siloScope: SiloScopeFactory
+ ) extends ReadRoutes with WriteRoutes {
 
   override implicit def executionContext: ExecutionContext = ac.dispatcher
 
-  override val persistenceService: PersistenceService = persistence
+  override val typePersistenceService: TypePersistenceService = typePersistence
+
+  override val beanPersistenceService: CopybeanPersistenceService = _beanPersistence
 
   override val siloScopeFactory: SiloScopeFactory = siloScope
 

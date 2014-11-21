@@ -52,8 +52,12 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
     persistenceServiceModule.documentBuilder, persistenceServiceModule.queryBuilder, globalModule.configuration
   )
 
+  lazy val typePersistenceService = persistenceServiceModule.typePersistenceService
+
+  lazy val copybeanPersistenceService = persistenceServiceModule.copybeanPersistenceService
+
   def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-    new CopygrinderApi(ac, persistenceServiceModule.persistenceService, siloScopeFactory)
+    new CopygrinderApi(ac, typePersistenceService, copybeanPersistenceService, siloScopeFactory)
   }
 
   lazy val routeExecutingActor = Props(new RouteExecutingActor(copygrinderApiFactory))
@@ -81,8 +85,9 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val predefinedCopybeanTypes = new PredefinedCopybeanTypes()
 
-  lazy val persistenceService = new PersistenceService(
-    globalModule.configuration,
+  lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes)
+
+  lazy val copybeanPersistenceService = new CopybeanPersistenceService(
     hashedFileResolver,
     copybeanTypeEnforcer,
     idEncoderDecoder,

@@ -37,29 +37,30 @@ object TestWiring {
     override lazy val serverModule = new ServerModule(globalModule, persistenceServiceModule) {
 
       override def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-        new CopygrinderApi(ac, persistenceServiceModule.persistenceService, siloScopeFactory) {
+        new CopygrinderApi(
+          ac, typePersistenceService, copybeanPersistenceService, siloScopeFactory) {
           implicit val ec: ExecutionContext = ac.dispatcher
           override val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes ~
-            path("longpause") {
-              get {
-                complete {
-                  Future {
-                    Thread.sleep(500)
-                    "LONG"
-                  }
-                }
-              }
-            } ~
-            path("shortpause") {
-              get {
-                complete {
-                  Future {
-                    Thread.sleep(100)
-                    "SHORT"
-                  }
-                }
-              }
-            }
+           path("longpause") {
+             get {
+               complete {
+                 Future {
+                   Thread.sleep(500)
+                   "LONG"
+                 }
+               }
+             }
+           } ~
+           path("shortpause") {
+             get {
+               complete {
+                 Future {
+                   Thread.sleep(100)
+                   "SHORT"
+                 }
+               }
+             }
+           }
         }
       }
     }

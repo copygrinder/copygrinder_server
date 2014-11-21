@@ -13,12 +13,10 @@
  */
 package org.copygrinder.impure.copybean.persistence
 
-import java.io.File
 import java.util.UUID
 
-import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
-import org.copygrinder.impure.system.{Configuration, SiloScope}
+import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model._
@@ -29,16 +27,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class PersistenceService(
- config: Configuration,
+class CopybeanPersistenceService(
  hashedFileResolver: HashedFileResolver,
  copybeanTypeEnforcer: CopybeanTypeEnforcer,
  idEncoderDecoder: IdEncoderDecoder,
  copybeanReifier: CopybeanReifier,
- predefinedCopybeanTypes: PredefinedCopybeanTypes
- ) extends LazyLogging with JsonReads with JsonWrites {
+ _predefinedCopybeanTypes: PredefinedCopybeanTypes
+ ) extends PersistenceSupport {
 
-  def fetchCopybean(id: String)(implicit siloScope: SiloScope): ReifiedCopybean = {
+  override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
+
+  protected def fetchCopybean(id: String)(implicit siloScope: SiloScope): ReifiedCopybean = {
     checkSiloExists()
     val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
 
@@ -109,70 +108,6 @@ class PersistenceService(
     Future.sequence(futures)
   }
 
-  def store(inputCopybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
-
-    val copybeanType = inputCopybeanType.generateValDefIds()
-
-    val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
-    val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
-    siloScope.typeGitRepo.add(file, json)
-    siloScope.indexer.addCopybeanType(copybeanType)
-  }
-
-  protected def checkSiloExists()(implicit siloScope: SiloScope) = {
-    if (!siloScope.root.exists) {
-      throw new SiloNotInitialized(siloScope.thisSiloId)
-    }
-  }
-
-  protected def fetchCopybeanType(id: String)(implicit siloScope: SiloScope): CopybeanType = {
-    checkSiloExists()
-    val file = new File(siloScope.typesDir, "/" + id + ".json")
-
-    if (!file.exists()) {
-      predefinedCopybeanTypes.predefinedTypes.getOrElse(id, throw new CopybeanTypeNotFound(id))
-    } else {
-      val json = FileUtils.readFileToString(file)
-      implicitly[Reads[CopybeanType]].reads(Json.parse(json)).get
-    }
-  }
-
-  def cachedFetchCopybeanType(id: String)(implicit siloScope: SiloScope): Future[CopybeanType] = siloScope.typeCache(id) {
-    logger.debug("Finding copybean type")
-    fetchCopybeanType(id)
-  }
-
-  def fetchAllCopybeanTypes()(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    logger.debug("Finding all copybean types")
-    checkSiloExists()
-    val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds()
-    fetchCopybeanTypes(copybeanTypeIds)
-  }
-
-  protected def fetchCopybeanTypes(copybeanTypeIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    val futures = copybeanTypeIds.map(id => {
-      cachedFetchCopybeanType(id)
-    })
-    Future.sequence(futures)
-  }
-
-  def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    logger.debug("Finding copybean types")
-    checkSiloExists()
-    val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds(params)
-    fetchCopybeanTypes(copybeanTypeIds)
-  }
-
-  protected def enforceTypes(copybean: Copybean)(implicit siloScope: SiloScope, ec: ExecutionContext): Unit = {
-    val future = copybean.enforcedTypeIds.map { typeId =>
-      cachedFetchCopybeanType(typeId).map { copybeanType =>
-        copybeanTypeEnforcer.enforceType(copybeanType, copybean)
-      }
-    }
-    val futureSeq = Future.sequence(future)
-    Await.result(futureSeq, 5 seconds)
-  }
-
   def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Unit = {
 
     val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.content, id)
@@ -190,19 +125,14 @@ class PersistenceService(
     siloScope.indexer.updateCopybean(copybean)
   }
 
-  def update(inputCopybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
-
-    val copybeanType = inputCopybeanType.generateValDefIds()
-
-    val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
-    val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
-    if (!file.exists()) {
-      throw new CopybeanTypeNotFound(copybeanType.id)
+  protected def enforceTypes(copybean: Copybean)(implicit siloScope: SiloScope, ec: ExecutionContext): Unit = {
+    val future = copybean.enforcedTypeIds.map { typeId =>
+      cachedFetchCopybeanType(typeId).map { copybeanType =>
+        copybeanTypeEnforcer.enforceType(copybeanType, copybean)
+      }
     }
-    siloScope.typeGitRepo.update(file, json)
-    siloScope.typeCache.remove(copybeanType.id)
-
-    siloScope.indexer.updateCopybeanType(copybeanType)
+    val futureSeq = Future.sequence(future)
+    Await.result(futureSeq, 5 seconds)
   }
 
 }
