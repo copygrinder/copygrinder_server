@@ -24,7 +24,7 @@ class PredefinedCopybeanTypes {
 
   val copygrinderAdminType = new CopybeanType(
     id = "copygrinderAdminMetatype",
-    singularTypeNoun = "Copygrinder Admin Metabean",
+    displayName = "Copygrinder Admin Metabean",
     fields = Seq(
       new CopybeanFieldDef("siloName", FieldType.String)
     ),

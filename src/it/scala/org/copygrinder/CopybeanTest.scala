@@ -66,8 +66,7 @@ class CopybeanTest extends FlatSpec with Matchers {
       """
         |[{
         |  "id": "testtype1",
-        |  "singularTypeNoun": "TestTypeOne",
-        |  "pluralTypeNoun": "TestTypeOnes",
+        |  "displayName": "TestTypeOne",
         |  "instanceNameFormat": "This bean is named $content.testfield2$ $content.testfield1$.",
         |  "fields": [{
         |      "id": "testfield1",
@@ -85,7 +84,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "cardinality": "Many"
         |},{
         |  "id": "testtype2",
-        |  "singularTypeNoun": "TestTypeTwo",
+        |  "displayName": "TestTypeTwo",
         |  "cardinality": "One"
         |}]""".stripMargin
 
@@ -273,9 +272,9 @@ class CopybeanTest extends FlatSpec with Matchers {
       """
         |{
         |  "id": "testtype2",
-        |  "singularTypeNoun": "TestTypeTwo-Edited",
+        |  "displayName": "TestTypeTwo-Edited",
         |  "cardinality": "One",
-        |  "instanceNameFormat": "$singularTypeNoun$"
+        |  "instanceNameFormat": "$displayName$"
         |}""".stripMargin
 
     val req = copybeanTypeIdUrl("testtype2").PUT.setContentType("application/json", "UTF8").setBody(json)

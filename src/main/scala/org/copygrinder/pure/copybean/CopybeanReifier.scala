@@ -43,8 +43,8 @@ class CopybeanReifier {
           case Some(value) => result.replace(variableString, value._2.toString)
           case _ => result
         }
-      } else if (strippedVariable == "singularTypeNoun") {
-        result.replace(variableString, cbType.singularTypeNoun.get)
+      } else if (strippedVariable == "displayName") {
+        result.replace(variableString, cbType.displayName.get)
       } else {
         result
       }

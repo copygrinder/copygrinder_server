@@ -18,3 +18,5 @@ log
 data
 gatling/.idea
 copygrinder.conf
+.floo
+.flooignore

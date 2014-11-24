@@ -17,8 +17,7 @@ import org.copygrinder.pure.copybean.model.Cardinality.Cardinality
 
 case class CopybeanType(
  id: String,
- singularTypeNoun: Option[String] = None,
- pluralTypeNoun: Option[String] = None,
+ displayName: Option[String] = None,
  instanceNameFormat: Option[String] = None,
  fields: Option[Seq[CopybeanFieldDef]] = None,
  validators: Option[Seq[CopybeanValidatorDef]] = None,
