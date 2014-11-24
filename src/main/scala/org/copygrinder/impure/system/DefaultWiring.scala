@@ -17,6 +17,7 @@ import java.io.File
 
 import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
+import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
 import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.pure.copybean.CopybeanReifier
@@ -35,11 +36,14 @@ class DefaultWiring {
   lazy val persistenceServiceModule = new PersistenceServiceModule(globalModule)
 
   lazy val serverModule = new ServerModule(globalModule, persistenceServiceModule)
+
 }
 
 
 class GlobalModule() {
+
   lazy val configuration = new Configuration()
+
 }
 
 
@@ -52,12 +56,12 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
     persistenceServiceModule.documentBuilder, persistenceServiceModule.queryBuilder, globalModule.configuration
   )
 
-  lazy val typePersistenceService = persistenceServiceModule.typePersistenceService
+  lazy val typeController = new TypeController(persistenceServiceModule.typePersistenceService)
 
-  lazy val copybeanPersistenceService = persistenceServiceModule.copybeanPersistenceService
+  lazy val beanController = new BeanController(persistenceServiceModule.copybeanPersistenceService)
 
   def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-    new CopygrinderApi(ac, typePersistenceService, copybeanPersistenceService, siloScopeFactory)
+    new CopygrinderApi(ac, typeController, beanController, siloScopeFactory)
   }
 
   lazy val routeExecutingActor = Props(new RouteExecutingActor(copygrinderApiFactory))

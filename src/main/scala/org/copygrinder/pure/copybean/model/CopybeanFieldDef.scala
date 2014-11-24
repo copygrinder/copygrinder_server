@@ -13,12 +13,14 @@
  */
 package org.copygrinder.pure.copybean.model
 
-case class CopybeanFieldDef(id: String, `type`: FieldType.FieldType)
+import play.api.libs.json.JsValue
+
+case class CopybeanFieldDef(id: String, `type`: FieldType.FieldType, attributes: Option[Map[String, JsValue]] = None)
 
 object FieldType extends Enumeration {
 
   type FieldType = Value
 
-  val String, Integer, Reference = Value
+  val String, Integer, Reference, Order = Value
 
 }

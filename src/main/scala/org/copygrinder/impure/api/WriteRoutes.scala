@@ -16,18 +16,18 @@ package org.copygrinder.impure.api
 import java.io.IOException
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.copygrinder.impure.copybean.persistence.{CopybeanPersistenceService, TypePersistenceService}
+import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
 import org.copygrinder.pure.copybean.exception._
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanImpl, CopybeanType}
+import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import spray.http.StatusCodes._
 import spray.routing._
 
 trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
-  val typePersistenceService: TypePersistenceService
+  val typePersistenceService: TypeController
 
-  val beanPersistenceService: CopybeanPersistenceService
+  val beanPersistenceService: BeanController
 
   protected def writeExceptionHandler() =
     ExceptionHandler {

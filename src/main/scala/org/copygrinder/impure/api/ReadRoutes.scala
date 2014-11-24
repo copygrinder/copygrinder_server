@@ -16,7 +16,7 @@ package org.copygrinder.impure.api
 import java.io.IOException
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.copygrinder.impure.copybean.persistence.{CopybeanPersistenceService, TypePersistenceService}
+import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.persistence.JsonWrites
 import spray.http.StatusCodes._
@@ -24,9 +24,9 @@ import spray.routing._
 
 trait ReadRoutes extends RouteSupport with JsonWrites {
 
-  val typePersistenceService: TypePersistenceService
+  val typePersistenceService: TypeController
 
-  val beanPersistenceService: CopybeanPersistenceService
+  val beanPersistenceService: BeanController
 
   protected def readExceptionHandler() =
     ExceptionHandler {
@@ -82,7 +82,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
             } ~
              path(Segment) { id =>
                scopedComplete(siloId) { implicit siloScope =>
-                 typePersistenceService.cachedFetchCopybeanType(id)
+                 typePersistenceService.fetchCopybeanType(id)
                }
              } ~
              scopedComplete(siloId) { implicit siloScope =>

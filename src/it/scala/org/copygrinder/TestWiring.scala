@@ -38,7 +38,7 @@ object TestWiring {
 
       override def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
         new CopygrinderApi(
-          ac, typePersistenceService, copybeanPersistenceService, siloScopeFactory) {
+          ac, typeController, beanController, siloScopeFactory) {
           implicit val ec: ExecutionContext = ac.dispatcher
           override val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes ~
            path("longpause") {
