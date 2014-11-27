@@ -24,9 +24,9 @@ import spray.routing._
 
 trait ReadRoutes extends RouteSupport with JsonWrites {
 
-  val typePersistenceService: TypeController
+  val typeController: TypeController
 
-  val beanPersistenceService: BeanController
+  val beanController: BeanController
 
   protected def readExceptionHandler() =
     ExceptionHandler {
@@ -76,17 +76,17 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
                 reject
               } else {
                 scopedComplete(siloId) { implicit siloScope =>
-                  typePersistenceService.findCopybeanTypes(params)
+                  typeController.findCopybeanTypes(params)
                 }
               }
             } ~
              path(Segment) { id =>
                scopedComplete(siloId) { implicit siloScope =>
-                 typePersistenceService.fetchCopybeanType(id)
+                 typeController.fetchCopybeanType(id)
                }
              } ~
              scopedComplete(siloId) { implicit siloScope =>
-               typePersistenceService.fetchAllCopybeanTypes()
+               typeController.fetchAllCopybeanTypes()
              }
           } ~
            parameterSeq { params =>
@@ -94,17 +94,17 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
                reject
              } else {
                scopedComplete(siloId) { implicit siloScope =>
-                 beanPersistenceService.find(params)
+                 beanController.find(params)
                }
              }
            } ~
            path(Segment) { id =>
              scopedComplete(siloId) { implicit siloScope =>
-               beanPersistenceService.cachedFetchCopybean(id)
+               beanController.cachedFetchCopybean(id)
              }
            } ~
            scopedComplete(siloId) { implicit siloScope =>
-             beanPersistenceService.find()
+             beanController.find()
            }
         }
       }

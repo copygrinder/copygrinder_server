@@ -85,20 +85,14 @@ class CopybeanPersistenceService(
     fetchCopybeans(copybeanIds)
   }
 
-  protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content", "type")
-
   def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
-    logger.debug("Finding copybeans")
-    checkSiloExists()
-
-    params.foreach(param => {
-      if (!copybeansReservedWords.exists(reservedWord => param._1.startsWith(reservedWord))) {
-        throw new UnknownQueryParameter(param._1)
-      }
-    })
-
-    val copybeanIds = siloScope.indexer.findCopybeanIds(params)
-    fetchCopybeans(copybeanIds)
+    if (params.nonEmpty) {
+      checkSiloExists()
+      val copybeanIds = siloScope.indexer.findCopybeanIds(params)
+      fetchCopybeans(copybeanIds)
+    } else {
+      find()
+    }
   }
 
   protected def fetchCopybeans(copybeanIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {

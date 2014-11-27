@@ -30,9 +30,9 @@ class CopygrinderApi(
 
   override implicit def executionContext: ExecutionContext = ac.dispatcher
 
-  override val typePersistenceService: TypeController = typePersistence
+  override val typeController: TypeController = typePersistence
 
-  override val beanPersistenceService: BeanController = _beanPersistence
+  override val beanController: BeanController = _beanPersistence
 
   override val siloScopeFactory: SiloScopeFactory = siloScope
 

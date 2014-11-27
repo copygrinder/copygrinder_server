@@ -44,8 +44,8 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
 
   def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
     logger.debug("Finding copybean types")
-    checkSiloExists()
     if (params.nonEmpty) {
+      checkSiloExists()
       val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds(params)
       fetchCopybeanTypes(copybeanTypeIds)
     } else {

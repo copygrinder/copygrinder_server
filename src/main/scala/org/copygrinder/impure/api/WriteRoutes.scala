@@ -25,9 +25,9 @@ import spray.routing._
 
 trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
-  val typePersistenceService: TypeController
+  val typeController: TypeController
 
-  val beanPersistenceService: BeanController
+  val beanController: BeanController
 
   protected def writeExceptionHandler() =
     ExceptionHandler {
@@ -63,26 +63,26 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
           entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
             scopedComplete(siloId) { implicit siloScope =>
               anonBeans.map { anonBean =>
-                beanPersistenceService.store(anonBean)
+                beanController.store(anonBean)
               }
             }
           } ~
            entity(as[AnonymousCopybean]) { anonBean =>
              scopedComplete(siloId) { implicit siloScope =>
-               beanPersistenceService.store(anonBean)
+               beanController.store(anonBean)
              }
            } ~ path("types") {
             entity(as[Seq[CopybeanType]]) { copybeanTypes =>
               scopedComplete(siloId) { implicit siloScope =>
                 copybeanTypes.map { copybeanType =>
-                  typePersistenceService.store(copybeanType)
+                  typeController.store(copybeanType)
                 }
                 ""
               }
             } ~
              entity(as[CopybeanType]) { copybeanType =>
                scopedComplete(siloId) { implicit siloScope =>
-                 typePersistenceService.store(copybeanType)
+                 typeController.store(copybeanType)
                  ""
                }
              }
@@ -99,7 +99,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
           path(Segment) { id =>
             entity(as[AnonymousCopybean]) { copybean =>
               scopedComplete(siloId) { implicit siloScope =>
-                beanPersistenceService.update(id, copybean)
+                beanController.update(id, copybean)
                 ""
               }
             }
@@ -107,7 +107,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
             path(Segment) { id =>
               entity(as[CopybeanType]) { copybeanTypes =>
                 scopedComplete(siloId) { implicit siloScope =>
-                  typePersistenceService.update(copybeanTypes)
+                  typeController.update(copybeanTypes)
                   ""
                 }
               }

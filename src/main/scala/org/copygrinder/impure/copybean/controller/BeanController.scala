@@ -15,11 +15,12 @@ package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.impure.copybean.persistence.CopybeanPersistenceService
 import org.copygrinder.impure.system.SiloScope
+import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json.{JsNull, JsString, JsValue, Json}
 
-class BeanController(persistenceService: CopybeanPersistenceService) extends JsonReads with JsonWrites {
+class BeanController(persistenceService: CopybeanPersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
   def cachedFetchCopybean(id: String)(implicit siloScope: SiloScope): JsValue = {
     val future = persistenceService.cachedFetchCopybean(id)
@@ -41,10 +42,19 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
     Json.toJson(futures)
   }
 
+  protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content", "type", "names")
 
   def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): JsValue = {
-    val futures = persistenceService.find(params)
-    Json.toJson(futures)
+    val (fields, nonFieldParams) = extractFields(params)
+
+    nonFieldParams.foreach(param => {
+      if (!copybeansReservedWords.exists(reservedWord => param._1.startsWith(reservedWord))) {
+        throw new UnknownQueryParameter(param._1)
+      }
+    })
+
+    val futures = persistenceService.find(nonFieldParams)
+    validateAndFilterFields(fields, Json.toJson(futures), copybeansReservedWords)
   }
 
   def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): JsValue = {

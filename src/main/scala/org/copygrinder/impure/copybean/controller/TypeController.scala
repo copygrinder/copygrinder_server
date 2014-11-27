@@ -23,7 +23,7 @@ import play.api.libs.json._
 import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 
-class TypeController(persistenceService: TypePersistenceService) extends JsonReads with JsonWrites {
+class TypeController(persistenceService: TypePersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
   def fetchAllCopybeanTypes()(implicit siloScope: SiloScope): JsValue = {
     val futures = persistenceService.fetchAllCopybeanTypes()
@@ -33,7 +33,7 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
   def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): JsValue = {
     val (fields, nonFieldParams) = extractFields(params)
     val futures = persistenceService.findCopybeanTypes(nonFieldParams)
-    keepFields(fields, Json.toJson(futures))
+    validateAndFilterFields(fields, Json.toJson(futures), copybeanTypeReservedWords)
   }
 
 
@@ -50,64 +50,6 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
     Json.toJson(future)
   }
 
-
-  protected def extractFields(params: Seq[(String, String)]) = {
-    val (fields, nonFieldParams) = params.partition(_._1 == "fields")
-    val flatFields = fields.flatMap(_._2.split(',')).toSet
-    (flatFields, nonFieldParams)
-  }
-
   protected val copybeanTypeReservedWords = Set("id", "displayName", "instanceNameFormat", "instanceNameFormat", "fields", "validators", "cardinality")
 
-  protected def keepFields(fields: Set[String], jsValue: JsValue) = {
-    if (fields.nonEmpty) {
-      val (validFields, invalidFields) = fields.partition(field => {
-        copybeanTypeReservedWords.exists(word => {
-          field == word
-        })
-      })
-
-      if (invalidFields.nonEmpty) {
-        throw new JsonInputException("One or more fields are invalid: " + invalidFields.mkString(","))
-      }
-
-      filterFields(validFields, jsValue)
-    } else {
-      jsValue
-    }
-  }
-
-  protected def filterFields(keepFields: Set[String], jsValue: JsValue): JsValue = {
-    jsValue match {
-      case obj: JsObject =>
-        filterObject(keepFields, obj)
-      case array: JsArray =>
-        filterArray(keepFields, array)
-      case other => other
-    }
-  }
-
-  def filterObject(keepFields: Set[String], obj: JsObject): JsObject = {
-    val fields = keepFields.foldLeft(Seq[(String, JsValue)]())((result, field) => {
-      val value = obj.\(field)
-      value match {
-        case _: JsUndefined => result
-        case _ => result :+(field, value)
-      }
-    })
-    JsObject(fields)
-  }
-
-  def filterArray(keepFields: Set[String], array: JsArray): JsArray = {
-    val filteredFields = array.value.map(a => filterFields(keepFields, a))
-    val emptiesRemoved = filteredFields.filter(field => {
-      val obj = field.asOpt[JsObject]
-      if (obj.isDefined) {
-        obj.get.fields.nonEmpty
-      } else {
-        true
-      }
-    })
-    JsArray(emptiesRemoved)
-  }
 }
