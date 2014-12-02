@@ -70,10 +70,12 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "instanceNameFormat": "This bean is named $content.testfield2$ $content.testfield1$.",
         |  "fields": [{
         |      "id": "testfield1",
-        |      "type": "String"
+        |      "type": "String",
+        |      "displayName": "String field"
         |    },{
         |      "id": "testfield2",
-        |      "type": "Integer"
+        |      "type": "Integer",
+        |      "displayName": "Integer field"
         |  }],
         |  "validators": [{
         |    "type": "required",

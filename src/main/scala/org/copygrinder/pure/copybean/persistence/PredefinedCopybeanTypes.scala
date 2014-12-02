@@ -26,7 +26,7 @@ class PredefinedCopybeanTypes {
     id = "copygrinderAdminMetatype",
     displayName = "Copygrinder Admin Metabean",
     fields = Seq(
-      new CopybeanFieldDef("siloName", FieldType.String)
+      new CopybeanFieldDef("siloName", "Silo Name", FieldType.String)
     ),
     cardinality = Cardinality.One,
     validators = Seq(

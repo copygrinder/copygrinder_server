@@ -15,7 +15,7 @@ package org.copygrinder.pure.copybean.model
 
 import play.api.libs.json.JsValue
 
-case class CopybeanFieldDef(id: String, `type`: FieldType.FieldType, attributes: Option[Map[String, JsValue]] = None)
+case class CopybeanFieldDef(id: String, displayName: String, `type`: FieldType.FieldType, attributes: Option[Map[String, JsValue]] = None)
 
 object FieldType extends Enumeration {
 
