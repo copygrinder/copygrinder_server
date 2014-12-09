@@ -65,8 +65,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
     }
   }
 
-  protected val copybeanReadRoute = handleExceptions(readExceptionHandler) {
-
+  protected val copybeanReadRoute =
     pathPrefix(Segment) { siloId =>
       get {
         pathPrefix("copybeans") {
@@ -109,8 +108,10 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
         }
       }
     }
-  }
 
-  val copygrinderReadRoutes: Route = cors(rootRoute ~ copybeanReadRoute)
+
+  val copygrinderReadRoutes: Route = cors(handleExceptions(readExceptionHandler) {
+    rootRoute ~ copybeanReadRoute
+  })
 
 }

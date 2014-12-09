@@ -56,7 +56,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
         }
     }
 
-  protected val postRoutes = handleExceptions(writeExceptionHandler) {
+  protected val postRoutes =
     pathPrefix(Segment) { siloId =>
       post {
         pathPrefix("copybeans") {
@@ -90,7 +90,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
         }
       }
     }
-  }
+
 
   protected val putRoutes = handleExceptions(writeExceptionHandler) {
     pathPrefix(Segment) { siloId =>
@@ -118,6 +118,8 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     }
   }
 
-  val copygrinderWriteRoutes: Route = cors(postRoutes ~ putRoutes)
+  val copygrinderWriteRoutes: Route = handleExceptions(writeExceptionHandler) {
+    cors(postRoutes ~ putRoutes)
+  }
 
 }
