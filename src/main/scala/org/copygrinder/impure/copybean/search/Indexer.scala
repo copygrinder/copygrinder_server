@@ -66,8 +66,13 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   def updateCopybean(copybean: Copybean): Unit = {
     val doc = documentBuilder.buildDocument(copybean)
-    trackingIndexWriter.deleteDocuments(new Term("id", copybean.id))
+    deleteCopybean(copybean.id)
     reopenToken = trackingIndexWriter.addDocument(doc)
+    indexWriter.commit()
+  }
+
+  def deleteCopybean(id: String): Unit = {
+    trackingIndexWriter.deleteDocuments(new Term("id", id))
     indexWriter.commit()
   }
 

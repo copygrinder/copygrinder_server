@@ -17,11 +17,17 @@ import java.io.IOException
 
 import com.fasterxml.jackson.core.JsonParseException
 import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
+import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
+import play.api.libs.json.{JsString, Writes}
+import shapeless.{::, HNil}
 import spray.http.StatusCodes._
+import spray.httpx.marshalling.ToResponseMarshallable
+import spray.httpx.unmarshalling.FromRequestUnmarshaller
 import spray.routing._
+import spray.routing.directives.MethodDirectives
 
 trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
@@ -56,70 +62,52 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
         }
     }
 
-  protected val postRoutes =
-    pathPrefix(Segment) { siloId =>
-      post {
-        pathPrefix("copybeans") {
-          entity(as[Seq[AnonymousCopybean]]) { anonBeans =>
-            scopedComplete(siloId) { implicit siloScope =>
-              anonBeans.map { anonBean =>
-                beanController.store(anonBean)
-              }
-            }
-          } ~
-           entity(as[AnonymousCopybean]) { anonBean =>
-             scopedComplete(siloId) { implicit siloScope =>
-               beanController.store(anonBean)
-             }
-           } ~ path("types") {
-            entity(as[Seq[CopybeanType]]) { copybeanTypes =>
-              scopedComplete(siloId) { implicit siloScope =>
-                copybeanTypes.map { copybeanType =>
-                  typeController.store(copybeanType)
-                }
-                ""
-              }
-            } ~
-             entity(as[CopybeanType]) { copybeanType =>
-               scopedComplete(siloId) { implicit siloScope =>
-                 typeController.store(copybeanType)
-                 ""
-               }
-             }
-          }
-        }
+  protected def postRoutes = {
+    BuildRoute(copybeansTypesPath & post & entity(as[Seq[CopybeanType]])) {
+      implicit siloScope: SiloScope => a: Seq[CopybeanType] => a.map { copybeanType =>
+        typeController.store(copybeanType)
+        ""
       }
-    }
-
-
-  protected val putRoutes = handleExceptions(writeExceptionHandler) {
-    pathPrefix(Segment) { siloId =>
-      put {
-        pathPrefix("copybeans") {
-          path(Segment) { id =>
-            entity(as[AnonymousCopybean]) { copybean =>
-              scopedComplete(siloId) { implicit siloScope =>
-                beanController.update(id, copybean)
-                ""
-              }
-            }
-          } ~ pathPrefix("types") {
-            path(Segment) { id =>
-              entity(as[CopybeanType]) { copybeanTypes =>
-                scopedComplete(siloId) { implicit siloScope =>
-                  typeController.update(copybeanTypes)
-                  ""
-                }
-              }
-            }
-          }
-        }
+    } ~ BuildRoute(copybeansTypesPath & post & entity(as[CopybeanType])) {
+      implicit siloScope => (copybeanType) =>
+        typeController.store(copybeanType)
+        ""
+    } ~ BuildRoute(copybeansPath & post & entity(as[Seq[AnonymousCopybean]])) {
+      implicit siloScope: SiloScope => a: Seq[AnonymousCopybean] => a.map { anonBean =>
+        beanController.store(anonBean)
       }
+    } ~ BuildRoute(copybeansPath & post & entity(as[AnonymousCopybean])) {
+      implicit siloScope => (anonBean) =>
+        beanController.store(anonBean)
     }
   }
 
+
+  protected val putRoutes = {
+    BuildRoute(copybeansTypeIdPath & put & entity(as[CopybeanType])) {
+      implicit siloScope: SiloScope => (id, copybeanType) =>
+        typeController.update(copybeanType)
+        ""
+    } ~ BuildRoute(copybeansIdPath & put & entity(as[AnonymousCopybean])) {
+      implicit siloScope: SiloScope => (id, copybean) =>
+        beanController.update(id, copybean)
+        ""
+    }
+  }
+
+  protected val deleteRoutes = {
+    BuildRoute(copybeansTypeIdPath & delete) {
+      implicit siloScope: SiloScope => (id) =>
+        typeController.delete(id)
+    } ~ BuildRoute(copybeansIdPath & delete) {
+      implicit siloScope: SiloScope => (id) =>
+        beanController.delete(id)
+    }
+  }
+
+
   val copygrinderWriteRoutes: Route = handleExceptions(writeExceptionHandler) {
-    cors(postRoutes ~ putRoutes)
+    cors(postRoutes ~ putRoutes ~ deleteRoutes)
   }
 
 }

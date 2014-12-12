@@ -129,4 +129,13 @@ class CopybeanPersistenceService(
     Await.result(futureSeq, 5 seconds)
   }
 
+  def delete(id: String)(implicit siloScope: SiloScope) = {
+    val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
+    siloScope.beanGitRepo.delete(file)
+    siloScope.indexer.deleteCopybean(id)
+    siloScope.beanCache.remove(id)
+
+  }
+
+
 }

@@ -25,17 +25,11 @@ import scala.concurrent.ExecutionContext
 
 class TypeController(persistenceService: TypePersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
-  def fetchAllCopybeanTypes()(implicit siloScope: SiloScope): JsValue = {
-    val futures = persistenceService.fetchAllCopybeanTypes()
-    Json.toJson(futures)
-  }
-
   def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): JsValue = {
     val (fields, nonFieldParams) = extractFields(params)
     val futures = persistenceService.findCopybeanTypes(nonFieldParams)
     validateAndFilterFields(fields, Json.toJson(futures), copybeanTypeReservedWords)
   }
-
 
   def update(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
     persistenceService.update(copybeanType)
@@ -48,6 +42,10 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
   def fetchCopybeanType(id: String)(implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
     val future = persistenceService.cachedFetchCopybeanType(id)
     Json.toJson(future)
+  }
+
+  def delete(id: String)(implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
+    JsNull
   }
 
   protected val copybeanTypeReservedWords = Set("id", "displayName", "instanceNameFormat", "instanceNameFormat", "fields", "validators", "cardinality")

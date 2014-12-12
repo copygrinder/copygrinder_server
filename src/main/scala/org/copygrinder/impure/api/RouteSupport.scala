@@ -17,6 +17,7 @@ package org.copygrinder.impure.api
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
 import play.api.libs.json._
+import shapeless.{::, HNil}
 import spray.http.HttpRequest
 import spray.httpx.PlayJsonSupport
 import spray.httpx.marshalling.ToResponseMarshallable
@@ -53,6 +54,68 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
         marshallable
       }
     )
+  }
+
+  protected val copybeansPath = pathPrefix(Segment) & pathPrefix("copybeans")
+
+  protected val copybeansIdPath = copybeansPath & path(Segment)
+
+  protected val copybeansTypesPath = copybeansPath & pathPrefix("types")
+
+  protected val copybeansTypeIdPath = copybeansTypesPath & path(Segment)
+
+  protected object BuildRoute {
+
+    def apply(path: Directive[::[String, HNil]]): OneArgRouteBuilder = {
+      new OneArgRouteBuilder(path)
+    }
+
+    def apply[S](path: Directive[::[String, ::[S, HNil]]]): TwoArgRouteBuilder[S] = {
+      new TwoArgRouteBuilder(path, (s: S) => false)
+    }
+
+    def apply[S, Q](path: Directive[::[String, ::[S, ::[Q, HNil]]]]): ThreeArgRouteBuilder[S, Q] = {
+      new ThreeArgRouteBuilder(path, (s: S, q: Q) => false)
+    }
+  }
+
+  protected class OneArgRouteBuilder(path: Directive[::[String, HNil]]) {
+
+    protected def paramsShouldReject(params: Seq[(String, String)]) = {
+      false
+    }
+
+    def withParams[R](func: (SiloScope) => (Seq[(String, String)]) => R)(implicit w: Writes[R]): Route = {
+      new TwoArgRouteBuilder(path & parameterSeq, paramsShouldReject).apply(func)
+    }
+  }
+
+  protected class TwoArgRouteBuilder[S](path: Directive[::[String, ::[S, HNil]]], shouldReject: (S) => Boolean) {
+    def apply[R](func: (SiloScope) => (S) => R)(implicit w: Writes[R]): Route = {
+      path { (siloId, secondValue) =>
+        if (shouldReject(secondValue)) {
+          reject
+        } else {
+          scopedComplete(siloId) { siloScope =>
+            func(siloScope)(secondValue)
+          }
+        }
+      }
+    }
+  }
+
+  protected class ThreeArgRouteBuilder[S, Q](path: Directive[::[String, ::[S, ::[Q, HNil]]]], shouldReject: (S, Q) => Boolean) {
+    def apply[R](func: (SiloScope) => (S, Q) => R)(implicit w: Writes[R]): Route = {
+      path { (siloId, secondValue, thirdValue) =>
+        if (shouldReject(secondValue, thirdValue)) {
+          reject
+        } else {
+          scopedComplete(siloId) { siloScope =>
+            func(siloScope)(secondValue, thirdValue)
+          }
+        }
+      }
+    }
   }
 
 }

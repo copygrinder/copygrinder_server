@@ -69,6 +69,11 @@ class GitRepo(repoDir: File, fileRepositoryBuilderWrapper: FileRepositoryBuilder
     }
   }
 
+  def delete(file: File): Unit = {
+    file.delete()
+    commit("Update")
+  }
+
 }
 
 class FileRepositoryBuilderWrapper {

@@ -37,11 +37,6 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
     JsString(id)
   }
 
-  def find()(implicit siloScope: SiloScope): JsValue = {
-    val futures = persistenceService.find()
-    Json.toJson(futures)
-  }
-
   protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content", "type", "names")
 
   def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): JsValue = {
@@ -59,6 +54,11 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
 
   def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): JsValue = {
     persistenceService.update(id, anonCopybean)
+    JsNull
+  }
+
+  def delete(id: String)(implicit siloScope: SiloScope): JsValue = {
+    persistenceService.delete(id)
     JsNull
   }
 

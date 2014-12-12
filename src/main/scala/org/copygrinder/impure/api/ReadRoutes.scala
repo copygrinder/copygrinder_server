@@ -18,6 +18,7 @@ import java.io.IOException
 import com.fasterxml.jackson.core.JsonParseException
 import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
 import org.copygrinder.pure.copybean.exception._
+import org.copygrinder.pure.copybean.model.AnonymousCopybean
 import org.copygrinder.pure.copybean.persistence.JsonWrites
 import spray.http.StatusCodes._
 import spray.routing._
@@ -65,49 +66,17 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
     }
   }
 
-  protected val copybeanReadRoute =
-    pathPrefix(Segment) { siloId =>
-      get {
-        pathPrefix("copybeans") {
-          pathPrefix("types") {
-            parameterSeq { params =>
-              if (params.isEmpty || params.head._1.isEmpty) {
-                reject
-              } else {
-                scopedComplete(siloId) { implicit siloScope =>
-                  typeController.findCopybeanTypes(params)
-                }
-              }
-            } ~
-             path(Segment) { id =>
-               scopedComplete(siloId) { implicit siloScope =>
-                 typeController.fetchCopybeanType(id)
-               }
-             } ~
-             scopedComplete(siloId) { implicit siloScope =>
-               typeController.fetchAllCopybeanTypes()
-             }
-          } ~
-           parameterSeq { params =>
-             if (params.isEmpty || params.head._1.isEmpty) {
-               reject
-             } else {
-               scopedComplete(siloId) { implicit siloScope =>
-                 beanController.find(params)
-               }
-             }
-           } ~
-           path(Segment) { id =>
-             scopedComplete(siloId) { implicit siloScope =>
-               beanController.cachedFetchCopybean(id)
-             }
-           } ~
-           scopedComplete(siloId) { implicit siloScope =>
-             beanController.find()
-           }
-        }
-      }
+  protected val copybeanReadRoute = {
+    BuildRoute(copybeansTypeIdPath & get) { implicit siloScope => id =>
+      typeController.fetchCopybeanType(id)
+    } ~ BuildRoute(copybeansTypesPath & get).withParams { implicit siloScope => params =>
+      typeController.findCopybeanTypes(params)
+    } ~ BuildRoute(copybeansIdPath & get) { implicit siloScope => id =>
+      beanController.cachedFetchCopybean(id)
+    } ~ BuildRoute(copybeansPath & get).withParams { implicit siloScope => params =>
+      beanController.find(params)
     }
+  }
 
 
   val copygrinderReadRoutes: Route = cors(handleExceptions(readExceptionHandler) {
