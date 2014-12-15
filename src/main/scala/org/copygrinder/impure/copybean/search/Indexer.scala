@@ -72,7 +72,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
   }
 
   def deleteCopybean(id: String): Unit = {
-    trackingIndexWriter.deleteDocuments(new Term("id", id))
+    reopenToken = trackingIndexWriter.deleteDocuments(new Term("id", id))
     indexWriter.commit()
   }
 
