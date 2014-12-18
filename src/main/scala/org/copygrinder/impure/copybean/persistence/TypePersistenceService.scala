@@ -78,4 +78,11 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
     siloScope.indexer.addCopybeanType(copybeanType)
   }
 
+  def delete(id: String)(implicit siloScope: SiloScope) = {
+    val file = new File(siloScope.typesDir, "/" + id + ".json")
+    siloScope.typeGitRepo.delete(file)
+    siloScope.indexer.deleteCopybean(id)
+    siloScope.typeCache.remove(id)
+  }
+
 }

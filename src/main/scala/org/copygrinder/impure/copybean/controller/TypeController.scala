@@ -45,6 +45,7 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
   }
 
   def delete(id: String)(implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
+    persistenceService.delete(id)
     JsNull
   }
 
