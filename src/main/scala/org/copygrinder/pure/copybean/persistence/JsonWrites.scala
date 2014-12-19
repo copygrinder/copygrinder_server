@@ -30,7 +30,8 @@ trait JsonWrites extends DefaultWrites {
         case b: Boolean => JsBoolean(b)
         case i: Int => JsNumber(i)
         case s: String => JsString(s)
-        case x => throw new JsonWriteException("Can't write JSON for class '" + x.getClass)
+        case m: ListMap[_,_] => stringAnyMapToJsObject(m.asInstanceOf[ListMap[String, Any]])
+        case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
       }
       (key, jsValue)
     }).toSeq

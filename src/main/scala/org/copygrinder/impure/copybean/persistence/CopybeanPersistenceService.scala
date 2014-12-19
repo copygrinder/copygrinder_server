@@ -32,7 +32,8 @@ class CopybeanPersistenceService(
  copybeanTypeEnforcer: CopybeanTypeEnforcer,
  idEncoderDecoder: IdEncoderDecoder,
  copybeanReifier: CopybeanReifier,
- _predefinedCopybeanTypes: PredefinedCopybeanTypes
+ _predefinedCopybeanTypes: PredefinedCopybeanTypes,
+ predefinedCopybeans: PredefinedCopybeans
  ) extends PersistenceSupport {
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
@@ -42,7 +43,7 @@ class CopybeanPersistenceService(
     val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
 
     val copybean = if (!file.exists()) {
-      throw new CopybeanNotFound(id)
+      predefinedCopybeans.predefinedBeans.getOrElse(id, throw new CopybeanTypeNotFound(id))
     } else {
       val json = FileUtils.readFileToByteArray(file)
       implicitly[Reads[CopybeanImpl]].reads(Json.parse(json)).get
@@ -122,11 +123,23 @@ class CopybeanPersistenceService(
   protected def enforceTypes(copybean: Copybean)(implicit siloScope: SiloScope, ec: ExecutionContext): Unit = {
     val future = copybean.enforcedTypeIds.map { typeId =>
       cachedFetchCopybeanType(typeId).map { copybeanType =>
-        copybeanTypeEnforcer.enforceType(copybeanType, copybean)
+        val validatorBeansMap = fetchValidators(copybeanType)
+        copybeanTypeEnforcer.enforceType(copybeanType, copybean, validatorBeansMap)
       }
     }
     val futureSeq = Future.sequence(future)
     Await.result(futureSeq, 5 seconds)
+  }
+
+  protected def fetchValidators(copybeanType: CopybeanType)(implicit siloScope: SiloScope, ec: ExecutionContext): Map[String, ReifiedCopybean] = {
+    if (copybeanType.validators.isDefined) {
+      val validatorTypes = copybeanType.validators.get.map(_.`type`)
+      val validatorBeansFuture = Future.sequence(validatorTypes.map(typeId => cachedFetchCopybean(s"validator.$typeId")))
+      val validatorBeans = Await.result(validatorBeansFuture, 5 seconds)
+      validatorBeans.map(validator => validator.id -> validator).toMap
+    } else {
+      Map.empty
+    }
   }
 
   def delete(id: String)(implicit siloScope: SiloScope): Unit = {

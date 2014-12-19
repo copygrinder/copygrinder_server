@@ -22,7 +22,7 @@ class PredefinedCopybeanTypes {
 
   implicit def value2option[T](v: T): Option[T] = Option(v)
 
-  lazy val predefinedTypes = Map(copygrinderAdminType.id -> copygrinderAdminType)
+  lazy val predefinedTypes = List(copygrinderAdminType, classBackedValidatorType).map(beanType => beanType.id -> beanType).toMap
 
   val copygrinderAdminType = new CopybeanType(
     id = "copygrinderAdminMetatype",
@@ -37,4 +37,20 @@ class PredefinedCopybeanTypes {
       )
     )
   )
+
+
+  val classBackedValidatorType = new CopybeanType(
+    id = "classBackedValidator",
+    displayName = "Class Backed Validator Type",
+    fields = Seq(
+      new CopybeanFieldDef("class", "Class", FieldType.String)
+    ),
+    cardinality = Cardinality.One,
+    validators = Seq(
+      new CopybeanValidatorDef(
+        "requiredId", "required", ListMap("fields" -> Seq("class"))
+      )
+    )
+  )
+
 }

@@ -22,7 +22,7 @@ import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.model.{CopybeanType, ReifiedCopybean}
-import org.copygrinder.pure.copybean.persistence.{CopybeanTypeEnforcer, IdEncoderDecoder, PredefinedCopybeanTypes}
+import org.copygrinder.pure.copybean.persistence.{PredefinedCopybeans, CopybeanTypeEnforcer, IdEncoderDecoder, PredefinedCopybeanTypes}
 import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 import spray.caching.{Cache, LruCache}
 
@@ -91,12 +91,15 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes)
 
+  lazy val predefinedCopybeans = new PredefinedCopybeans()
+
   lazy val copybeanPersistenceService = new CopybeanPersistenceService(
     hashedFileResolver,
     copybeanTypeEnforcer,
     idEncoderDecoder,
     copybeanReifier,
-    predefinedCopybeanTypes
+    predefinedCopybeanTypes,
+    predefinedCopybeans
   )
 
 }
