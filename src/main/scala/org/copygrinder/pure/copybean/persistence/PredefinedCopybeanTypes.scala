@@ -14,7 +14,9 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.model._
-import play.api.libs.json.JsBoolean
+
+import scala.collection.immutable.ListMap
+import scala.language.implicitConversions
 
 class PredefinedCopybeanTypes {
 
@@ -31,7 +33,7 @@ class PredefinedCopybeanTypes {
     cardinality = Cardinality.One,
     validators = Seq(
       new CopybeanValidatorDef(
-        "requiredId", "required", Map("siloName" -> JsBoolean(true))
+        "requiredId", "required", ListMap("siloName" -> true)
       )
     )
   )

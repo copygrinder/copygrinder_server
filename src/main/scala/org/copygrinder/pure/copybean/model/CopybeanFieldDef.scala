@@ -13,9 +13,9 @@
  */
 package org.copygrinder.pure.copybean.model
 
-import play.api.libs.json.JsValue
+import scala.collection.immutable.ListMap
 
-case class CopybeanFieldDef(id: String, displayName: String, `type`: FieldType.FieldType, attributes: Option[Map[String, JsValue]] = None)
+case class CopybeanFieldDef(id: String, displayName: String, `type`: FieldType.FieldType, attributes: Option[ListMap[String, Any]] = None)
 
 object FieldType extends Enumeration {
 

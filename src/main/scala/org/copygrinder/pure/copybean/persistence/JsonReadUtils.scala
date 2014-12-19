@@ -44,16 +44,6 @@ trait JsonReadUtils extends DefaultReads {
     }
   }
 
-  implicit object TrackingJsObjectReads extends Reads[JsObject] {
-    def reads(json: JsValue): JsResult[JsObject] = {
-      json match {
-        case o: JsObjectWrapper => o.objectUnreadFields.clear()
-        case _ =>
-      }
-      JsObjectReads.reads(json)
-    }
-  }
-
   def readWrapper[T](r: Reads[T]): Reads[T] = {
     new Reads[T] {
       override def reads(jsValue: JsValue): JsResult[T] = {

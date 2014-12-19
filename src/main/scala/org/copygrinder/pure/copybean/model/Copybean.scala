@@ -13,12 +13,12 @@
  */
 package org.copygrinder.pure.copybean.model
 
-import play.api.libs.json.JsObject
+import scala.collection.immutable.ListMap
 
 
 trait AnonymousCopybean {
   val enforcedTypeIds: Set[String]
-  val content: JsObject
+  val content: ListMap[String, Any]
 }
 
 trait Copybean extends AnonymousCopybean {
@@ -29,14 +29,14 @@ trait ReifiedCopybean extends Copybean {
   val names: Map[String, String]
 }
 
-case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], content: JsObject) extends AnonymousCopybean {
+case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any]) extends AnonymousCopybean {
 
 }
 
-case class CopybeanImpl(enforcedTypeIds: Set[String], content: JsObject, id: String) extends Copybean {
+case class CopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String) extends Copybean {
 
 }
 
-case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: JsObject, id: String, names: Map[String, String]) extends ReifiedCopybean {
+case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String, names: Map[String, String]) extends ReifiedCopybean {
 
 }

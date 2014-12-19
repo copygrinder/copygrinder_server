@@ -15,23 +15,23 @@ package org.copygrinder.pure.copybean.validator
 
 import org.copygrinder.pure.copybean.exception.TypeValidationException
 import org.copygrinder.pure.copybean.model.Copybean
-import play.api.libs.json.{JsNull, JsString, JsValue}
+import play.api.libs.json.{JsNull, JsString}
+
+import scala.collection.immutable.ListMap
 
 class RequiredValidator extends Validator {
 
   protected val falseyValues = Seq(0, false, "false", "0", "f", "no", "n")
 
-  override def validate(copybean: Copybean, args: Map[String, JsValue]): Unit = {
+  override def validate(copybean: Copybean, args: ListMap[String, Any]): Unit = {
 
     args.foreach { arg =>
       val (field, argValue) = arg
       if (!falseyValues.contains(argValue.toString())) {
-        copybean.content.fields.find(f => f._1 == field) match {
+        copybean.content.find(f => f._1 == field) match {
           case Some(value) => value._2 match {
-            case JsNull =>
-              throw new TypeValidationException(s"Field '$field' is required but was null")
-            case jString: JsString =>
-              if (jString.value.isEmpty) {
+            case str: String =>
+              if (str.isEmpty) {
                 throw new TypeValidationException(s"Field '$field' is required but was empty")
               }
             case _ =>

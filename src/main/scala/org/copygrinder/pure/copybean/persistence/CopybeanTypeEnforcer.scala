@@ -33,18 +33,18 @@ class CopybeanTypeEnforcer() {
 
     val fieldId = fieldDef.id
 
-    val valueOpt = copybean.content.fields.find(field => field._1 == fieldId)
+    val valueOpt = copybean.content.find(field => field._1 == fieldId)
 
     if (valueOpt.isDefined) {
       val value = valueOpt.get._2
       val fType = fieldDef.`type`
 
       value match {
-        case string: JsString =>
+        case string: String =>
           if (fType == FieldType.Integer) {
             throw new TypeValidationException(s"$fieldId must be an Integer but was the String: $value")
           }
-        case int: JsNumber =>
+        case int: Int =>
           if (fType == FieldType.String) {
             throw new TypeValidationException(s"$fieldId must be a String but was the Integer: $value")
           }

@@ -17,6 +17,8 @@ import org.apache.lucene.document._
 import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
 import play.api.libs.json._
 
+import scala.collection.immutable.ListMap
+
 class DocumentBuilder {
 
   def buildDocument(copybean: Copybean): Document = {
@@ -36,23 +38,23 @@ class DocumentBuilder {
     doc
   }
 
-  protected def addFieldsToDoc(doc: Document, jValue: JsValue, prefix: String): Unit = {
+  protected def addFieldsToDoc(doc: Document, field: Any, prefix: String): Unit = {
 
-    jValue match {
-      case s: JsString =>
-        doc.add(new TextField(prefix, s.value, Field.Store.NO))
-      case dec: JsNumber =>
-        doc.add(new DoubleField(prefix, dec.value.toDouble, Field.Store.NO))
-      case bool: JsBoolean =>
-        doc.add(new StringField(prefix, bool.value.toString, Field.Store.NO))
-      case JsNull =>
-        doc.add(new StringField(prefix, "null", Field.Store.NO))
-      case array: JsArray =>
-        array.value.foreach(arrayValue => {
+    field match {
+      case s: String =>
+        doc.add(new TextField(prefix, s, Field.Store.NO))
+      case d: Double =>
+        doc.add(new DoubleField(prefix, d, Field.Store.NO))
+      case i: Int =>
+        doc.add(new IntField(prefix, i, Field.Store.NO))
+      case bool: Boolean =>
+        doc.add(new StringField(prefix, bool.toString, Field.Store.NO))
+      case array: Seq[_] =>
+        array.foreach(arrayValue => {
           addFieldsToDoc(doc, arrayValue, prefix)
         })
-      case jObj: JsObject =>
-        jObj.value.foreach(value => {
+      case map: ListMap[_, _] =>
+        map.foreach(value => {
           addFieldsToDoc(doc, value._2, prefix + "." + value._1)
         })
       case u: JsUndefined =>

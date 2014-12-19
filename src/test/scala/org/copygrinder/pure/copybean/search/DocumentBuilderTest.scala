@@ -17,18 +17,19 @@ import org.copygrinder.UnitTest
 import org.copygrinder.pure.copybean.model.CopybeanImpl
 import play.api.libs.json._
 
+import scala.collection.immutable.ListMap
+
 class DocumentBuilderTest extends UnitTest {
 
   val documentBuilder = new DocumentBuilder()
 
   "buildDocument" should "return a Document object that matches the supplied CopybeanImpl" in {
-    val nestedObject = ("nested", JsObject(Seq(
-      ("nestedField", JsNumber(123)),
-      ("decField", JsNumber(1.1)),
-      ("nullField", JsNull)
-    )))
-    val array = ("array", JsArray(List(JsBoolean(false), JsNumber(3.14))))
-    val values = JsObject(Seq(("stringField", JsString("true")), nestedObject, array))
+    val nestedObject = ("nested" -> ListMap(
+      "nestedField" -> 123,
+      "decField" -> 1.1
+    ))
+    val array = ("array" -> Seq(false, 3.14))
+    val values = ListMap("stringField" -> "true", nestedObject, array)
     val doc = documentBuilder.buildDocument(CopybeanImpl(Set("someType"), values, "876"))
 
     doc.getField("id").stringValue() should be("876")
@@ -36,7 +37,6 @@ class DocumentBuilderTest extends UnitTest {
     doc.getField("content.stringField").stringValue() should be("true")
     doc.getField("content.nested.nestedField").numericValue() should be(123)
     doc.getField("content.nested.decField").numericValue() should be(1.1)
-    doc.getField("content.nested.nullField").stringValue() should be("null")
     doc.getFields("content.array").map(_.stringValue()) should be(Array("false", "3.14"))
   }
 

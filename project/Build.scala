@@ -21,7 +21,7 @@ object CopygrinderBuild extends Build {
 
      scalaVersion := "2.11.2",
 
-     scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
+     scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-feature", "-language:postfixOps"),
 
      resolvers ++= Seq(
        "spray repo" at "http://repo.spray.io/",

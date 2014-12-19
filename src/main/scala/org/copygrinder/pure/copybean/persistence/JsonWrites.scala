@@ -13,13 +13,36 @@
  */
 package org.copygrinder.pure.copybean.persistence
 
+import org.copygrinder.pure.copybean.exception.JsonWriteException
 import org.copygrinder.pure.copybean.model._
 import play.api.libs.json._
 
+import scala.collection.immutable.ListMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 trait JsonWrites extends DefaultWrites {
+
+  protected def stringAnyMapToJsObject(map: ListMap[String, Any]): JsObject = {
+    val fields = map.map(entry => {
+      val (key, value) = entry
+      val jsValue: JsValue = value match {
+        case b: Boolean => JsBoolean(b)
+        case i: Int => JsNumber(i)
+        case s: String => JsString(s)
+        case x => throw new JsonWriteException("Can't write JSON for class '" + x.getClass)
+      }
+      (key, jsValue)
+    }).toSeq
+    JsObject(fields)
+  }
+
+  implicit val stringAnyWrites = new Writes[ListMap[String, Any]] {
+    override def writes(map: ListMap[String, Any]): JsValue = {
+      stringAnyMapToJsObject(map)
+    }
+  }
+
 
   def enumWrites[E <: Enumeration](enum: E): Writes[E#Value] = new Writes[E#Value] {
     def writes(v: E#Value): JsValue = JsString(v.toString)

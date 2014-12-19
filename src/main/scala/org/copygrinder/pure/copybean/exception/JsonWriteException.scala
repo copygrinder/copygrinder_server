@@ -11,14 +11,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.validator
+package org.copygrinder.pure.copybean.exception
 
-import org.copygrinder.pure.copybean.model.Copybean
+class JsonWriteException(message: String) extends Exception(message) {
 
-import scala.collection.immutable.ListMap
-
-trait Validator {
-
-  def validate(copybean: Copybean, args: ListMap[String, Any]): Unit
 
 }

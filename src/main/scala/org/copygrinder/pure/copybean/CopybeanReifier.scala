@@ -38,7 +38,7 @@ class CopybeanReifier {
       val strippedVariable = variableString.substring(1, variableString.length - 1)
 
       if (strippedVariable.startsWith("content.")) {
-        val valueOpt = copybean.content.fields.find(field => field._1 == strippedVariable.replace("content.", ""))
+        val valueOpt = copybean.content.find(field => field._1 == strippedVariable.replace("content.", ""))
         valueOpt match {
           case Some(value) => result.replace(variableString, value._2.toString)
           case _ => result

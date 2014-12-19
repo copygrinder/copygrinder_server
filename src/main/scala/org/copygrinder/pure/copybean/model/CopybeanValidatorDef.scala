@@ -13,11 +13,11 @@
  */
 package org.copygrinder.pure.copybean.model
 
-import play.api.libs.json.JsValue
+import scala.collection.immutable.ListMap
 
 case class CopybeanValidatorDef(
  id: Option[String],
  `type`: String,
- args: Map[String, JsValue]) {
+ args: ListMap[String, Any]) {
 
 }
