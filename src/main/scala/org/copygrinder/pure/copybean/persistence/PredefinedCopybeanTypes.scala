@@ -33,7 +33,7 @@ class PredefinedCopybeanTypes {
     cardinality = Cardinality.One,
     validators = Seq(
       new CopybeanValidatorDef(
-        "requiredId", "required", ListMap("siloName" -> true)
+        "requiredId", "required", ListMap("fields" -> "siloName")
       )
     )
   )

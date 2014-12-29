@@ -38,7 +38,8 @@ trait JsonReads extends JsonReadUtils {
       case JsString(s) => JsSuccess(s)
       case JsArray(arr) => {
         val list = arr.map(metaValueToJsValue)
-        JsSuccess(list)
+        val values = list.map(result => result.get).toSeq
+        JsSuccess(values)
       }
       case JsObject(m) => {
         val m1 = m.map(f => (f._1, metaValueToJsValue(f._2))).toMap

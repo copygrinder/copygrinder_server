@@ -95,7 +95,7 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "validators": [{
         |    "type": "required",
         |    "args": {
-        |      "testfield1": "true"
+        |      "fields": ["testfield1"]
         |    }
         |  }],
         |  "cardinality": "Many"
