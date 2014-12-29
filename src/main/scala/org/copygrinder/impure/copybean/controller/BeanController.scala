@@ -62,4 +62,9 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
     JsNull
   }
 
+  def createSilo()(implicit siloScope: SiloScope): JsValue = {
+    persistenceService.createSilo()
+    JsNull
+  }
+
 }

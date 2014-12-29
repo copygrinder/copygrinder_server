@@ -49,6 +49,9 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
         val siloId = e.siloId
         logger.debug(s"Silo with id=$siloId does not exist.")
         complete(NotFound, s"Silo with id=$siloId does not exist.")
+      case e: SiloAlreadyInitialized =>
+        val siloId = e.siloId
+        complete(BadRequest, s"Silo with id '$siloId' already exists.")
       case e: TypeValidationException =>
         complete(BadRequest, e.getMessage)
       case e: JsonInputException =>
@@ -79,6 +82,11 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     } ~ BuildRoute(copybeansPath & post & entity(as[AnonymousCopybean])) {
       implicit siloScope => (anonBean) =>
         beanController.store(anonBean)
+    } ~ BuildRoute(siloPath & post) {
+      implicit siloScope => {
+        typeController.createSilo()
+        beanController.createSilo()
+      }
     }
   }
 

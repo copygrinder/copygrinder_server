@@ -69,6 +69,8 @@ class CopybeanPersistenceService(
 
   def store(copybean: Copybean)(implicit siloScope: SiloScope): String = {
 
+    checkSiloExists()
+
     enforceTypes(copybean)
 
     val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
@@ -80,8 +82,8 @@ class CopybeanPersistenceService(
   }
 
   def find()(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
-    logger.debug("Finding all copybeans")
     checkSiloExists()
+    logger.debug("Finding all copybeans")
     val copybeanIds = siloScope.indexer.findCopybeanIds()
     fetchCopybeans(copybeanIds)
   }
@@ -104,6 +106,8 @@ class CopybeanPersistenceService(
   }
 
   def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Unit = {
+
+    checkSiloExists()
 
     val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.content, id)
 
@@ -143,10 +147,18 @@ class CopybeanPersistenceService(
   }
 
   def delete(id: String)(implicit siloScope: SiloScope): Unit = {
+    checkSiloExists()
     val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
     siloScope.beanGitRepo.delete(file)
     siloScope.indexer.deleteCopybean(id)
     siloScope.beanCache.remove(id)
+  }
+
+  def createSilo()(implicit siloScope: SiloScope): Unit = {
+    val beans = predefinedCopybeans.predefinedBeans.map(_._2)
+    beans.foreach { bean =>
+      siloScope.indexer.addCopybean(bean)
+    }
   }
 
 

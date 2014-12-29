@@ -17,6 +17,7 @@ import org.copygrinder.pure.copybean.exception.JsonWriteException
 import org.copygrinder.pure.copybean.model._
 import play.api.libs.json._
 
+import scala.collection.Traversable
 import scala.collection.immutable.ListMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -31,6 +32,7 @@ trait JsonWrites extends DefaultWrites {
         case i: Int => JsNumber(i)
         case s: String => JsString(s)
         case m: ListMap[_,_] => stringAnyMapToJsObject(m.asInstanceOf[ListMap[String, Any]])
+        case list: List[_] => traversableWrites[String].writes(list.asInstanceOf[List[String]])
         case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
       }
       (key, jsValue)

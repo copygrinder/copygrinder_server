@@ -29,8 +29,8 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
 
   def fetchAllCopybeanTypes()(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    logger.debug("Finding all copybean types")
     checkSiloExists()
+    logger.debug("Finding all copybean types")
     val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds()
     fetchCopybeanTypes(copybeanTypeIds)
   }
@@ -43,7 +43,6 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
   }
 
   def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    logger.debug("Finding copybean types")
     if (params.nonEmpty) {
       checkSiloExists()
       val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds(params)
@@ -54,6 +53,8 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
   }
 
   def update(inputCopybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
+
+    checkSiloExists()
 
     val copybeanType = inputCopybeanType.generateValDefIds()
 
@@ -70,6 +71,8 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
 
   def store(inputCopybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
 
+    checkSiloExists()
+
     val copybeanType = inputCopybeanType.generateValDefIds()
 
     val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
@@ -79,10 +82,23 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
   }
 
   def delete(id: String)(implicit siloScope: SiloScope):Unit = {
+
+    checkSiloExists()
+
     val file = new File(siloScope.typesDir, "/" + id + ".json")
     siloScope.typeGitRepo.delete(file)
     siloScope.indexer.deleteCopybean(id)
     siloScope.typeCache.remove(id)
+  }
+
+  def createSilo()(implicit siloScope: SiloScope): Unit = {
+    if (siloScope.root.exists) {
+      throw new SiloAlreadyInitialized(siloScope.siloId)
+    }
+    val types = predefinedCopybeanTypes.predefinedTypes.map(_._2)
+    types.foreach { beanType =>
+      siloScope.indexer.addCopybeanType(beanType)
+    }
   }
 
 }

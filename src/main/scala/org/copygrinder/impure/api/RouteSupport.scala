@@ -56,7 +56,9 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
     )
   }
 
-  protected val copybeansPath = pathPrefix(Segment) & pathPrefix("copybeans")
+  protected val siloPath = pathPrefix(Segment)
+
+  protected val copybeansPath = siloPath & pathPrefix("copybeans")
 
   protected val copybeansIdPath = copybeansPath & path(Segment)
 
@@ -80,6 +82,14 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
   }
 
   protected class OneArgRouteBuilder(path: Directive[::[String, HNil]]) {
+
+    def apply[R](func: (SiloScope) => R)(implicit w: Writes[R]): Route = {
+      path { (siloId) =>
+        scopedComplete(siloId) { siloScope =>
+          func(siloScope)
+        }
+      }
+    }
 
     protected def paramsShouldReject(params: Seq[(String, String)]) = {
       false

@@ -49,6 +49,11 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
     JsNull
   }
 
+  def createSilo()(implicit siloScope: SiloScope): JsValue = {
+    persistenceService.createSilo()
+    JsNull
+  }
+
   protected val copybeanTypeReservedWords = Set("id", "displayName", "instanceNameFormat", "instanceNameFormat", "fields", "validators", "cardinality")
 
 }

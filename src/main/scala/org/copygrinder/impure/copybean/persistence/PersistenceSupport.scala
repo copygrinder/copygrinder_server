@@ -47,7 +47,7 @@ trait PersistenceSupport extends LazyLogging with JsonReads with JsonWrites {
 
   protected def checkSiloExists()(implicit siloScope: SiloScope) = {
     if (!siloScope.root.exists) {
-      throw new SiloNotInitialized(siloScope.thisSiloId)
+      throw new SiloNotInitialized(siloScope.siloId)
     }
   }
 
