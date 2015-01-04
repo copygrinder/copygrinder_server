@@ -30,7 +30,7 @@ class DocumentBuilderTest extends UnitTest {
     ))
     val array = ("array" -> Seq(false, 3.14))
     val values = ListMap("stringField" -> "true", nestedObject, array)
-    val doc = documentBuilder.buildDocument(CopybeanImpl(Set("someType"), values, "876"))
+    val doc = documentBuilder.buildDocument(CopybeanImpl("876", Set("someType"), values))
 
     doc.getField("id").stringValue() should be("876")
     doc.getField("enforcedTypeIds").stringValue() should be("someType")

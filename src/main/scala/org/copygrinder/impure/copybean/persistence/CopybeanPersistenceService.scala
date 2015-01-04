@@ -64,7 +64,7 @@ class CopybeanPersistenceService(
 
   def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): String = {
     val id = idEncoderDecoder.encodeUuid(UUID.randomUUID())
-    val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.content, id)
+    val copybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
     store(copybean)
   }
 
@@ -110,7 +110,7 @@ class CopybeanPersistenceService(
 
     checkSiloExists()
 
-    val copybean = new CopybeanImpl(anonCopybean.enforcedTypeIds, anonCopybean.content, id)
+    val copybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
 
     enforceTypes(copybean)
 

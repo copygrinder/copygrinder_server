@@ -33,7 +33,7 @@ case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[
 
 }
 
-case class CopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String) extends Copybean {
+case class CopybeanImpl(id: String, enforcedTypeIds: Set[String], content: ListMap[String, Any]) extends Copybean {
 
 }
 

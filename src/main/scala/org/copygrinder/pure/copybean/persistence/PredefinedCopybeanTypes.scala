@@ -42,13 +42,14 @@ class PredefinedCopybeanTypes {
   val classBackedValidatorType = new CopybeanType(
     id = "classBackedValidator",
     displayName = "Class Backed Validator Type",
+    instanceNameFormat = "$displayName$",
     fields = Seq(
       new CopybeanFieldDef("class", "Class", FieldType.String)
     ),
     cardinality = Cardinality.One,
     validators = Seq(
       new CopybeanValidatorDef(
-        "requiredId", "required", ListMap("fields" -> Seq("class"))
+        "requiredId", "required", ListMap("fields" -> Seq("class", "signature"))
       )
     )
   )
