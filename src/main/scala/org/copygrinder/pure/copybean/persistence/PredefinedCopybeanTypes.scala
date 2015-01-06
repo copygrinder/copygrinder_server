@@ -24,13 +24,14 @@ class PredefinedCopybeanTypes {
 
   lazy val predefinedTypes = List(copygrinderAdminType, classBackedValidatorType).map(beanType => beanType.id -> beanType).toMap
 
-  val copygrinderAdminType = new CopybeanType(
+  def predefinedType = new CopybeanType(id = "", tags = Seq("PREDEFINED"), cardinality = Cardinality.One)
+
+  val copygrinderAdminType = predefinedType.copy(
     id = "copygrinderAdminMetatype",
     displayName = "Copygrinder Admin Metabean",
     fields = Seq(
       new CopybeanFieldDef("siloName", "Silo Name", FieldType.String)
     ),
-    cardinality = Cardinality.One,
     validators = Seq(
       new CopybeanValidatorDef(
         "requiredId", "required", ListMap("fields" -> "siloName")
@@ -39,17 +40,18 @@ class PredefinedCopybeanTypes {
   )
 
 
-  val classBackedValidatorType = new CopybeanType(
+  val classBackedValidatorType = predefinedType.copy(
     id = "classBackedValidator",
     displayName = "Class Backed Validator Type",
     instanceNameFormat = "$displayName$",
     fields = Seq(
       new CopybeanFieldDef("class", "Class", FieldType.String)
     ),
-    cardinality = Cardinality.One,
     validators = Seq(
       new CopybeanValidatorDef(
-        "requiredId", "required", ListMap("fields" -> Seq("class", "signature"))
+        "requiredId", "required", ListMap(
+          "fields" -> Seq("class", "signature", "scope", "isSingleton", "applicableFieldTypes")
+        )
       )
     )
   )

@@ -18,6 +18,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 import org.copygrinder.pure.copybean.search.DocTypes.DocTypes
+import scala.collection.JavaConversions._
 
 class QueryBuilder extends LazyLogging {
 
@@ -31,7 +32,7 @@ class QueryBuilder extends LazyLogging {
     combinedQuery.add(query, Occur.MUST)
     combinedQuery.add(doctypeQuery, Occur.MUST)
 
-    logger.debug("Built Query " + query)
+    logger.debug("Built Query " + combinedQuery)
     combinedQuery
   }
 
@@ -68,6 +69,10 @@ class QueryBuilder extends LazyLogging {
         val query = addParamToQuery(field, param._2, booleanQuery)
         booleanQuery.add(query, clause)
       }
+    }
+    val occurs = booleanQuery.clauses().map(_.getOccur)
+    if (!occurs.exists(_ != BooleanClause.Occur.MUST_NOT)) {
+      booleanQuery.add(new MatchAllDocsQuery, BooleanClause.Occur.MUST)
     }
     booleanQuery
   }

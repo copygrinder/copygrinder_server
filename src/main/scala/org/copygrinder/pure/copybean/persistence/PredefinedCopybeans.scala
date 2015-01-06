@@ -21,12 +21,17 @@ class PredefinedCopybeans {
 
   lazy val predefinedBeans = List(requiredValidator).map(bean => bean.id -> bean).toMap
 
-  val requiredValidator = new CopybeanImpl("validator.required", Set("classBackedValidator"),
+  val requiredValidator = new CopybeanImpl(
+    "validator.required",
+    Set("classBackedValidator"),
     ListMap(
       "displayName" -> "Required",
       "class" -> "org.copygrinder.pure.copybean.validator.RequiredValidator",
+      "scope" -> "SingleFieldBatchable",
+      "isSingleton" -> true,
+      "applicableFieldTypes" -> Seq("*"),
       "signature" -> ListMap(
-        "fields" -> "List[String]"
+        "fields" -> "List[Field]"
       )
     )
   )

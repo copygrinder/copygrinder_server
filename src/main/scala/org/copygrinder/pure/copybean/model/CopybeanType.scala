@@ -21,6 +21,7 @@ case class CopybeanType(
  instanceNameFormat: Option[String] = None,
  fields: Option[Seq[CopybeanFieldDef]] = None,
  validators: Option[Seq[CopybeanValidatorDef]] = None,
+ tags: Option[Seq[String]] = None,
  cardinality: Cardinality
  ) {
 

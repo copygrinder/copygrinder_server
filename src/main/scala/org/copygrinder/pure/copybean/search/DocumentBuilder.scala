@@ -76,6 +76,10 @@ class DocumentBuilder {
       doc.add(new TextField("fieldDef." + fieldDef.id + ".type", fieldDef.`type`.toString, Field.Store.NO))
     })
 
+    copybeanType.tags.map(_.foreach { tag =>
+      doc.add(new TextField("tags", tag, Field.Store.NO))
+    })
+
     doc
   }
 
