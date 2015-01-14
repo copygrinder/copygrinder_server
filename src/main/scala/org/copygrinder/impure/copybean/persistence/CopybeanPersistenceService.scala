@@ -130,7 +130,8 @@ class CopybeanPersistenceService(
       cachedFetchCopybeanType(typeId).map { copybeanType =>
         val validatorBeansMap = fetchValidators(copybeanType)
         val validatorInstances = fetchClassBackedValidators(validatorBeansMap.map(_._2))
-        copybeanTypeEnforcer.enforceType(copybeanType, copybean, validatorBeansMap, validatorInstances)
+        val refs = copybeanTypeEnforcer.enforceType(copybeanType, copybean, validatorBeansMap, validatorInstances)
+        checkRefs(refs)
       }
     }
     val futureSeq = Future.sequence(future)
@@ -183,6 +184,18 @@ class CopybeanPersistenceService(
       Map.empty
     }
   }
+
+  protected def checkRefs(refs: Set[String])(implicit siloScope: SiloScope, ec: ExecutionContext) = {
+    if (refs.size > 0) {
+      val params = refs.toSeq.map(ref => ("id~", ref))
+      val ids = siloScope.indexer.findCopybeanIds(params).toSet
+      val diffs = refs.diff(ids)
+      if (diffs.size > 0) {
+        throw new TypeValidationException(s"Reference(s) made to non-existent bean(s): " + diffs.mkString)
+      }
+    }
+  }
+
 
   def delete(id: String)(implicit siloScope: SiloScope): Unit = {
     checkSiloExists()

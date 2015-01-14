@@ -27,6 +27,6 @@ object FieldType extends Enumeration {
 
   type FieldType = Value
 
-  val String, Integer, Reference, Order = Value
+  val String, Integer, Reference = Value
 
 }

@@ -92,6 +92,10 @@ class CopybeanTest extends FlatSpec with Matchers {
         |      "id": "testfield2",
         |      "type": "Integer",
         |      "displayName": "Integer field"
+        |  },{
+        |      "id": "testfield3",
+        |      "type": "Reference",
+        |      "displayName": "Reference field"
         |  }],
         |  "cardinality": "Many"
         |},{
@@ -233,8 +237,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     Await.result(responseFuture, 1 second)
   }
 
-  it should "edit existing Copybeans" in {
-
+  def getId() = {
     val req = copybeansUrl.GET
 
     val responseFuture = Http(req).map { response =>
@@ -248,6 +251,14 @@ class CopybeanTest extends FlatSpec with Matchers {
     }
 
     val id = Await.result(responseFuture, 1 second)
+    id
+  }
+
+  it should "edit existing Copybeans" in {
+
+    val req = copybeansUrl.GET
+
+    val id = getId()
 
     val json =
       """
@@ -304,6 +315,55 @@ class CopybeanTest extends FlatSpec with Matchers {
     }
 
     Await.result(responseFuture2, 1 second)
+  }
+
+  it should "handle bad references" in {
+
+    val json =
+      """
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "content": {
+        |    "testfield1":"1",
+        |    "testfield3":"!REF!:1"
+        |  }
+        |}""".stripMargin
+
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response, 400)
+      assert(response.getResponseBody.contains("non-existent bean"))
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
+  it should "handle good references" in {
+
+    val id = getId()
+
+    val json =
+      s"""
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "content": {
+        |    "testfield1":"1",
+        |    "testfield3":"!REF!:$id"
+        |  }
+        |}""".stripMargin
+
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+    }
+
+    Await.result(responseFuture, 1 second)
   }
 
   def checkStatus(req: Req, response: Response, code: Int = 200) = {
