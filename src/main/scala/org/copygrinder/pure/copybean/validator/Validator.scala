@@ -17,8 +17,7 @@ import org.copygrinder.pure.copybean.model.Copybean
 
 import scala.collection.immutable.ListMap
 
-trait Validator {
+trait FieldValidator {
 
-  def validate(copybean: Copybean, args: ListMap[String, Any]): Unit
-
+  def validate(copybean: Copybean, field: String, args: Option[ListMap[String, Any]]): Unit
 }

@@ -20,22 +20,9 @@ case class CopybeanType(
  displayName: Option[String] = None,
  instanceNameFormat: Option[String] = None,
  fields: Option[Seq[CopybeanFieldDef]] = None,
- validators: Option[Seq[CopybeanValidatorDef]] = None,
  tags: Option[Seq[String]] = None,
  cardinality: Cardinality
  ) {
-
-  def generateValDefIds():CopybeanType = {
-    val valDefs = validators.map(_.map(valDef => {
-      if (valDef.id.isEmpty) {
-        valDef.copy(id = Some("placeholderId"))
-      } else {
-        valDef
-      }
-    }))
-
-    this.copy(validators = valDefs)
-  }
 
 }
 

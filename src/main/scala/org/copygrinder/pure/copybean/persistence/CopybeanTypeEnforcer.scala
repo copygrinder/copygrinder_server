@@ -15,7 +15,7 @@ package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.TypeValidationException
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.validator.Validator
+import org.copygrinder.pure.copybean.validator.FieldValidator
 
 class CopybeanTypeEnforcer() {
 
@@ -23,7 +23,7 @@ class CopybeanTypeEnforcer() {
    copybeanType: CopybeanType,
    copybean: Copybean,
    validatorBeans: Map[String, Copybean],
-   validatorClassInstances: Map[String, Validator]
+   validatorClassInstances: Map[String, FieldValidator]
    ): Unit = {
     copybeanType.fields.map(_.map { fieldDef =>
       checkField(fieldDef, copybean)
@@ -60,25 +60,26 @@ class CopybeanTypeEnforcer() {
   protected def checkValidators(
    copybeanType: CopybeanType,
    copybean: Copybean, validatorBeans: Map[String, Copybean],
-   validatorClassInstances: Map[String, Validator]) = {
-    copybeanType.validators.map(_.map({ validatorDef =>
+   validatorClassInstances: Map[String, FieldValidator]) = {
+    copybeanType.fields.map(_.map(field => field.validators.map(_.map({ validatorDef =>
       val typeId = validatorDef.`type`
       val validator = validatorBeans.getOrElse(s"validator.$typeId",
         throw new TypeValidationException(s"Couldn't find a validator of type '$typeId'")
       )
-      if (validator.enforcedTypeIds.contains("classBackedValidator")) {
-        checkClassBackedValidator(copybean, validator, validatorDef, validatorClassInstances)
+      if (validator.enforcedTypeIds.contains("classBackedFieldValidator")) {
+        checkClassBackedValidator(copybean, field.id, validator, validatorDef, validatorClassInstances)
       } else {
         throw new TypeValidationException(s"Couldn't execute validator '${validator.id}'")
       }
-    }))
+    }))))
   }
 
   protected def checkClassBackedValidator(
    copybean: Copybean,
+   field: String,
    validator: Copybean,
-   validatorDef: CopybeanValidatorDef,
-   validatorClassInstances: Map[String, Validator]) = {
+   validatorDef: CopybeanFieldValidatorDef,
+   validatorClassInstances: Map[String, FieldValidator]) = {
     val className = validator.content.getOrElse("class",
       throw new TypeValidationException(s"Couldn't find a class for validator '${validator.id}'")
     )
@@ -88,7 +89,7 @@ class CopybeanTypeEnforcer() {
         val validator = validatorClassInstances.getOrElse(classNameString,
           throw new TypeValidationException(s"Couldn't find a class for validator '${classNameString}'")
         )
-        validator.validate(copybean, validatorDef.args)
+        validator.validate(copybean, field, validatorDef.args)
       }
       case x => throw new TypeValidationException(
         s"Validator '${validator.id}' did not specify class as a String but the value '$x' which is a ${x.getClass}"

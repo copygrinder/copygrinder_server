@@ -23,16 +23,13 @@ class PredefinedCopybeans {
 
   val requiredValidator = new CopybeanImpl(
     "validator.required",
-    Set("classBackedValidator"),
+    Set("classBackedFieldValidator"),
     ListMap(
       "displayName" -> "Required",
       "class" -> "org.copygrinder.pure.copybean.validator.RequiredValidator",
-      "scope" -> "SingleFieldBatchable",
       "isSingleton" -> true,
       "applicableFieldTypes" -> Seq("*"),
-      "signature" -> ListMap(
-        "fields" -> "List[Field]"
-      )
+      "signature" -> ListMap()
     )
   )
 

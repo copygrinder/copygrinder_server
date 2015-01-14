@@ -15,9 +15,7 @@ package org.copygrinder.pure.copybean.model
 
 import scala.collection.immutable.ListMap
 
-case class CopybeanValidatorDef(
- id: Option[String],
+case class CopybeanFieldValidatorDef(
  `type`: String,
- args: ListMap[String, Any]) {
-
+ args: Option[ListMap[String, Any]] = None) {
 }

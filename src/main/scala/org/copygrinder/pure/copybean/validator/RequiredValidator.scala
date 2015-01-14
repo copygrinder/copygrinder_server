@@ -18,36 +18,20 @@ import org.copygrinder.pure.copybean.model.Copybean
 
 import scala.collection.immutable.ListMap
 
-class RequiredValidator extends Validator {
+class RequiredValidator extends FieldValidator {
 
-  override def validate(copybean: Copybean, args: ListMap[String, Any]): Unit = {
+  override def validate(copybean: Copybean, field: String, args: Option[ListMap[String, Any]]): Unit = {
 
-    val fields = args.getOrElse("fields", throw new TypeValidationException(s"Required validation args incorrectly defined.  Needed 'fields'.  args: $args"))
+    val fieldValue = copybean.content.get(field).getOrElse(
+      throw new TypeValidationException(s"Field '$field' was not defined but is required")
+    )
 
-    fields match {
-      case fields: Seq[_] => {
-        fields.foreach {
-          case field: String => checkField(copybean, field)
-          case e => throw new TypeValidationException(s"Required validation args incorrectly defined.  Needed 'fields' value to be an array of strings but found: $e")
+    fieldValue match {
+      case str: String =>
+        if (str.isEmpty) {
+          throw new TypeValidationException(s"Field '$field' is required but was empty")
         }
-      }
-      case field: String => checkField(copybean, field)
-      case e => throw new TypeValidationException(s"Required validation args incorrectly defined.  Needed 'fields' value to be an array but was: $e")
-    }
-
-
-  }
-
-  protected def checkField(copybean: Copybean, field: String) = {
-    copybean.content.find(f => f._1 == field) match {
-      case Some(value) => value._2 match {
-        case str: String =>
-          if (str.isEmpty) {
-            throw new TypeValidationException(s"Field '$field' is required but was empty")
-          }
-        case _ =>
-      }
-      case None => throw new TypeValidationException(s"Field '$field' was not defined but is required")
+      case _ =>
     }
   }
 

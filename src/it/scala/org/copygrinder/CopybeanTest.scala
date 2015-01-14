@@ -54,7 +54,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = rootUrl.GET
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
     }
 
     Await.result(responseFuture, 1 second)
@@ -65,7 +65,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = baseUrl.POST
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
     }
 
     Await.result(responseFuture, 1 second)
@@ -86,17 +86,12 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "fields": [{
         |      "id": "testfield1",
         |      "type": "String",
-        |      "displayName": "String field"
+        |      "displayName": "String field",
+        |      "validators": [{"type":"required"}]
         |    },{
         |      "id": "testfield2",
         |      "type": "Integer",
         |      "displayName": "Integer field"
-        |  }],
-        |  "validators": [{
-        |    "type": "required",
-        |    "args": {
-        |      "fields": ["testfield1"]
-        |    }
         |  }],
         |  "cardinality": "Many"
         |},{
@@ -109,7 +104,7 @@ class CopybeanTest extends FlatSpec with Matchers {
 
     val responseFuture = Http(req).map { response =>
 
-      checkStatus(response)
+      checkStatus(req, response)
 
     }
 
@@ -141,7 +136,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
     }
 
     Await.result(responseFuture, 1 second)
@@ -152,7 +147,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = copybeansUrl.GET
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
       assert(response.getResponseBody.contains("testfield2\":2"))
       assert(response.getResponseBody.contains("testfield2\":4"))
     }
@@ -165,7 +160,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = copybeansUrl.GET.setQueryParameters(Map("content.testfield1" -> Seq("3")))
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
       assert(response.getResponseBody.contains("testfield1\":\"3"))
       assert(!response.getResponseBody.contains("testfield2\":2"))
     }
@@ -189,7 +184,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response, 400)
+      checkStatus(req, response, 400)
       assert(response.getResponseBody.contains("required"))
     }
 
@@ -209,7 +204,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response, 400)
+      checkStatus(req, response, 400)
       assert(response.getResponseBody.contains("bogus"))
     }
 
@@ -232,7 +227,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
     }
 
     Await.result(responseFuture, 1 second)
@@ -243,7 +238,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = copybeansUrl.GET
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
       val json = Json.parse(response.getResponseBody).as[JsArray]
       val bean = json.value.find { bean =>
         val ids = bean.\("enforcedTypeIds").as[JsArray]
@@ -269,13 +264,13 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req2 = copybeanIdUrl(id).PUT.setContentType("application/json", "UTF8").setBody(json)
 
     val responseFuture2 = Http(req2).map { response =>
-      checkStatus(response)
+      checkStatus(req2, response)
     }
 
     Await.result(responseFuture2, 1 second)
 
     val responseFuture3 = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
       assert(response.getResponseBody.contains("1-edited"))
     }
 
@@ -296,7 +291,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req = copybeanTypeIdUrl("testtype2").PUT.setContentType("application/json", "UTF8").setBody(json)
 
     val responseFuture = Http(req).map { response =>
-      checkStatus(response)
+      checkStatus(req, response)
     }
 
     Await.result(responseFuture, 1 second)
@@ -304,16 +299,17 @@ class CopybeanTest extends FlatSpec with Matchers {
     val req2 = copybeansTypesUrl.GET.setQueryParameters(Map("id" -> Seq("testtype2")))
 
     val responseFuture2 = Http(req2).map { response =>
-      checkStatus(response)
+      checkStatus(req2, response)
       assert(response.getResponseBody.contains("TestTypeTwo-Edited"))
     }
 
     Await.result(responseFuture2, 1 second)
   }
 
-  def checkStatus(response: Response, code: Int = 200) = {
+  def checkStatus(req: Req, response: Response, code: Int = 200) = {
     val status = response.getStatusCode
     if (status != code) {
+      println("REQUEST: " + req.toRequest)
       println("RESPONSE: " + response.getResponseBody)
       assert(status == code)
     }

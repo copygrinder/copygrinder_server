@@ -15,7 +15,13 @@ package org.copygrinder.pure.copybean.model
 
 import scala.collection.immutable.ListMap
 
-case class CopybeanFieldDef(id: String, displayName: String, `type`: FieldType.FieldType, attributes: Option[ListMap[String, Any]] = None)
+case class CopybeanFieldDef(
+ id: String,
+ displayName: String,
+ `type`: FieldType.FieldType,
+ attributes: Option[ListMap[String, Any]] = None,
+ validators: Option[Seq[CopybeanFieldValidatorDef]] = None
+ )
 
 object FieldType extends Enumeration {
 

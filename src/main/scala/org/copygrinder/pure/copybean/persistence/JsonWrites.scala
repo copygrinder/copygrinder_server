@@ -31,7 +31,7 @@ trait JsonWrites extends DefaultWrites {
         case b: Boolean => JsBoolean(b)
         case i: Int => JsNumber(i)
         case s: String => JsString(s)
-        case m: ListMap[_,_] => stringAnyMapToJsObject(m.asInstanceOf[ListMap[String, Any]])
+        case m: ListMap[_, _] => stringAnyMapToJsObject(m.asInstanceOf[ListMap[String, Any]])
         case list: List[_] => traversableWrites[String].writes(list.asInstanceOf[List[String]])
         case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
       }
@@ -76,12 +76,11 @@ trait JsonWrites extends DefaultWrites {
     }
   }
 
-
   implicit val fieldTypeWrites = enumWrites(FieldType)
 
-  implicit val copybeanFieldDefWrites = Json.writes[CopybeanFieldDef]
+  implicit val copybeanValidatorDefWrites = Json.writes[CopybeanFieldValidatorDef]
 
-  implicit val copybeanValidatorDefWrites = Json.writes[CopybeanValidatorDef]
+  implicit val copybeanFieldDefWrites = Json.writes[CopybeanFieldDef]
 
   implicit val cardinalityWrites = enumWrites(Cardinality)
 

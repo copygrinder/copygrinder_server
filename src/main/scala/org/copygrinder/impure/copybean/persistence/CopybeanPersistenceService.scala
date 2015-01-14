@@ -21,7 +21,7 @@ import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence._
-import org.copygrinder.pure.copybean.validator.Validator
+import org.copygrinder.pure.copybean.validator.FieldValidator
 import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -139,9 +139,9 @@ class CopybeanPersistenceService(
 
   protected def fetchClassBackedValidators(validators: Iterable[Copybean]) = {
 
-    validators.foldLeft(Map[String, Validator]()) { (result, validator) =>
+    validators.foldLeft(Map[String, FieldValidator]()) { (result, validator) =>
 
-      if (validator.enforcedTypeIds.contains("classBackedValidator")) {
+      if (validator.enforcedTypeIds.contains("classBackedFieldValidator")) {
 
         val className = validator.content.getOrElse("class",
           throw new TypeValidationException(s"Couldn't find a class for validator '${validator.id}'")
@@ -150,7 +150,7 @@ class CopybeanPersistenceService(
         className match {
           case classNameString: String => {
             try {
-              result + (classNameString -> Class.forName(classNameString).newInstance().asInstanceOf[Validator])
+              result + (classNameString -> Class.forName(classNameString).newInstance().asInstanceOf[FieldValidator])
             } catch {
               case e: ClassNotFoundException =>
                 throw new TypeValidationException(s"Couldn't find class '$classNameString' for validator '${validator.id}'")
@@ -168,11 +168,17 @@ class CopybeanPersistenceService(
   }
 
   protected def fetchValidators(copybeanType: CopybeanType)(implicit siloScope: SiloScope, ec: ExecutionContext): Map[String, ReifiedCopybean] = {
-    if (copybeanType.validators.isDefined) {
-      val validatorTypes = copybeanType.validators.get.map(_.`type`)
-      val validatorBeansFuture = Future.sequence(validatorTypes.map(typeId => cachedFetchCopybean(s"validator.$typeId")))
-      val validatorBeans = Await.result(validatorBeansFuture, 5 seconds)
-      validatorBeans.map(validator => validator.id -> validator).toMap
+    if (copybeanType.fields.isDefined) {
+      copybeanType.fields.get.foldLeft(Map[String, ReifiedCopybean]()) { (result, field) =>
+        if (field.validators.isDefined) {
+          val validatorTypes = field.validators.get.map(_.`type`)
+          val validatorBeansFuture = Future.sequence(validatorTypes.map(typeId => cachedFetchCopybean(s"validator.$typeId")))
+          val validatorBeans = Await.result(validatorBeansFuture, 5 seconds)
+          result ++ validatorBeans.map(validator => validator.id -> validator).toMap
+        } else {
+          result
+        }
+      }
     } else {
       Map.empty
     }

@@ -89,9 +89,9 @@ trait JsonReads extends JsonReadUtils {
 
   implicit val fieldTypeReads = enumReads(FieldType)
 
-  implicit val copybeanFieldDefReads = Json.reads[CopybeanFieldDef]
+  implicit val anonymousCopybeanValidatorDefReads = Json.reads[CopybeanFieldValidatorDef]
 
-  implicit val anonymousCopybeanValidatorDefReads = Json.reads[CopybeanValidatorDef]
+  implicit val copybeanFieldDefReads = Json.reads[CopybeanFieldDef]
 
   implicit val cardinalityReads = enumReads(Cardinality)
 

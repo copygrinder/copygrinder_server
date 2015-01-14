@@ -52,11 +52,9 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
     }
   }
 
-  def update(inputCopybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
+  def update(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
 
     checkSiloExists()
-
-    val copybeanType = inputCopybeanType.generateValDefIds()
 
     val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
     val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
@@ -69,11 +67,9 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
     siloScope.indexer.updateCopybeanType(copybeanType)
   }
 
-  def store(inputCopybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
+  def store(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
 
     checkSiloExists()
-
-    val copybeanType = inputCopybeanType.generateValDefIds()
 
     val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
     val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
@@ -81,7 +77,7 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes) 
     siloScope.indexer.addCopybeanType(copybeanType)
   }
 
-  def delete(id: String)(implicit siloScope: SiloScope):Unit = {
+  def delete(id: String)(implicit siloScope: SiloScope): Unit = {
 
     checkSiloExists()
 
