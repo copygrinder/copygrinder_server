@@ -19,7 +19,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
-import scala.collection.{Map, Seq}
+import scala.collection.Seq
 import scala.collection.immutable.ListMap
 
 
@@ -42,7 +42,16 @@ trait JsonReads extends JsonReadUtils {
         JsSuccess(values)
       }
       case JsObject(m) => {
-        val m1 = m.map(f => (f._1, metaValueToJsValue(f._2))).toMap
+        val m1 = m.map(f => {
+          val value = metaValueToJsValue(f._2)
+          val unwrapedValue = if (value.isInstanceOf[JsSuccess[_]]) {
+            value.asInstanceOf[JsSuccess[_]].value
+          } else {
+            value
+          }
+          (f._1, unwrapedValue)
+        }).toMap
+        println("m1 " + m1)
         JsSuccess(m1)
       }
       case x => JsError(x.toString())
@@ -52,7 +61,9 @@ trait JsonReads extends JsonReadUtils {
   def listMapReads[V](implicit fmtv: Reads[V]): Reads[ListMap[String, V]] = new Reads[ListMap[String, V]] {
     override def reads(json: JsValue) = {
       json match {
-        case o: JsObjectWrapper => o.objectUnreadFields.clear()
+        case o: JsObjectWrapper => {
+          o.ignore()
+        }
         case _ =>
       }
       listMapReadsImpl(json, fmtv)
@@ -62,12 +73,12 @@ trait JsonReads extends JsonReadUtils {
   /**
    * This function is a slightly modified version of DefaultReads.mapReads to handle ListMaps
    */
-  protected def listMapReadsImpl[V](json: JsValue, fmtv: Reads[V]):JsResult[ListMap[String, V]] = {
+  protected def listMapReadsImpl[V](json: JsValue, fmtv: Reads[V]): JsResult[ListMap[String, V]] = {
     json match {
       case JsObject(m) => {
 
         type Errors = Seq[(JsPath, Seq[ValidationError])]
-        def locate(e: Errors, key: String):Errors = e.map { case (p, valerr) => (JsPath \ key) ++ p -> valerr}
+        def locate(e: Errors, key: String): Errors = e.map { case (p, valerr) => (JsPath \ key) ++ p -> valerr}
 
         m.foldLeft(Right(ListMap.empty): Either[Errors, ListMap[String, V]]) {
           case (acc, (key, value)) => (acc, fromJson[V](value)(fmtv)) match {

@@ -95,7 +95,10 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  },{
         |      "id": "testfield3",
         |      "type": "Reference",
-        |      "displayName": "Reference field"
+        |      "displayName": "Reference field",
+        |      "attributes": {"refs": [
+        |        {"refValidationTypes": ["testtype2"], "refDisplayType": "testtype2"}
+        |      ]}
         |  }],
         |  "cardinality": "Many"
         |},{
@@ -370,6 +373,7 @@ class CopybeanTest extends FlatSpec with Matchers {
     val status = response.getStatusCode
     if (status != code) {
       println("REQUEST: " + req.toRequest)
+      println("REQUEST BODY: " + req.toRequest.getStringData)
       println("RESPONSE: " + response.getResponseBody)
       assert(status == code)
     }

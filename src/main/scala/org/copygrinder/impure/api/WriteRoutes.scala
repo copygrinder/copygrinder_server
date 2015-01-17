@@ -13,22 +13,16 @@
  */
 package org.copygrinder.impure.api
 
-import java.io.{StringWriter, PrintWriter, IOException}
+import java.io.{IOException, PrintWriter, StringWriter}
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.apache.http.util.ExceptionUtils
 import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import play.api.libs.json.{JsString, Writes}
-import shapeless.{::, HNil}
 import spray.http.StatusCodes._
-import spray.httpx.marshalling.ToResponseMarshallable
-import spray.httpx.unmarshalling.FromRequestUnmarshaller
 import spray.routing._
-import spray.routing.directives.MethodDirectives
 
 trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 

@@ -13,6 +13,8 @@
  */
 package org.copygrinder.pure.copybean.persistence
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import org.copygrinder.pure.copybean.exception.JsonInputException
 import play.api.libs.json._
 
@@ -27,7 +29,7 @@ trait JsonReadUtils extends DefaultReads {
         try {
           JsSuccess(enum.withName(s))
         } catch {
-          case _: NoSuchElementException => JsError(s"Enumeration expected of type: '${ enum.getClass }', but it does not appear to contain the value: '$s'")
+          case _: NoSuchElementException => JsError(s"Enumeration expected of type: '${enum.getClass}', but it does not appear to contain the value: '$s'")
         }
       }
       case _ => JsError("String value expected")
@@ -37,7 +39,7 @@ trait JsonReadUtils extends DefaultReads {
   implicit def trackingMapReads[V](implicit fmtv: Reads[V]): Reads[Map[String, V]] = new Reads[Map[String, V]] {
     def reads(json: JsValue): JsResult[Map[String, V]] = {
       json match {
-        case o: JsObjectWrapper => o.objectUnreadFields.clear()
+        case o: JsObjectWrapper => o.ignore()
         case _ =>
       }
       mapReads(fmtv).reads(json)
@@ -96,24 +98,37 @@ trait ReadTracking {
 
   def unreadFields: Set[String]
 
+  def ignore()
+
 }
 
 class JsObjectWrapper(fields: Seq[(String, JsValue)], prefix: String) extends JsObject(fields) with ReadTracking {
 
   val objectUnreadFields = new mutable.HashSet[String]()
 
+  val objectIgnore = new AtomicBoolean(false)
+
   fields.map(_._1).foreach(objectUnreadFields.add(_))
+
+  def ignore() = {
+    objectIgnore.set(true)
+  }
 
   override def unreadFields: Set[String] = {
 
-    val nestedFields = fields.flatMap(field => {
-      field._2 match {
-        case r: ReadTracking => r.unreadFields.map(field._1 + prefix + _)
-        case _ => None
-      }
-    })
+    if (!objectIgnore.get()) {
 
-    objectUnreadFields.toSet ++ nestedFields
+      val nestedFields = fields.flatMap(field => {
+        field._2 match {
+          case r: ReadTracking => r.unreadFields.map(field._1 + prefix + _)
+          case _ => None
+        }
+      })
+
+      objectUnreadFields.toSet ++ nestedFields
+    } else {
+      Set()
+    }
   }
 
 
@@ -126,18 +141,28 @@ class JsObjectWrapper(fields: Seq[(String, JsValue)], prefix: String) extends Js
 
 class JsArrayWrapper(value: Seq[JsValue]) extends JsArray(value) with ReadTracking {
 
+  val objectIgnore = new AtomicBoolean(false)
+
+  def ignore() = {
+    objectIgnore.set(true)
+  }
+
   override def unreadFields: Set[String] = {
 
-    val nestedFields = value.zipWithIndex.foldLeft(Set[String]())((result, value) => {
-      value._1 match {
-        case r: ReadTracking => {
-          result ++ r.unreadFields.map(field => "[" + value._2 + "]." + field)
+    if (!objectIgnore.get()) {
+      val nestedFields = value.zipWithIndex.foldLeft(Set[String]())((result, value) => {
+        value._1 match {
+          case r: ReadTracking => {
+            result ++ r.unreadFields.map(field => "[" + value._2 + "]." + field)
+          }
+          case _ => result
         }
-        case _ => result
-      }
-    })
+      })
 
-    nestedFields
+      nestedFields
+    } else {
+      Set()
+    }
   }
 
 

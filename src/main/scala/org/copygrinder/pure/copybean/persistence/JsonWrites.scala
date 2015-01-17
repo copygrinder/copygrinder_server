@@ -24,15 +24,45 @@ import scala.concurrent.{Await, Future}
 
 trait JsonWrites extends DefaultWrites {
 
-  protected def stringAnyMapToJsObject(map: ListMap[String, Any]): JsObject = {
+  protected def stringAnyMapToJsObject(map: Map[String, Any]): JsObject = {
     val fields = map.map(entry => {
       val (key, value) = entry
       val jsValue: JsValue = value match {
         case b: Boolean => JsBoolean(b)
         case i: Int => JsNumber(i)
         case s: String => JsString(s)
-        case m: ListMap[_, _] => stringAnyMapToJsObject(m.asInstanceOf[ListMap[String, Any]])
-        case list: List[_] => traversableWrites[String].writes(list.asInstanceOf[List[String]])
+        case m: ListMap[_, _] => {
+          if (!m.isEmpty) {
+            val head = m.head._1;
+            if (head.isInstanceOf[String]) {
+              stringAnyMapToJsObject(m.asInstanceOf[Map[String, Any]])
+            } else {
+              throw new JsonWriteException(s"Can't write JSON for map with value '$head")
+            }
+          } else {
+            JsObject(Seq())
+          }
+        }
+        case list: List[_] => {
+          if (!list.isEmpty) {
+            val head = list.head
+            if (head.isInstanceOf[String]) {
+              traversableWrites[String].writes(list.asInstanceOf[List[String]])
+            } else if (head.isInstanceOf[Map[_, _]]) {
+              val newList = list.asInstanceOf[List[Map[String, Any]]].map(map => {
+                val newMap = map.map(entry => {
+                  (entry._1 -> entry._2)
+                })
+                stringAnyMapToJsObject(newMap)
+              })
+              JsArray(newList)
+            } else {
+              throw new JsonWriteException(s"Can't write JSON for list with value '$head")
+            }
+          } else {
+            JsArray()
+          }
+        }
         case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
       }
       (key, jsValue)
