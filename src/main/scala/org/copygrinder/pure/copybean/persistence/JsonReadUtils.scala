@@ -98,7 +98,7 @@ trait ReadTracking {
 
   def unreadFields: Set[String]
 
-  def ignore()
+  def ignore(): Unit
 
 }
 
@@ -110,7 +110,7 @@ class JsObjectWrapper(fields: Seq[(String, JsValue)], prefix: String) extends Js
 
   fields.map(_._1).foreach(objectUnreadFields.add(_))
 
-  def ignore() = {
+  def ignore(): Unit = {
     objectIgnore.set(true)
   }
 
@@ -143,7 +143,7 @@ class JsArrayWrapper(value: Seq[JsValue]) extends JsArray(value) with ReadTracki
 
   val objectIgnore = new AtomicBoolean(false)
 
-  def ignore() = {
+  def ignore(): Unit = {
     objectIgnore.set(true)
   }
 

@@ -114,48 +114,60 @@ class CopybeanTypeEnforcer() {
 
     tpe.typeConstructor.toString match {
       case "Seq" => {
-        if (data.isInstanceOf[Seq[_]]) {
-          val seq = data.asInstanceOf[Seq[Any]].zipWithIndex
-          seq.map(pair => {
-            val (innerData, index) = pair
-            val newParent = s"$parent[$index]"
-            doCastAttr(innerData, fieldDef, newParent, tpe.typeArgs.head)
-          })
-        } else {
-          throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent to be an array")
-        }
+        handleSeqCast(data, fieldDef, parent, tpe)
       }
       case "Map" => {
-        if (data.isInstanceOf[Map[_, _]]) {
-          val map = data.asInstanceOf[Map[Any, Any]]
-          map.map(entry => {
-            if (entry._1.isInstanceOf[String]) {
-              entry._1 -> doCastAttr(entry._2, fieldDef, parent + "." + entry._1, tpe.typeArgs(1))
-            } else {
-              throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent.${entry._1} to be an string")
-            }
-          })
-        } else {
-          throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent to be an object")
-        }
+        handleMapCast(data, fieldDef, parent, tpe)
       }
       case "Either" => {
-        val isLeft = checkEither(data, fieldDef, parent, tpe.typeArgs(0))
-        val isRight = checkEither(data, fieldDef, parent, tpe.typeArgs(1))
-        if (isLeft) {
-          Left(doCastAttr(data, fieldDef, parent, tpe.typeArgs(0)))
-        } else if (isRight) {
-          Right(doCastAttr(data, fieldDef, parent, tpe.typeArgs(1)))
-        } else {
-          throw new TypeValidationException(
-            s"${fieldDef.id} attribute $parent is neither ${tpe.typeArgs(0)} nor ${tpe.typeArgs(1)}"
-          )
-        }
+        handleEitherCast(data, fieldDef, parent, tpe)
       }
       case "String" => data
       case other => throw new TypeValidationException(s"${fieldDef.id} has unknown argument type '$other'")
     }
 
+  }
+
+  protected def handleSeqCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
+    if (data.isInstanceOf[Seq[_]]) {
+      val seq = data.asInstanceOf[Seq[Any]].zipWithIndex
+      seq.map(pair => {
+        val (innerData, index) = pair
+        val newParent = s"$parent[$index]"
+        doCastAttr(innerData, fieldDef, newParent, tpe.typeArgs.head)
+      })
+    } else {
+      throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent to be an array")
+    }
+  }
+
+  protected def handleMapCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
+    if (data.isInstanceOf[Map[_, _]]) {
+      val map = data.asInstanceOf[Map[Any, Any]]
+      map.map(entry => {
+        if (entry._1.isInstanceOf[String]) {
+          entry._1 -> doCastAttr(entry._2, fieldDef, parent + "." + entry._1, tpe.typeArgs(1))
+        } else {
+          throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent.${entry._1} to be an string")
+        }
+      })
+    } else {
+      throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent to be an object")
+    }
+  }
+
+  protected def handleEitherCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
+    val isLeft = checkEither(data, fieldDef, parent, tpe.typeArgs(0))
+    val isRight = checkEither(data, fieldDef, parent, tpe.typeArgs(1))
+    if (isLeft) {
+      Left(doCastAttr(data, fieldDef, parent, tpe.typeArgs(0)))
+    } else if (isRight) {
+      Right(doCastAttr(data, fieldDef, parent, tpe.typeArgs(1)))
+    } else {
+      throw new TypeValidationException(
+        s"${fieldDef.id} attribute $parent is neither ${tpe.typeArgs(0)} nor ${tpe.typeArgs(1)}"
+      )
+    }
   }
 
   protected def checkEither(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type): Boolean = {
@@ -187,7 +199,9 @@ class CopybeanTypeEnforcer() {
       case string: String =>
         if (fieldDef.`type` == FieldType.Reference) {
           if (!string.startsWith("!REF!:")) {
-            throw new TypeValidationException(s"${fieldDef.id} must be an Reference but didn't start with !REF!: $string")
+            throw new TypeValidationException(
+              s"${fieldDef.id} must be an Reference but didn't start with !REF!: $string"
+            )
           } else {
             Option(string.replace("!REF!:", ""))
           }

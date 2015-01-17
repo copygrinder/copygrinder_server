@@ -17,7 +17,6 @@ import org.copygrinder.pure.copybean.exception.JsonWriteException
 import org.copygrinder.pure.copybean.model._
 import play.api.libs.json._
 
-import scala.collection.Traversable
 import scala.collection.immutable.ListMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -32,42 +31,50 @@ trait JsonWrites extends DefaultWrites {
         case i: Int => JsNumber(i)
         case s: String => JsString(s)
         case m: ListMap[_, _] => {
-          if (!m.isEmpty) {
-            val head = m.head._1;
-            if (head.isInstanceOf[String]) {
-              stringAnyMapToJsObject(m.asInstanceOf[Map[String, Any]])
-            } else {
-              throw new JsonWriteException(s"Can't write JSON for map with value '$head")
-            }
-          } else {
-            JsObject(Seq())
-          }
+          convertListMap(m)
         }
         case list: List[_] => {
-          if (!list.isEmpty) {
-            val head = list.head
-            if (head.isInstanceOf[String]) {
-              traversableWrites[String].writes(list.asInstanceOf[List[String]])
-            } else if (head.isInstanceOf[Map[_, _]]) {
-              val newList = list.asInstanceOf[List[Map[String, Any]]].map(map => {
-                val newMap = map.map(entry => {
-                  (entry._1 -> entry._2)
-                })
-                stringAnyMapToJsObject(newMap)
-              })
-              JsArray(newList)
-            } else {
-              throw new JsonWriteException(s"Can't write JSON for list with value '$head")
-            }
-          } else {
-            JsArray()
-          }
+          convertList(list)
         }
         case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
       }
       (key, jsValue)
     }).toSeq
     JsObject(fields)
+  }
+
+  protected def convertList(list: List[Any]): JsArray = {
+    if (!list.isEmpty) {
+      val head = list.head
+      if (head.isInstanceOf[String]) {
+        traversableWrites[String].writes(list.asInstanceOf[List[String]])
+      } else if (head.isInstanceOf[Map[_, _]]) {
+        val newList = list.asInstanceOf[List[Map[String, Any]]].map(map => {
+          val newMap = map.map(entry => {
+            (entry._1 -> entry._2)
+          })
+          stringAnyMapToJsObject(newMap)
+        })
+        JsArray(newList)
+      } else {
+        throw new JsonWriteException(s"Can't write JSON for list with value '$head")
+      }
+    } else {
+      JsArray()
+    }
+  }
+
+  protected def convertListMap(m: ListMap[_, Any]): JsObject = {
+    if (!m.isEmpty) {
+      val head = m.head._1
+      if (head.isInstanceOf[String]) {
+        stringAnyMapToJsObject(m.asInstanceOf[Map[String, Any]])
+      } else {
+        throw new JsonWriteException(s"Can't write JSON for map with value '$head")
+      }
+    } else {
+      JsObject(Seq())
+    }
   }
 
   implicit val stringAnyWrites = new Writes[ListMap[String, Any]] {
