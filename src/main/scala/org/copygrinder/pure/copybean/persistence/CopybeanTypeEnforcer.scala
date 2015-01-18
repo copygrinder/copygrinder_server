@@ -113,13 +113,13 @@ class CopybeanTypeEnforcer() {
   protected def doCastAttr(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type): Any = {
 
     tpe.typeConstructor.toString match {
-      case "Seq" => {
+      case s if s.endsWith("Seq") => {
         handleSeqCast(data, fieldDef, parent, tpe)
       }
-      case "Map" => {
+      case m if m.endsWith("Map") => {
         handleMapCast(data, fieldDef, parent, tpe)
       }
-      case "Either" => {
+      case e if e.endsWith("Either") => {
         handleEitherCast(data, fieldDef, parent, tpe)
       }
       case "String" => data
@@ -179,7 +179,7 @@ class CopybeanTypeEnforcer() {
           false
         }
       }
-      case "Seq" => {
+      case s if s.endsWith("Seq") => {
         if (data.isInstanceOf[Seq[_]]) {
           true
         } else {
@@ -197,7 +197,7 @@ class CopybeanTypeEnforcer() {
   protected def checkRefs(fieldDef: CopybeanFieldDef, value: Any): Option[String] = {
     value match {
       case string: String =>
-        if (fieldDef.`type` == FieldType.Reference) {
+        if (fieldDef.`type` == FieldType.Reference && string.nonEmpty) {
           if (!string.startsWith("!REF!:")) {
             throw new TypeValidationException(
               s"${fieldDef.id} must be an Reference but didn't start with !REF!: $string"
@@ -239,9 +239,9 @@ class CopybeanTypeEnforcer() {
    validatorDef: CopybeanFieldValidatorDef,
    validatorClassInstances: Map[String, FieldValidator]) = {
     val className = validator.content.getOrElse("class",
-      throw new TypeValidationException(s"Couldn't find a class for validator '${
-        validator.id
-      }'")
+      throw new TypeValidationException(
+        s"Couldn't find a class for validator '${validator.id}'"
+      )
     )
 
     className match {
