@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.model
 
-case class FileMetadata(filenames: Set[String], length: Long) {
+case class FileMetadata(filenames: Set[String], length: Long, contentType: String) {
 
 }

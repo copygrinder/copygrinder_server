@@ -28,12 +28,18 @@ class FilePersistenceService(
  hashedFileResolver: HashedFileResolver
  ) extends JsonReads with JsonWrites {
 
-  def getFile(hash: String)(implicit siloScope: SiloScope): Array[Byte] = {
+  def getFile(hash: String)(implicit siloScope: SiloScope): (Array[Byte], String) = {
+
+    val destMetaFile = hashedFileResolver.locate(hash, "json", siloScope.fileDir)
+    val json = FileUtils.readFileToByteArray(destMetaFile)
+    val metaData = implicitly[Reads[FileMetadata]].reads(Json.parse(json)).get
+
     val destBlobFile = hashedFileResolver.locate(hash, "blob", siloScope.fileDir)
-    FileUtils.readFileToByteArray(destBlobFile)
+    val array = FileUtils.readFileToByteArray(destBlobFile)
+    (array, metaData.contentType)
   }
 
-  def storeFile(filename: String, stream: Stream[HttpData])(implicit siloScope: SiloScope): String = {
+  def storeFile(filename: String, contentType: String, stream: Stream[HttpData])(implicit siloScope: SiloScope): String = {
     FileUtils.forceMkdir(siloScope.tempDir)
     val tempFile = File.createTempFile("blob", ".tmp", siloScope.tempDir)
     tempFile.deleteOnExit()
@@ -57,7 +63,7 @@ class FilePersistenceService(
       val json = FileUtils.readFileToByteArray(destMetaFile)
       implicitly[Reads[FileMetadata]].reads(Json.parse(json)).get
     } else {
-      new FileMetadata(Set(), destBlobFile.length())
+      new FileMetadata(Set(), destBlobFile.length(), contentType)
     }
 
     val newMetaData = metaData.copy(filenames = metaData.filenames + filename)

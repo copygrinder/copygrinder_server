@@ -19,7 +19,8 @@ import com.fasterxml.jackson.core.JsonParseException
 import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.persistence.JsonWrites
-import spray.http.HttpHeaders
+import spray.http.HttpHeaders._
+import spray.http.MediaType
 import spray.http.StatusCodes._
 import spray.routing._
 
@@ -93,9 +94,11 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
           fileController.getFile(beanId, fieldId)
         }
       ) { fileData =>
-        respondWithHeader(HttpHeaders.`Content-Disposition`.apply("attachment", Map("filename" -> fileData._1))) {
-          complete {
-            fileData._2
+        respondWithHeaders(`Content-Disposition`(fileData._4, Map("filename" -> fileData._1))) {
+          respondWithMediaType(MediaType.custom(fileData._3)) {
+            complete {
+              fileData._2
+            }
           }
         }
       }

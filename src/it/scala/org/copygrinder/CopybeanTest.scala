@@ -47,6 +47,8 @@ class CopybeanTest extends FlatSpec with Matchers {
 
   val filesUrl = baseUrl / "files"
 
+  def copybeanFileUrl(id: String, field: String) = copybeansUrl / id / field
+
   "Copygrinder" should "give a basic response to root GETs" in {
 
     val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
@@ -106,6 +108,10 @@ class CopybeanTest extends FlatSpec with Matchers {
         |      "id": "testfield4",
         |      "type": "File",
         |      "displayName": "File field"
+        |    },{
+        |      "id": "testfield5",
+        |      "type": "Image",
+        |      "displayName": "Image field"
         |    }
         |  ],
         |  "cardinality": "Many"
@@ -381,7 +387,9 @@ class CopybeanTest extends FlatSpec with Matchers {
 
     val file = new File("developer.md")
 
-    val req = filesUrl.PUT.addBodyPart(new FilePart("upload", file)).setHeader("Transfer-Encoding", "chunked")
+    val req = filesUrl.PUT.addBodyPart(
+      new FilePart("upload", file, "text/x-markdown", "UTF-8")
+    ).setHeader("Transfer-Encoding", "chunked")
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)
@@ -410,9 +418,73 @@ class CopybeanTest extends FlatSpec with Matchers {
 
     val responseFuture2 = Http(req2).map { response =>
       checkStatus(req2, response)
+      val body = response.getResponseBody
+      body.substring(1, body.length - 1)
     }
 
-    Await.result(responseFuture2, 2 second)
+    val id = Await.result(responseFuture2, 2 second)
+
+    val req3 = copybeanFileUrl(id, "testfield4").GET
+
+    val responseFuture3 = Http(req3).map { response =>
+      checkStatus(req3, response)
+      val body = response.getResponseBody
+      assert(body.length > 2 * 1024)
+    }
+
+    Await.result(responseFuture3, 1 second)
+  }
+
+  it should "handle Image fields" in {
+
+    val file = new File("src/it/resources/test.jpg")
+
+    val req = filesUrl.PUT.addBodyPart(
+      new FilePart("upload", file, "image/jpeg", null)
+    ).setHeader("Transfer-Encoding", "chunked")
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+      val json = Json.parse(response.getResponseBody).as[JsObject]
+      json.\("test.jpg").as[JsString].value
+    }
+
+    val hash = Await.result(responseFuture, 1 second)
+
+    val json =
+      s"""
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "content": {
+        |    "testfield1": "abc",
+        |    "testfield5": {
+        |      "filename": "test.jpg",
+        |      "hash": "$hash"
+        |    }
+        |  }
+        |}""".stripMargin
+
+    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture2 = Http(req2).map { response =>
+      checkStatus(req2, response)
+      val body = response.getResponseBody
+      body.substring(1, body.length - 1)
+    }
+
+    val id = Await.result(responseFuture2, 2 second)
+
+    val req3 = copybeanFileUrl(id, "testfield5").GET
+
+    val responseFuture3 = Http(req3).map { response =>
+      checkStatus(req3, response)
+      val body = response.getResponseBody
+      assert(body.length == 30128)
+    }
+
+    Await.result(responseFuture3, 1 second)
   }
 
   def checkStatus(req: Req, response: Response, code: Int = 200) = {

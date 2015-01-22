@@ -66,7 +66,7 @@ class CopybeanTypeEnforcer() {
           throw new TypeValidationException(s"$fieldId must be a String but was the Integer: $value")
         }
       case map: Map[_, _] =>
-        if (fType != FieldType.Reference && fType != FieldType.File) {
+        if (fType != FieldType.Reference && fType != FieldType.File && fType != FieldType.Image) {
           throw new TypeValidationException(s"$fieldId can not be a map: $value")
         } else if (fType == FieldType.File) {
           val fileData = castData[Map[String, String]](value, fieldId, fieldDef)
