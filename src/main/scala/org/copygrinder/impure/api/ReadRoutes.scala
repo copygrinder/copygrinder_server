@@ -13,21 +13,25 @@
  */
 package org.copygrinder.impure.api
 
-import java.io.{PrintWriter, StringWriter, IOException}
+import java.io.{IOException, PrintWriter, StringWriter}
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
+import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
 import org.copygrinder.pure.copybean.exception._
-import org.copygrinder.pure.copybean.model.AnonymousCopybean
 import org.copygrinder.pure.copybean.persistence.JsonWrites
+import spray.http.HttpHeaders
 import spray.http.StatusCodes._
 import spray.routing._
+
+import scala.concurrent.Future
 
 trait ReadRoutes extends RouteSupport with JsonWrites {
 
   val typeController: TypeController
 
   val beanController: BeanController
+
+  val fileController: FileController
 
   protected def readExceptionHandler() =
     ExceptionHandler {
@@ -82,6 +86,19 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
       beanController.cachedFetchCopybean(id)
     } ~ BuildRoute(copybeansPath & get).withParams { implicit siloScope => params =>
       beanController.find(params)
+    } ~ copybeansIdFieldPath.&(get) { (siloId, beanId, fieldId) =>
+      implicit lazy val siloScope = siloScopeFactory.build(siloId)
+      onSuccess(
+        Future {
+          fileController.getFile(beanId, fieldId)
+        }
+      ) { fileData =>
+        respondWithHeader(HttpHeaders.`Content-Disposition`.apply("attachment", Map("filename" -> fileData._1))) {
+          complete {
+            fileData._2
+          }
+        }
+      }
     }
   }
 

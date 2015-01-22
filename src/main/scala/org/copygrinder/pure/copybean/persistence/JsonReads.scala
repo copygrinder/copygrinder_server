@@ -42,7 +42,7 @@ trait JsonReads extends JsonReadUtils {
         JsSuccess(values)
       }
       case JsObject(m) => {
-        val m1 = m.map(f => {
+        val list = m.map(f => {
           val value = metaValueToJsValue(f._2)
           val unwrapedValue = if (value.isInstanceOf[JsSuccess[_]]) {
             value.asInstanceOf[JsSuccess[_]].value
@@ -50,8 +50,10 @@ trait JsonReads extends JsonReadUtils {
             value
           }
           (f._1, unwrapedValue)
-        }).toMap
-        JsSuccess(m1)
+        })
+
+        val map = ListMap((for (item <- list) yield (item._1, item._2)): _*)
+        JsSuccess(map)
       }
       case x => JsError(x.toString())
     }
@@ -115,5 +117,7 @@ trait JsonReads extends JsonReadUtils {
 
 
   implicit val copybeanReads = readWrapper(Json.reads[CopybeanImpl])
+
+  implicit val fileMetadataReads = readWrapper(Json.reads[FileMetadata])
 
 }

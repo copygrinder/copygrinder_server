@@ -16,11 +16,12 @@ package org.copygrinder
 import java.io.File
 
 import com.ning.http.client.Response
+import com.ning.http.multipart.FilePart
 import dispatch.Defaults._
 import dispatch._
 import org.apache.commons.io.FileUtils
 import org.scalatest.{FlatSpec, Matchers}
-import play.api.libs.json.{JsArray, JsString, Json}
+import play.api.libs.json.{JsArray, JsObject, JsString, Json}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -44,6 +45,7 @@ class CopybeanTest extends FlatSpec with Matchers {
 
   def copybeanTypeIdUrl(id: String) = copybeansTypesUrl / id
 
+  val filesUrl = baseUrl / "files"
 
   "Copygrinder" should "give a basic response to root GETs" in {
 
@@ -83,7 +85,8 @@ class CopybeanTest extends FlatSpec with Matchers {
         |  "id": "testtype1",
         |  "displayName": "TestTypeOne",
         |  "instanceNameFormat": "This bean is named $content.testfield2$ $content.testfield1$.",
-        |  "fields": [{
+        |  "fields": [
+        |    {
         |      "id": "testfield1",
         |      "type": "String",
         |      "displayName": "String field",
@@ -92,14 +95,19 @@ class CopybeanTest extends FlatSpec with Matchers {
         |      "id": "testfield2",
         |      "type": "Integer",
         |      "displayName": "Integer field"
-        |  },{
+        |    },{
         |      "id": "testfield3",
         |      "type": "Reference",
         |      "displayName": "Reference field",
         |      "attributes": {"refs": [
         |        {"refValidationTypes": ["testtype2"], "refDisplayType": "testtype2"}
         |      ]}
-        |  }],
+        |    },{
+        |      "id": "testfield4",
+        |      "type": "File",
+        |      "displayName": "File field"
+        |    }
+        |  ],
         |  "cardinality": "Many"
         |},{
         |  "id": "testtype2",
@@ -367,6 +375,44 @@ class CopybeanTest extends FlatSpec with Matchers {
     }
 
     Await.result(responseFuture, 1 second)
+  }
+
+  it should "handle File fields" in {
+
+    val file = new File("developer.md")
+
+    val req = filesUrl.PUT.addBodyPart(new FilePart("upload", file)).setHeader("Transfer-Encoding", "chunked")
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+      val json = Json.parse(response.getResponseBody).as[JsObject]
+      json.\("developer.md").as[JsString].value
+    }
+
+    val hash = Await.result(responseFuture, 1 second)
+
+    val json =
+      s"""
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "content": {
+        |    "testfield1": "abc",
+        |    "testfield4": {
+        |      "filename": "developer.md",
+        |      "hash": "$hash"
+        |    }
+        |  }
+        |}""".stripMargin
+
+    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture2 = Http(req2).map { response =>
+      checkStatus(req2, response)
+    }
+
+    Await.result(responseFuture2, 2 second)
   }
 
   def checkStatus(req: Req, response: Response, code: Int = 200) = {

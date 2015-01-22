@@ -16,9 +16,9 @@ package org.copygrinder.impure.system
 import akka.actor.{Actor, ActorContext, Props}
 import akka.routing.BalancingPool
 import org.copygrinder.impure.api.CopygrinderApi
-import spray.http.{HttpRequest, HttpResponse, StatusCodes, Timedout}
+import spray.http.HttpMethods._
+import spray.http.{HttpRequest, _}
 import spray.routing._
-
 
 class RoutingActor(routeExecutingActor: Props, config: Configuration) extends Actor {
 
@@ -49,14 +49,14 @@ class RouteExecutingActor(apiFactory: (ActorContext) => CopygrinderApi) extends 
     case "copygrinder-write-service-actor" => api.copygrinderWriteRoutes
   }
 
-  override def receive = {
-    //handleTimeouts orElse runRoute(route)
-    runRoute(route)
+  override def receive = doSprayCan orElse doRoute
+
+  def doSprayCan: PartialFunction[Any, Unit] = {
+    case HttpRequest(PUT, Uri.Path("/spraycan"), headers, entity, _) => {
+      sender() ! HttpResponse(entity = "Raw")
+    }
   }
 
-  protected def handleTimeouts: Receive = {
-    case Timedout(x: HttpRequest) =>
-      sender ! HttpResponse(StatusCodes.InternalServerError, "Too late")
-  }
+  def doRoute = runRoute(route)
 
 }

@@ -17,6 +17,7 @@ import org.copygrinder.pure.copybean.exception.TypeValidationException
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.validator.FieldValidator
 
+import scala.collection.immutable.ListMap
 import scala.reflect.runtime.universe._
 
 class CopybeanTypeEnforcer() {
@@ -35,7 +36,7 @@ class CopybeanTypeEnforcer() {
         val ref = if (valueOpt.isDefined) {
           val value = valueOpt.get._2
           val fType = fieldDef.`type`
-          checkField(fieldId, value, fType)
+          checkField(fieldId, value, fType, fieldDef)
           if (fType == FieldType.Reference) {
             checkRefsAttrs(fieldDef, value)
             checkRefs(fieldDef, value)
@@ -54,7 +55,7 @@ class CopybeanTypeEnforcer() {
     }
   }
 
-  protected def checkField(fieldId: String, value: Any, fType: FieldType.FieldType) = {
+  protected def checkField(fieldId: String, value: Any, fType: FieldType.FieldType, fieldDef: CopybeanFieldDef) = {
     value match {
       case string: String =>
         if (fType == FieldType.Integer) {
@@ -63,6 +64,18 @@ class CopybeanTypeEnforcer() {
       case int: Int =>
         if (fType == FieldType.String) {
           throw new TypeValidationException(s"$fieldId must be a String but was the Integer: $value")
+        }
+      case map: Map[_, _] =>
+        if (fType != FieldType.Reference && fType != FieldType.File) {
+          throw new TypeValidationException(s"$fieldId can not be a map: $value")
+        } else if (fType == FieldType.File) {
+          val fileData = castData[Map[String, String]](value, fieldId, fieldDef)
+          if (fileData.get("filename").isEmpty) {
+            throw new TypeValidationException(s"$fieldId is a file and requires a filename")
+          }
+          if (fileData.get("hash").isEmpty) {
+            throw new TypeValidationException(s"$fieldId is a file and requires a hash")
+          }
         }
       case _ =>
         throw new TypeValidationException(s"$fieldId with value $value was an unexpected type: ${value.getClass}")
@@ -96,6 +109,11 @@ class CopybeanTypeEnforcer() {
     None
   }
 
+  protected def castData[T](data: Any, field: String, fieldDef: CopybeanFieldDef)(implicit typeTag: TypeTag[T]): T = {
+    val castData = doCast(data, fieldDef, field, typeTag.tpe)
+    castData.asInstanceOf[T]
+  }
+
   protected def castAttr[T](fieldDef: CopybeanFieldDef, attr: String)(implicit typeTag: TypeTag[T]): T = {
 
     val attrs = fieldDef.attributes.getOrElse(
@@ -106,11 +124,11 @@ class CopybeanTypeEnforcer() {
       throw new TypeValidationException(s"${fieldDef.id} requires attribute $attr")
     )
 
-    val castData = doCastAttr(data, fieldDef, attr, typeTag.tpe)
+    val castData = doCast(data, fieldDef, attr, typeTag.tpe)
     castData.asInstanceOf[T]
   }
 
-  protected def doCastAttr(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type): Any = {
+  protected def doCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type): Any = {
 
     tpe.typeConstructor.toString match {
       case s if s.endsWith("Seq") => {
@@ -123,7 +141,7 @@ class CopybeanTypeEnforcer() {
         handleEitherCast(data, fieldDef, parent, tpe)
       }
       case "String" => data
-      case other => throw new TypeValidationException(s"${fieldDef.id} has unknown argument type '$other'")
+      case other => throw new TypeValidationException(s"${fieldDef.id} has unknown type '$other'")
     }
 
   }
@@ -134,10 +152,10 @@ class CopybeanTypeEnforcer() {
       seq.map(pair => {
         val (innerData, index) = pair
         val newParent = s"$parent[$index]"
-        doCastAttr(innerData, fieldDef, newParent, tpe.typeArgs.head)
+        doCast(innerData, fieldDef, newParent, tpe.typeArgs.head)
       })
     } else {
-      throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent to be an array")
+      throw new TypeValidationException(s"${fieldDef.id} requires $parent to be an array")
     }
   }
 
@@ -146,13 +164,13 @@ class CopybeanTypeEnforcer() {
       val map = data.asInstanceOf[Map[Any, Any]]
       map.map(entry => {
         if (entry._1.isInstanceOf[String]) {
-          entry._1 -> doCastAttr(entry._2, fieldDef, parent + "." + entry._1, tpe.typeArgs(1))
+          entry._1 -> doCast(entry._2, fieldDef, parent + "." + entry._1, tpe.typeArgs(1))
         } else {
-          throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent.${entry._1} to be an string")
+          throw new TypeValidationException(s"${fieldDef.id} requires $parent.${entry._1} to be an string")
         }
       })
     } else {
-      throw new TypeValidationException(s"${fieldDef.id} requires attribute $parent to be an object")
+      throw new TypeValidationException(s"${fieldDef.id} requires $parent to be an object")
     }
   }
 
@@ -160,12 +178,12 @@ class CopybeanTypeEnforcer() {
     val isLeft = checkEither(data, fieldDef, parent, tpe.typeArgs(0))
     val isRight = checkEither(data, fieldDef, parent, tpe.typeArgs(1))
     if (isLeft) {
-      Left(doCastAttr(data, fieldDef, parent, tpe.typeArgs(0)))
+      Left(doCast(data, fieldDef, parent, tpe.typeArgs(0)))
     } else if (isRight) {
-      Right(doCastAttr(data, fieldDef, parent, tpe.typeArgs(1)))
+      Right(doCast(data, fieldDef, parent, tpe.typeArgs(1)))
     } else {
       throw new TypeValidationException(
-        s"${fieldDef.id} attribute $parent is neither ${tpe.typeArgs(0)} nor ${tpe.typeArgs(1)}"
+        s"${fieldDef.id} $parent is neither ${tpe.typeArgs(0)} nor ${tpe.typeArgs(1)}"
       )
     }
   }

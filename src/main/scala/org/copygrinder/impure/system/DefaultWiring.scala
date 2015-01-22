@@ -17,12 +17,12 @@ import java.io.File
 
 import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
-import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
+import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
 import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.search.Indexer
 import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.model.{CopybeanType, ReifiedCopybean}
-import org.copygrinder.pure.copybean.persistence.{PredefinedCopybeans, CopybeanTypeEnforcer, IdEncoderDecoder, PredefinedCopybeanTypes}
+import org.copygrinder.pure.copybean.persistence.{CopybeanTypeEnforcer, IdEncoderDecoder, PredefinedCopybeanTypes, PredefinedCopybeans}
 import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 import spray.caching.{Cache, LruCache}
 
@@ -60,8 +60,11 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
 
   lazy val beanController = new BeanController(persistenceServiceModule.copybeanPersistenceService)
 
+  lazy val fileController = new FileController(persistenceServiceModule.filePersistenceService,
+    persistenceServiceModule.copybeanPersistenceService)
+
   def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-    new CopygrinderApi(ac, typeController, beanController, siloScopeFactory)
+    new CopygrinderApi(ac, typeController, beanController, fileController, siloScopeFactory)
   }
 
   lazy val routeExecutingActor = Props(new RouteExecutingActor(copygrinderApiFactory))
@@ -102,6 +105,10 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
     predefinedCopybeans
   )
 
+  lazy val filePersistenceService = new FilePersistenceService(
+    hashedFileResolver
+  )
+
 }
 
 class SiloScope(_siloId: String, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, config: Configuration) {
@@ -125,6 +132,10 @@ class SiloScope(_siloId: String, documentBuilder: DocumentBuilder, queryBuilder:
   lazy val typesDir = new File(root, "types/")
 
   lazy val typeGitRepo = new GitRepo(typesDir, new FileRepositoryBuilderWrapper())
+
+  lazy val tempDir = new File(root, "temp/")
+
+  lazy val fileDir = new File(root, "files/")
 
 }
 

@@ -123,7 +123,8 @@ trait JsonWrites extends DefaultWrites {
 
   implicit val copybeanTypeWrites = Json.writes[CopybeanType]
 
-  implicit val ReifiedCopybeanWrites = Json.writes[ReifiedCopybeanImpl]
+  implicit val reifiedCopybeanWrites = Json.writes[ReifiedCopybeanImpl]
 
+  implicit val fileMetadataWrites = Json.writes[FileMetadata]
 
 }

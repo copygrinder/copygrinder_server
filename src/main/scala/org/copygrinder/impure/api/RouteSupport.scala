@@ -72,6 +72,10 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
 
   protected val copybeansTypeIdPath = copybeansTypesPathPartial & path(Segment)
 
+  protected val filePath = siloPathPartial & path("files")
+
+  protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & path(Segment)
+
   protected object BuildRoute {
 
     def apply(path: Directive[::[String, HNil]]): OneArgRouteBuilder = {

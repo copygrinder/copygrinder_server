@@ -15,12 +15,14 @@ package org.copygrinder.impure.api
 
 import java.io.{IOException, PrintWriter, StringWriter}
 
+import akka.actor.{ActorContext, ActorRefFactory}
 import com.fasterxml.jackson.core.JsonParseException
-import org.copygrinder.impure.copybean.controller.{BeanController, TypeController}
+import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
+import spray.http.MultipartContent
 import spray.http.StatusCodes._
 import spray.routing._
 
@@ -29,6 +31,10 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
   val typeController: TypeController
 
   val beanController: BeanController
+
+  val fileController: FileController
+
+  val actorContext: ActorContext
 
   protected def writeExceptionHandler() =
     ExceptionHandler {
@@ -84,14 +90,11 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     } ~ BuildRoute(copybeansPath & post & entity(as[AnonymousCopybean])) {
       implicit siloScope => (anonBean) =>
         beanController.store(anonBean)
-    } ~ BuildRoute(siloPath & post) {
-      implicit siloScope => {
-        typeController.createSilo()
-        beanController.createSilo()
-      }
-    }
+    } ~ BuildRoute(siloPath & post)(implicit siloScope => {
+      typeController.createSilo()
+      beanController.createSilo()
+    })
   }
-
 
   protected val putRoutes = {
     BuildRoute(copybeansTypeIdPath & put & entity(as[CopybeanType])) {
@@ -102,6 +105,10 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
       implicit siloScope: SiloScope => (id, copybean) =>
         beanController.update(id, copybean)
         ""
+    } ~ BuildRoute(filePath & put & entity(as[MultipartContent])) { implicit siloScope =>
+      (data) => {
+        fileController.storeFile(data)
+      }
     }
   }
 
