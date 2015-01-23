@@ -17,10 +17,9 @@ import org.copygrinder.pure.copybean.exception.TypeValidationException
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.validator.FieldValidator
 
-import scala.collection.immutable.ListMap
-import scala.reflect.runtime.universe._
-
 class CopybeanTypeEnforcer() {
+
+  protected val caster = new UntypedCaster()
 
   def enforceType(
    copybeanType: CopybeanType,
@@ -38,7 +37,6 @@ class CopybeanTypeEnforcer() {
           val fType = fieldDef.`type`
           checkField(fieldId, value, fType, fieldDef)
           if (fType == FieldType.Reference) {
-            checkRefsAttrs(fieldDef, value)
             checkRefs(fieldDef, value)
           } else {
             None
@@ -69,7 +67,7 @@ class CopybeanTypeEnforcer() {
         if (fType != FieldType.Reference && fType != FieldType.File && fType != FieldType.Image) {
           throw new TypeValidationException(s"$fieldId can not be a map: $value")
         } else if (fType == FieldType.File) {
-          val fileData = castData[Map[String, String]](value, fieldId, fieldDef)
+          val fileData = caster.castData[Map[String, String]](value, fieldId, fieldDef)
           if (fileData.get("filename").isEmpty) {
             throw new TypeValidationException(s"$fieldId is a file and requires a filename")
           }
@@ -81,136 +79,6 @@ class CopybeanTypeEnforcer() {
         throw new TypeValidationException(s"$fieldId with value $value was an unexpected type: ${value.getClass}")
     }
   }
-
-  /*
-   * TODO: This should run when types are created, probably not when beans are created.
-   */
-  protected def checkRefsAttrs(fieldDef: CopybeanFieldDef, value: Any): Option[String] = {
-    val castAttrs = castAttr[Seq[Map[String, Either[String, Seq[String]]]]](fieldDef, "refs")
-    castAttrs.foreach(ref => {
-
-      val validationTypes = ref.get("refValidationTypes").get.right.get
-      val displayType = ref.get("refDisplayType").get.left.get
-
-      if (validationTypes.isEmpty) {
-        throw new TypeValidationException(s"${fieldDef.id} requires an array for attribute refValidationTypes")
-      }
-      if (displayType.isEmpty) {
-        throw new TypeValidationException(s"${fieldDef.id} requires attribute refDisplayType")
-      }
-
-      if (!validationTypes.contains(displayType)) {
-        throw new TypeValidationException(
-          s"${fieldDef.id} has a refDisplayType '$displayType' that is not in refValidationTypes '${validationTypes.mkString}'"
-        )
-      }
-
-    })
-    None
-  }
-
-  protected def castData[T](data: Any, field: String, fieldDef: CopybeanFieldDef)(implicit typeTag: TypeTag[T]): T = {
-    val castData = doCast(data, fieldDef, field, typeTag.tpe)
-    castData.asInstanceOf[T]
-  }
-
-  protected def castAttr[T](fieldDef: CopybeanFieldDef, attr: String)(implicit typeTag: TypeTag[T]): T = {
-
-    val attrs = fieldDef.attributes.getOrElse(
-      throw new TypeValidationException(s"${fieldDef.id} requires attribute $attr")
-    )
-
-    val data = attrs.getOrElse(attr,
-      throw new TypeValidationException(s"${fieldDef.id} requires attribute $attr")
-    )
-
-    val castData = doCast(data, fieldDef, attr, typeTag.tpe)
-    castData.asInstanceOf[T]
-  }
-
-  protected def doCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type): Any = {
-
-    tpe.typeConstructor.toString match {
-      case s if s.endsWith("Seq") => {
-        handleSeqCast(data, fieldDef, parent, tpe)
-      }
-      case m if m.endsWith("Map") => {
-        handleMapCast(data, fieldDef, parent, tpe)
-      }
-      case e if e.endsWith("Either") => {
-        handleEitherCast(data, fieldDef, parent, tpe)
-      }
-      case "String" => data
-      case other => throw new TypeValidationException(s"${fieldDef.id} has unknown type '$other'")
-    }
-
-  }
-
-  protected def handleSeqCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
-    if (data.isInstanceOf[Seq[_]]) {
-      val seq = data.asInstanceOf[Seq[Any]].zipWithIndex
-      seq.map(pair => {
-        val (innerData, index) = pair
-        val newParent = s"$parent[$index]"
-        doCast(innerData, fieldDef, newParent, tpe.typeArgs.head)
-      })
-    } else {
-      throw new TypeValidationException(s"${fieldDef.id} requires $parent to be an array")
-    }
-  }
-
-  protected def handleMapCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
-    if (data.isInstanceOf[Map[_, _]]) {
-      val map = data.asInstanceOf[Map[Any, Any]]
-      map.map(entry => {
-        if (entry._1.isInstanceOf[String]) {
-          entry._1 -> doCast(entry._2, fieldDef, parent + "." + entry._1, tpe.typeArgs(1))
-        } else {
-          throw new TypeValidationException(s"${fieldDef.id} requires $parent.${entry._1} to be an string")
-        }
-      })
-    } else {
-      throw new TypeValidationException(s"${fieldDef.id} requires $parent to be an object")
-    }
-  }
-
-  protected def handleEitherCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
-    val isLeft = checkEither(data, fieldDef, parent, tpe.typeArgs(0))
-    val isRight = checkEither(data, fieldDef, parent, tpe.typeArgs(1))
-    if (isLeft) {
-      Left(doCast(data, fieldDef, parent, tpe.typeArgs(0)))
-    } else if (isRight) {
-      Right(doCast(data, fieldDef, parent, tpe.typeArgs(1)))
-    } else {
-      throw new TypeValidationException(
-        s"${fieldDef.id} $parent is neither ${tpe.typeArgs(0)} nor ${tpe.typeArgs(1)}"
-      )
-    }
-  }
-
-  protected def checkEither(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type): Boolean = {
-    tpe.typeConstructor.toString match {
-      case "String" => {
-        if (data.isInstanceOf[String]) {
-          true
-        } else {
-          false
-        }
-      }
-      case s if s.endsWith("Seq") => {
-        if (data.isInstanceOf[Seq[_]]) {
-          true
-        } else {
-          false
-        }
-      }
-      case other =>
-        throw new TypeValidationException(
-          s"${fieldDef.id} attribute $parent has an unknown Either type '$other'"
-        )
-    }
-  }
-
 
   protected def checkRefs(fieldDef: CopybeanFieldDef, value: Any): Option[String] = {
     value match {
