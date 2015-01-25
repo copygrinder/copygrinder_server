@@ -19,7 +19,7 @@ object CopygrinderBuild extends Build {
 
      version := "0.1",
 
-     scalaVersion := "2.11.2",
+     scalaVersion := "2.11.5",
 
      scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-feature", "-language:postfixOps"),
 
@@ -32,28 +32,31 @@ object CopygrinderBuild extends Build {
 
      /* SCALA LIBS */
      libraryDependencies ++= Seq(
-       "io.spray" %% "spray-caching" % "1.3.1",
-       "io.spray" %% "spray-can" % "1.3.1",
-       "io.spray" %% "spray-routing" % "1.3.1",
-       "com.typesafe.akka" %% "akka-slf4j" % "2.3.5",
+       "io.spray" %% "spray-caching" % "1.3.2",
+       "io.spray" %% "spray-can" % "1.3.2",
+       "io.spray" %% "spray-routing-shapeless2" % "1.3.2",
+       "com.typesafe.akka" %% "akka-slf4j" % "2.3.9",
        "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
-       "com.typesafe.play" %% "play-json" % "2.3.5"
+       "com.typesafe.play" %% "play-json" % "2.3.7",
+       "com.github.julien-truffaut"  %%  "monocle-core"    % "1.0.1",
+       "com.github.julien-truffaut"  %%  "monocle-generic" % "1.0.1",
+       "com.github.julien-truffaut"  %%  "monocle-macro"   % "1.0.1"
      ),
 
      /* JAVA LIBS */
      libraryDependencies ++= Seq(
-       "org.eclipse.jgit" % "org.eclipse.jgit" % "3.4.1.201406201815-r",
+       "org.eclipse.jgit" % "org.eclipse.jgit" % "3.6.2.201501210735-r",
        "commons-io" % "commons-io" % "2.4",
        "ch.qos.logback" % "logback-classic" % "1.1.2",
-       "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
-       "org.apache.lucene" % "lucene-join" % "4.10.2"
+       "org.apache.lucene" % "lucene-analyzers-common" % "4.10.3",
+       "org.apache.lucene" % "lucene-join" % "4.10.3"
      ),
 
      /* TEST LIBS */
      libraryDependencies ++= Seq(
-       "org.scalatest" %% "scalatest" % "2.2.2" % "test, it",
-       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.2" % "test, it",
-       "io.spray" %% "spray-testkit" % "1.3.1" % "test, it",
+       "org.scalatest" %% "scalatest" % "2.2.3" % "test, it",
+       "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "test, it",
+       "io.spray" %% "spray-testkit" % "1.3.2" % "test, it",
        "net.databinder.dispatch" %% "dispatch-core" % "0.11.2" % "test, it"
      ),
 

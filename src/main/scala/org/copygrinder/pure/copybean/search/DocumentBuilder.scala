@@ -14,7 +14,7 @@
 package org.copygrinder.pure.copybean.search
 
 import org.apache.lucene.document._
-import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
+import org.copygrinder.pure.copybean.model.{FileMetadata, Copybean, CopybeanType}
 import play.api.libs.json._
 
 import scala.collection.immutable.ListMap
@@ -63,13 +63,13 @@ class DocumentBuilder {
   }
 
   def buildDocument(copybeanType: CopybeanType): Document = {
-    implicit val doc = new Document
+    val doc = new Document
     doc.add(new IntField("doctype", DocTypes.CopybeanType.id, Field.Store.NO))
     doc.add(new TextField("id", copybeanType.id, Field.Store.YES))
     doc.add(new TextField("cardinality", copybeanType.cardinality.toString, Field.Store.NO))
 
-    addOption("displayName", copybeanType.displayName)
-    addOption("beanDescFormat", copybeanType.instanceNameFormat)
+    addOption("displayName", copybeanType.displayName, doc)
+    addOption("beanDescFormat", copybeanType.instanceNameFormat, doc)
 
     copybeanType.fields.map(_.foreach { fieldDef =>
       doc.add(new TextField("fieldDef.id", fieldDef.id, Field.Store.NO))
@@ -84,7 +84,7 @@ class DocumentBuilder {
   }
 
 
-  protected def addOption(id: String, value: Option[String])(implicit doc: Document) = {
+  protected def addOption(id: String, value: Option[String], doc: Document) = {
     if (value.isDefined) {
       doc.add(new TextField(id, value.get, Field.Store.NO))
     }
@@ -96,6 +96,6 @@ object DocTypes extends Enumeration {
 
   type DocTypes = Value
 
-  val Copybean, CopybeanType = Value
+  val Copybean, CopybeanType, File = Value
 
 }

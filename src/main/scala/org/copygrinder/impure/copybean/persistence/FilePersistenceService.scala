@@ -39,7 +39,9 @@ class FilePersistenceService(
     (array, metaData.contentType)
   }
 
-  def storeFile(filename: String, contentType: String, stream: Stream[HttpData])(implicit siloScope: SiloScope): String = {
+  def storeFile(filename: String, contentType: String, stream: Stream[HttpData])
+   (implicit siloScope: SiloScope): (String, Long) = {
+
     FileUtils.forceMkdir(siloScope.tempDir)
     val tempFile = File.createTempFile("blob", ".tmp", siloScope.tempDir)
     tempFile.deleteOnExit()
@@ -57,22 +59,7 @@ class FilePersistenceService(
       FileUtils.moveFile(tempFile, destBlobFile)
     }
 
-
-    val destMetaFile = hashedFileResolver.locate(hash, "json", siloScope.fileDir)
-    val metaData = if (destMetaFile.exists()) {
-      val json = FileUtils.readFileToByteArray(destMetaFile)
-      implicitly[Reads[FileMetadata]].reads(Json.parse(json)).get
-    } else {
-      new FileMetadata(Set(), destBlobFile.length(), contentType)
-    }
-
-    val newMetaData = metaData.copy(filenames = metaData.filenames + filename)
-
-    if (metaData != newMetaData) {
-      val newJson = Json.stringify(implicitly[Writes[FileMetadata]].writes(newMetaData))
-      FileUtils.writeStringToFile(destMetaFile, newJson, "UTF-8")
-    }
-    hash
+    (hash, destBlobFile.length())
   }
 
 }

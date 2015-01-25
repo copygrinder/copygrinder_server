@@ -13,14 +13,17 @@
  */
 package org.copygrinder.impure.copybean.controller
 
+import monocle.Lens
+import monocle.macros.Lenser
 import org.copygrinder.impure.copybean.persistence.{CopybeanPersistenceService, FilePersistenceService}
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.JsonInputException
-import org.copygrinder.pure.copybean.model.FieldType
+import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import play.api.libs.json.{JsObject, JsString, JsValue}
+import play.api.libs.json.{JsArray, JsObject, JsString, JsValue}
 import spray.http.MultipartContent
 
+import scala.collection.immutable.ListMap
 import scala.concurrent.{ExecutionContext, Future, Await}
 import scala.concurrent.duration._
 
@@ -68,12 +71,38 @@ class FileController(
       ).value
       val stream = part.entity.data.toChunkStream(128 * 1024)
       val filename = part.filename.get
-      val hash = filePersistenceService.storeFile(filename, contentType, stream)
+      val (hash, length) = filePersistenceService.storeFile(filename, contentType, stream)
+
+      handleMetaData(filename, hash, length)
+
       (filename, hash)
     })
-    JsObject(hashes.map { nameAndHash =>
-      (nameAndHash._1, JsString(nameAndHash._2))
-    })
+    val out = hashes.map { nameAndHash =>
+      JsObject(Seq(("filename", JsString(nameAndHash._1)), ("hash", JsString(nameAndHash._2))))
+    }
+    JsArray(out)
   }
 
+  protected def handleMetaData(filename: String, hash: String, length: Long)(implicit siloScope: SiloScope) {
+    val metaDataFuture = copybeanPersistenceService.find(Seq(("enforcedTypeIds", "ImageMetadata"), ("hash", hash)))
+    val existingMetaData = Await.result(metaDataFuture, 5 seconds).headOption
+
+    if (existingMetaData.isDefined) {
+      val metaData = existingMetaData.get
+      val filenames = metaData.content.get("filenames").asInstanceOf[Seq[String]]
+      if (!filenames.contains(filename)) {
+        val newMetaData = Lenser[ReifiedCopybeanImpl](_.content).modify(oldContent => {
+          oldContent.updated("filenames", filenames + filename)
+        })(metaData.asInstanceOf[ReifiedCopybeanImpl])
+        copybeanPersistenceService.update(newMetaData.id, newMetaData)
+      }
+    } else {
+      val metaData = new AnonymousCopybeanImpl(Set("ImageMetadata"), ListMap(
+        "filenames" -> Seq(filename),
+        "hash" -> hash,
+        "length" -> length
+      ))
+      copybeanPersistenceService.store(metaData)
+    }
+  }
 }

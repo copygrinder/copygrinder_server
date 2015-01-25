@@ -22,7 +22,7 @@ import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util.Version
-import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
+import org.copygrinder.pure.copybean.model.{FileMetadata, Copybean, CopybeanType}
 import org.copygrinder.pure.copybean.search.{DocTypes, DocumentBuilder, QueryBuilder}
 
 class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, defaultMaxResults: Int)
@@ -32,7 +32,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   protected lazy val indexDirectory = FSDirectory.open(indexDir)
 
-  protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_10_2, analyzer)
+  protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_10_3, analyzer)
 
   protected lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
