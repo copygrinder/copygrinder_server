@@ -387,14 +387,13 @@ class CopybeanTest extends FlatSpec with Matchers {
 
     val file = new File("developer.md")
 
-    val req = filesUrl.PUT.addBodyPart(
+    val req = filesUrl.POST.addBodyPart(
       new FilePart("upload", file, "text/x-markdown", "UTF-8")
     ).setHeader("Transfer-Encoding", "chunked")
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)
-      val json = Json.parse(response.getResponseBody).as[JsArray]
-      json.value.seq(0).\("hash").as[JsString].value
+      getHash(response)
     }
 
     val hash = Await.result(responseFuture, 1 second)
@@ -435,18 +434,22 @@ class CopybeanTest extends FlatSpec with Matchers {
     Await.result(responseFuture3, 1 second)
   }
 
+  protected def getHash(response: Response) = {
+    val json = Json.parse(response.getResponseBody).as[JsArray]
+    json.value.seq(0).\("content").as[JsObject].\("hash").as[JsString].value
+  }
+
   it should "handle Image fields" in {
 
     val file = new File("src/it/resources/test.jpg")
 
-    val req = filesUrl.PUT.addBodyPart(
+    val req = filesUrl.POST.addBodyPart(
       new FilePart("upload", file, "image/jpeg", null)
     ).setHeader("Transfer-Encoding", "chunked")
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)
-      val json = Json.parse(response.getResponseBody).as[JsArray]
-      json.value.seq(0).\("hash").as[JsString].value
+      getHash(response)
     }
 
     val hash = Await.result(responseFuture, 1 second)

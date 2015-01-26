@@ -38,9 +38,9 @@ object CopygrinderBuild extends Build {
        "com.typesafe.akka" %% "akka-slf4j" % "2.3.9",
        "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
        "com.typesafe.play" %% "play-json" % "2.3.7",
-       "com.github.julien-truffaut"  %%  "monocle-core"    % "1.0.1",
-       "com.github.julien-truffaut"  %%  "monocle-generic" % "1.0.1",
-       "com.github.julien-truffaut"  %%  "monocle-macro"   % "1.0.1"
+       "com.github.julien-truffaut" %% "monocle-core" % "1.0.1",
+       "com.github.julien-truffaut" %% "monocle-generic" % "1.0.1",
+       "com.github.julien-truffaut" %% "monocle-macro" % "1.0.1"
      ),
 
      /* JAVA LIBS */

@@ -28,8 +28,8 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
   }
 
   def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): JsString = {
-    val id = persistenceService.store(anonCopybean)
-    JsString(id)
+    val bean = persistenceService.store(anonCopybean)
+    JsString(bean.id)
   }
 
   def store(copybean: Copybean)(implicit siloScope: SiloScope): JsString = {

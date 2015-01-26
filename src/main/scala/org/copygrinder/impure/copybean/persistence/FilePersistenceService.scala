@@ -19,24 +19,19 @@ import java.security.MessageDigest
 import encoding.CrockfordBase32
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.model.FileMetadata
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import play.api.libs.json.{Json, Reads, Writes}
 import spray.http.HttpData
 
 class FilePersistenceService(
  hashedFileResolver: HashedFileResolver
  ) extends JsonReads with JsonWrites {
 
-  def getFile(hash: String)(implicit siloScope: SiloScope): (Array[Byte], String) = {
-
-    val destMetaFile = hashedFileResolver.locate(hash, "json", siloScope.fileDir)
-    val json = FileUtils.readFileToByteArray(destMetaFile)
-    val metaData = implicitly[Reads[FileMetadata]].reads(Json.parse(json)).get
+  def getFile(hash: String)(implicit siloScope: SiloScope): Array[Byte] = {
 
     val destBlobFile = hashedFileResolver.locate(hash, "blob", siloScope.fileDir)
     val array = FileUtils.readFileToByteArray(destBlobFile)
-    (array, metaData.contentType)
+
+    array
   }
 
   def storeFile(filename: String, contentType: String, stream: Stream[HttpData])

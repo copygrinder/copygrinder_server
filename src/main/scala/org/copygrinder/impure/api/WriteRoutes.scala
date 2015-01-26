@@ -93,7 +93,11 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     } ~ BuildRoute(siloPath & post)(implicit siloScope => {
       typeController.createSilo()
       beanController.createSilo()
-    })
+    }) ~ BuildRoute(filePath & post & entity(as[MultipartContent])) { implicit siloScope =>
+      (data) => {
+        fileController.storeFile(data)
+      }
+    }
   }
 
   protected val putRoutes = {
@@ -105,10 +109,6 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
       implicit siloScope: SiloScope => (id, copybean) =>
         beanController.update(id, copybean)
         ""
-    } ~ BuildRoute(filePath & put & entity(as[MultipartContent])) { implicit siloScope =>
-      (data) => {
-        fileController.storeFile(data)
-      }
     }
   }
 
@@ -122,9 +122,8 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     }
   }
 
-
-  val copygrinderWriteRoutes: Route = handleExceptions(writeExceptionHandler) {
-    cors(postRoutes ~ putRoutes ~ deleteRoutes)
-  }
+  val copygrinderWriteRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
+    postRoutes ~ putRoutes ~ deleteRoutes
+  })
 
 }

@@ -56,12 +56,16 @@ class CopybeanTypeEnforcer() {
   protected def checkField(fieldId: String, value: Any, fType: FieldType.FieldType, fieldDef: CopybeanFieldDef) = {
     value match {
       case string: String =>
-        if (fType == FieldType.Integer) {
-          throw new TypeValidationException(s"$fieldId must be an Integer but was the String: $value")
+        if (fType != FieldType.String && fType != FieldType.Reference) {
+          throw new TypeValidationException(s"$fieldId must be a String but was: $value")
         }
       case int: Int =>
-        if (fType == FieldType.String) {
-          throw new TypeValidationException(s"$fieldId must be a String but was the Integer: $value")
+        if (fType != FieldType.Integer) {
+          throw new TypeValidationException(s"$fieldId must be an Integer but was: $value")
+        }
+      case long: Long =>
+        if (fType != FieldType.Long) {
+          throw new TypeValidationException(s"$fieldId must be an Long but was: $value")
         }
       case map: Map[_, _] =>
         if (fType != FieldType.Reference && fType != FieldType.File && fType != FieldType.Image) {
@@ -74,6 +78,10 @@ class CopybeanTypeEnforcer() {
           if (fileData.get("hash").isEmpty) {
             throw new TypeValidationException(s"$fieldId is a file and requires a hash")
           }
+        }
+      case seq: Seq[_] =>
+        if (fType != FieldType.List) {
+          throw new TypeValidationException(s"$fieldId must be a list, not: $value")
         }
       case _ =>
         throw new TypeValidationException(s"$fieldId with value $value was an unexpected type: ${value.getClass}")

@@ -13,19 +13,18 @@
  */
 package org.copygrinder.impure.copybean.controller
 
-import monocle.Lens
 import monocle.macros.Lenser
 import org.copygrinder.impure.copybean.persistence.{CopybeanPersistenceService, FilePersistenceService}
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.JsonInputException
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import play.api.libs.json.{JsArray, JsObject, JsString, JsValue}
+import play.api.libs.json.{JsValue, Json}
 import spray.http.MultipartContent
 
 import scala.collection.immutable.ListMap
-import scala.concurrent.{ExecutionContext, Future, Await}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class FileController(
  filePersistenceService: FilePersistenceService, copybeanPersistenceService: CopybeanPersistenceService
@@ -38,6 +37,17 @@ class FileController(
       throw new JsonInputException("Field $field was not found in bean $id")
     )
 
+    val fileData = value.asInstanceOf[Map[String, String]]
+    val hash = fileData.get("hash").get
+    val filename = fileData.get("filename").get
+    val array = filePersistenceService.getFile(hash)
+
+    val metaDataFuture = copybeanPersistenceService.find(Seq(("enforcedTypeIds", "fileMetadata"), ("content.hash", hash)))
+    val existingMetaData = Await.result(metaDataFuture, 5 seconds).headOption.getOrElse(
+      throw new JsonInputException(s"Metadata for hash not found: $hash")
+    )
+    val contentType = existingMetaData.content.get("contentType").get.asInstanceOf[String]
+
     val typeFutures = bean.enforcedTypeIds.map(typeId => {
       copybeanPersistenceService.cachedFetchCopybeanType(typeId).map(beanType => {
         beanType.fields.flatMap(_.find(typeField => {
@@ -46,11 +56,6 @@ class FileController(
       })
     })
     val typeField = Await.result(Future.sequence(typeFutures), 5 seconds).flatten.head
-
-    val fileData = value.asInstanceOf[Map[String, String]]
-    val hash = fileData.get("hash").get
-    val filename = fileData.get("filename").get
-    val (array, contentType) = filePersistenceService.getFile(hash)
 
     val disposition = if (typeField.`type` == FieldType.Image) {
       "inline"
@@ -62,47 +67,51 @@ class FileController(
   }
 
   def storeFile(data: MultipartContent)(implicit siloScope: SiloScope): JsValue = {
-    val hashes = data.parts.seq.map(part => {
+    val fileMetadataBeans = data.parts.seq.map(part => {
       if (part.filename.isEmpty) {
         throw new JsonInputException("Filename is required.")
       }
-      val contentType = part.headers.find(_.is("content-type")).getOrElse(
-        throw new JsonInputException("content-type is required.")
-      ).value
+      if (part.entity.isEmpty) {
+        throw new JsonInputException("Payload can't be empty.")
+      }
+      val contentType = part.entity.toOption.get.contentType.value
       val stream = part.entity.data.toChunkStream(128 * 1024)
       val filename = part.filename.get
       val (hash, length) = filePersistenceService.storeFile(filename, contentType, stream)
 
-      handleMetaData(filename, hash, length)
-
-      (filename, hash)
+      handleMetaData(filename, hash, length, contentType)
     })
-    val out = hashes.map { nameAndHash =>
-      JsObject(Seq(("filename", JsString(nameAndHash._1)), ("hash", JsString(nameAndHash._2))))
-    }
-    JsArray(out)
+
+    Json.toJson(fileMetadataBeans)
   }
 
-  protected def handleMetaData(filename: String, hash: String, length: Long)(implicit siloScope: SiloScope) {
-    val metaDataFuture = copybeanPersistenceService.find(Seq(("enforcedTypeIds", "ImageMetadata"), ("hash", hash)))
+  protected def handleMetaData(filename: String, hash: String, length: Long, contentType: String)
+   (implicit siloScope: SiloScope): Copybean = {
+    val metaDataFuture = copybeanPersistenceService.find(Seq(("enforcedTypeIds", "fileMetadata"), ("content.hash", hash)))
     val existingMetaData = Await.result(metaDataFuture, 5 seconds).headOption
 
-    if (existingMetaData.isDefined) {
+    val metaData = if (existingMetaData.isDefined) {
       val metaData = existingMetaData.get
-      val filenames = metaData.content.get("filenames").asInstanceOf[Seq[String]]
+      val filenames = metaData.content.get("filenames").get.asInstanceOf[Seq[String]]
       if (!filenames.contains(filename)) {
         val newMetaData = Lenser[ReifiedCopybeanImpl](_.content).modify(oldContent => {
           oldContent.updated("filenames", filenames + filename)
         })(metaData.asInstanceOf[ReifiedCopybeanImpl])
         copybeanPersistenceService.update(newMetaData.id, newMetaData)
+        newMetaData
+      } else {
+        metaData
       }
     } else {
-      val metaData = new AnonymousCopybeanImpl(Set("ImageMetadata"), ListMap(
+      val metaData = new AnonymousCopybeanImpl(Set("fileMetadata"), ListMap(
         "filenames" -> Seq(filename),
         "hash" -> hash,
-        "length" -> length
+        "sizeInBytes" -> length,
+        "contentType" -> contentType
       ))
       copybeanPersistenceService.store(metaData)
     }
+
+    metaData
   }
 }

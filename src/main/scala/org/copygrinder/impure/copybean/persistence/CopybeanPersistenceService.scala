@@ -62,10 +62,11 @@ class CopybeanPersistenceService(
     fetchCopybean(id)
   }
 
-  def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): String = {
+  def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Copybean = {
     val id = idEncoderDecoder.encodeUuid(UUID.randomUUID())
     val copybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
     store(copybean)
+    copybean
   }
 
   def store(copybean: Copybean)(implicit siloScope: SiloScope): String = {

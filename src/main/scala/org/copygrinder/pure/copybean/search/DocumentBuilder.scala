@@ -47,6 +47,8 @@ class DocumentBuilder {
         doc.add(new DoubleField(prefix, d, Field.Store.NO))
       case i: Int =>
         doc.add(new IntField(prefix, i, Field.Store.NO))
+      case long: Long =>
+        doc.add(new LongField(prefix, long, Field.Store.NO))
       case bool: Boolean =>
         doc.add(new StringField(prefix, bool.toString, Field.Store.NO))
       case array: Seq[_] =>

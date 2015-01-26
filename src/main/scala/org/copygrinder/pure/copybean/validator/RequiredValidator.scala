@@ -31,7 +31,13 @@ class RequiredValidator extends FieldValidator {
         if (str.isEmpty) {
           throw new TypeValidationException(s"Field '$field' is required but was empty")
         }
-      case _ =>
+      case seq: Seq[_] =>
+        if (seq.isEmpty) {
+          throw new TypeValidationException(s"Field '$field' is required but was empty")
+        }
+      case int: Int =>
+      case long: Long =>
+      case other => throw new TypeValidationException(s"Field '$field' is required but we can't validate $other")
     }
   }
 

@@ -29,6 +29,7 @@ trait JsonWrites extends DefaultWrites {
       val jsValue: JsValue = value match {
         case b: Boolean => JsBoolean(b)
         case i: Int => JsNumber(i)
+        case long: Long => JsNumber(long)
         case s: String => JsString(s)
         case m: ListMap[_, _] => {
           convertListMap(m)
