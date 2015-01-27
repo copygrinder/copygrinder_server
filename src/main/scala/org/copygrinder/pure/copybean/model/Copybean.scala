@@ -19,10 +19,14 @@ import scala.collection.immutable.ListMap
 trait AnonymousCopybean {
   val enforcedTypeIds: Set[String]
   val content: ListMap[String, Any]
+
+  def copyAnonymousCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any]): AnonymousCopybean
 }
 
 trait Copybean extends AnonymousCopybean {
   val id: String
+
+  def copyCopybean(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String): AnonymousCopybean
 }
 
 trait ReifiedCopybean extends Copybean {
@@ -30,13 +34,27 @@ trait ReifiedCopybean extends Copybean {
 }
 
 case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any]) extends AnonymousCopybean {
-
+  override def copyAnonymousCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content): AnonymousCopybean = {
+    copy(enforcedTypeIds = enforcedTypeIds, content = content)
+  }
 }
 
 case class CopybeanImpl(id: String, enforcedTypeIds: Set[String], content: ListMap[String, Any]) extends Copybean {
+  override def copyAnonymousCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content): AnonymousCopybean = {
+    copy(enforcedTypeIds = enforcedTypeIds, content = content)
+  }
 
+  override def copyCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content, id: String = id): AnonymousCopybean = {
+    copy(enforcedTypeIds = enforcedTypeIds, content = content, id = id)
+  }
 }
 
 case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String, names: Map[String, String]) extends ReifiedCopybean {
+  override def copyAnonymousCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content): AnonymousCopybean = {
+    copy(enforcedTypeIds = enforcedTypeIds, content = content)
+  }
 
+  override def copyCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content, id: String = id): AnonymousCopybean = {
+    copy(enforcedTypeIds = enforcedTypeIds, content = content, id = id)
+  }
 }

@@ -70,13 +70,17 @@ class CopybeanTypeEnforcer() {
       case map: Map[_, _] =>
         if (fType != FieldType.Reference && fType != FieldType.File && fType != FieldType.Image) {
           throw new TypeValidationException(s"$fieldId can not be a map: $value")
-        } else if (fType == FieldType.File) {
+        } else if (fType == FieldType.File || fType == FieldType.Image) {
           val fileData = caster.castData[Map[String, String]](value, fieldId, fieldDef)
           if (fileData.get("filename").isEmpty) {
             throw new TypeValidationException(s"$fieldId is a file and requires a filename")
           }
           if (fileData.get("hash").isEmpty) {
             throw new TypeValidationException(s"$fieldId is a file and requires a hash")
+          }
+          val badKeys = fileData.keySet.filter(key => key != "filename" && key != "hash")
+          if (badKeys.nonEmpty) {
+            throw new TypeValidationException(s"$fieldId is a file and has unknown keys: ${badKeys.mkString(",")}")
           }
         }
       case seq: Seq[_] =>

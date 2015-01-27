@@ -50,12 +50,17 @@ class CopybeanPersistenceService(
       implicitly[Reads[CopybeanImpl]].reads(Json.parse(json)).get
     }
 
+    val types: Set[CopybeanType] = resolveTypes(copybean)
+    copybeanReifier.reify(copybean, types)
+  }
+
+  protected def resolveTypes(copybean: AnonymousCopybean)(implicit siloScope: SiloScope): Set[CopybeanType] = {
     val future = copybean.enforcedTypeIds.map { typeId =>
       cachedFetchCopybeanType(typeId)
     }
     val futureSeq = Future.sequence(future)
     val types = Await.result(futureSeq, 5 seconds)
-    copybeanReifier.reify(copybean, types)
+    types
   }
 
   def cachedFetchCopybean(id: String)(implicit siloScope: SiloScope): Future[ReifiedCopybean] = siloScope.beanCache(id) {
@@ -69,9 +74,11 @@ class CopybeanPersistenceService(
     copybean
   }
 
-  def store(copybean: Copybean)(implicit siloScope: SiloScope): String = {
+  def store(rawCopybean: Copybean)(implicit siloScope: SiloScope): String = {
 
     checkSiloExists()
+
+    val copybean = copybeanReifier.unreify[Copybean](rawCopybean, resolveTypes(rawCopybean))
 
     enforceTypes(copybean)
 
@@ -111,7 +118,9 @@ class CopybeanPersistenceService(
 
     checkSiloExists()
 
-    val copybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
+    val rawCopybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
+
+    val copybean = copybeanReifier.unreify[Copybean](rawCopybean, resolveTypes(rawCopybean))
 
     enforceTypes(copybean)
 

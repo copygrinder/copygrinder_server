@@ -15,9 +15,13 @@ package org.copygrinder.pure.copybean
 
 import org.copygrinder.pure.copybean.model._
 
+import scala.collection.immutable.ListMap
+
 class CopybeanReifier {
 
   def reify(copybean: CopybeanImpl, types: Set[CopybeanType]): ReifiedCopybean = {
+
+    val decoratedCopybean = addFileUrls(copybean, types)
 
     val names = types.map(cbType => {
       if (cbType.instanceNameFormat.isDefined) {
@@ -27,7 +31,7 @@ class CopybeanReifier {
       }
     }).flatten.toMap
 
-    new ReifiedCopybeanImpl(copybean.enforcedTypeIds, copybean.content, copybean.id, names)
+    new ReifiedCopybeanImpl(copybean.enforcedTypeIds, decoratedCopybean.content, copybean.id, names)
   }
 
   protected def resolveName(format: String, copybean: CopybeanImpl, cbType: CopybeanType): String = {
@@ -50,6 +54,51 @@ class CopybeanReifier {
       }
 
     })
+  }
+
+  protected def addFileUrls(copybean: CopybeanImpl, types: Set[CopybeanType]) = {
+
+    val fields: Set[CopybeanFieldDef] = findImageAndFileFields(types)
+
+    modifyContent(copybean, fields) { (fieldData, field) =>
+      fieldData + ("url" -> s"copybeans/${copybean.id}/${field.id}")
+    }
+  }
+
+  protected def findImageAndFileFields(types: Set[CopybeanType]): Set[CopybeanFieldDef] = {
+    val typesWithFields = types.filter(_.fields.isDefined)
+
+    val fields = typesWithFields.flatMap(_.fields.get.filter(field =>
+      field.`type` == FieldType.File || field.`type` == FieldType.Image
+    ))
+    fields
+  }
+
+  protected def modifyContent[T <: AnonymousCopybean](copybean: T, fields: Set[CopybeanFieldDef])
+   (func: (ListMap[String, String], CopybeanFieldDef) => ListMap[String, String]): T = {
+    val newContent = fields.foldLeft(copybean.content) { (result, field) =>
+      val fieldId = field.id
+      val fieldDataOpt = result.get(fieldId)
+      if (fieldDataOpt.isDefined) {
+        val fieldData = fieldDataOpt.get.asInstanceOf[ListMap[String, String]]
+        val newFieldData = func(fieldData, field)
+        result.updated(fieldId, newFieldData)
+      } else {
+        result
+      }
+    }
+
+    copybean.copyAnonymousCopybean(content = newContent).asInstanceOf[T]
+  }
+
+  def unreify[T <: AnonymousCopybean](copybean: T, types: Set[CopybeanType]): T = {
+
+    val fields: Set[CopybeanFieldDef] = findImageAndFileFields(types)
+
+    modifyContent[T](copybean, fields) { (fieldData, field) =>
+      fieldData - "url"
+    }
+
   }
 
 }
