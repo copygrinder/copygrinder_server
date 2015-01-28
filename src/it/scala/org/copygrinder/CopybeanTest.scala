@@ -112,6 +112,10 @@ class CopybeanTest extends FlatSpec with Matchers {
         |      "id": "testfield5",
         |      "type": "Image",
         |      "displayName": "Image field"
+        |    },{
+        |      "id": "testfield6",
+        |      "type": "Html",
+        |      "displayName": "Html field"
         |    }
         |  ],
         |  "cardinality": "Many"

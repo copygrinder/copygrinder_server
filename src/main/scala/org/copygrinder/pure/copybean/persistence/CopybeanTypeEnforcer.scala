@@ -56,7 +56,7 @@ class CopybeanTypeEnforcer() {
   protected def checkField(fieldId: String, value: Any, fType: FieldType.FieldType, fieldDef: CopybeanFieldDef) = {
     value match {
       case string: String =>
-        if (fType != FieldType.String && fType != FieldType.Reference) {
+        if (fType != FieldType.String && fType != FieldType.Reference && fType != FieldType.Html) {
           throw new TypeValidationException(s"$fieldId must be a String but was: $value")
         }
       case int: Int =>
