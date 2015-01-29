@@ -15,16 +15,19 @@ package org.copygrinder.impure.api
 
 import java.io.{IOException, PrintWriter, StringWriter}
 
-import akka.actor.{ActorContext, ActorRefFactory}
+import akka.actor.{ActorRefFactory, ActorContext}
 import com.fasterxml.jackson.core.JsonParseException
-import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
+import org.copygrinder.impure.copybean.controller._
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import spray.http.MultipartContent
+import spray.http.{FormData, MultipartContent}
 import spray.http.StatusCodes._
 import spray.routing._
+import spray.routing.authentication.{UserPass, BasicAuth}
+
+import scala.concurrent.Future
 
 trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
@@ -34,7 +37,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
   val fileController: FileController
 
-  val actorContext: ActorContext
+  val securityController: SecurityController
 
   protected def writeExceptionHandler() =
     ExceptionHandler {
@@ -109,6 +112,11 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
       implicit siloScope: SiloScope => (id, copybean) =>
         beanController.update(id, copybean)
         ""
+    } ~ BuildRoute(passwordPath & put & entity(as[FormData])) {
+      implicit siloScope: SiloScope => (form) =>
+        val password = form.fields.find(_._1 == "password").get._2
+        securityController.updatePassword(password)
+        ""
     }
   }
 
@@ -122,8 +130,21 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     }
   }
 
+  protected def authenticator(userPass: Option[UserPass]): Future[Option[String]] =
+    Future {
+      if (securityController.auth(userPass)) {
+        Some(userPass.getOrElse(UserPass("", "")).user.toLowerCase)
+      } else {
+        None
+      }
+    }
+
   val copygrinderWriteRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
-    postRoutes ~ putRoutes ~ deleteRoutes
+    handleRejections(RejectionHandler.Default) {
+      authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
+        postRoutes ~ putRoutes ~ deleteRoutes
+      }
+    }
   })
 
 }

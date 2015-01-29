@@ -14,6 +14,7 @@
 package org.copygrinder.impure.api
 
 
+import akka.actor.ActorContext
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
 import play.api.libs.json._
@@ -31,7 +32,9 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
 
   val siloScopeFactory: SiloScopeFactory
 
-  implicit def executionContext: ExecutionContext
+  implicit def executionContext: ExecutionContext = ac.dispatcher
+
+  implicit def ac: ActorContext
 
   protected implicit def unmarshaller[T](implicit r: Reads[T]) = new FromRequestUnmarshaller[T] {
     override def apply(req: HttpRequest): Deserialized[T] = {
@@ -75,6 +78,8 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
   protected val filePath = siloPathPartial & path("files")
 
   protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & path(Segment)
+
+  protected val passwordPath = siloPathPartial & path("password")
 
   protected object BuildRoute {
 

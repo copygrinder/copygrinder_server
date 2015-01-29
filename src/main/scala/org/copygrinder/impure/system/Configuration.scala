@@ -16,7 +16,8 @@ package org.copygrinder.impure.system
 import java.io.File
 
 import ch.qos.logback.classic.{Level, LoggerContext}
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigRenderOptions, ConfigValueFactory, ConfigFactory}
+import org.apache.commons.io.FileUtils
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -27,7 +28,7 @@ class Configuration {
 
   protected val defaultMaxResults = 100
 
-  protected val config = ConfigFactory.parseFile(new File("copygrinder.conf"))
+  protected var config = ConfigFactory.parseFile(new File("copygrinder.conf"))
 
   lazy val serviceReadPort = Try(config.getInt("service.readPort")).getOrElse(defaultPortNumber)
 
@@ -47,5 +48,13 @@ class Configuration {
 
   loggingContext.getLogger("org.copygrinder").setLevel(Level.toLevel(loggingLevel))
 
+  lazy val passwordHash = Try(config.getString("user.admin.hash")).getOrElse("")
+
+  def updatePasswordHash(hash: String): Unit = {
+    config = config.withValue("user.admin.hash", ConfigValueFactory.fromAnyRef(hash))
+    val options = ConfigRenderOptions.defaults().setOriginComments(false)
+    val newConfig = config.root().render(options)
+    FileUtils.writeStringToFile(new File("copygrinder.conf"), newConfig)
+  }
 
 }

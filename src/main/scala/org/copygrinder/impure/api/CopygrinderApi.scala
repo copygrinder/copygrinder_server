@@ -14,21 +14,20 @@
 package org.copygrinder.impure.api
 
 import akka.actor.ActorContext
-import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
+import org.copygrinder.impure.copybean.controller._
 import org.copygrinder.impure.system.SiloScopeFactory
 import spray.routing._
 
-import scala.concurrent.ExecutionContext
-
 class CopygrinderApi(
- ac: ActorContext,
+ _ac: ActorContext,
  _typeController: TypeController,
  _beanController: BeanController,
  _fileController: FileController,
+ _securityController: SecurityController,
  siloScope: SiloScopeFactory
  ) extends ReadRoutes with WriteRoutes {
 
-  override implicit def executionContext: ExecutionContext = ac.dispatcher
+  override implicit def ac: ActorContext = _ac
 
   override val typeController: TypeController = _typeController
 
@@ -38,7 +37,7 @@ class CopygrinderApi(
 
   override val siloScopeFactory: SiloScopeFactory = siloScope
 
-  override val actorContext: ActorContext = ac
+  override val securityController: SecurityController = _securityController
 
   val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes
 

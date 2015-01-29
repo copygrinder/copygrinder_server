@@ -49,7 +49,8 @@ object CopygrinderBuild extends Build {
        "commons-io" % "commons-io" % "2.4",
        "ch.qos.logback" % "logback-classic" % "1.1.2",
        "org.apache.lucene" % "lucene-analyzers-common" % "4.10.3",
-       "org.apache.lucene" % "lucene-join" % "4.10.3"
+       "org.apache.lucene" % "lucene-join" % "4.10.3",
+       "com.lambdaworks" % "scrypt" % "1.4.0"
      ),
 
      /* TEST LIBS */
