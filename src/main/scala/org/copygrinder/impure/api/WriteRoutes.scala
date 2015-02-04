@@ -22,7 +22,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import spray.http.{FormData, MultipartContent}
+import spray.http.{Uri, FormData, MultipartContent}
 import spray.http.StatusCodes._
 import spray.routing._
 import spray.routing.authentication.{UserPass, BasicAuth}
@@ -36,8 +36,6 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
   val beanController: BeanController
 
   val fileController: FileController
-
-  val securityController: SecurityController
 
   protected def writeExceptionHandler() =
     ExceptionHandler {
@@ -130,19 +128,21 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     }
   }
 
-  protected def authenticator(userPass: Option[UserPass]): Future[Option[String]] =
-    Future {
-      if (securityController.auth(userPass)) {
-        Some(userPass.getOrElse(UserPass("", "")).user.toLowerCase)
-      } else {
-        None
-      }
+  protected val writeRoutes = postRoutes ~ putRoutes ~ deleteRoutes
+
+  protected val adminRoutes = (adminPathPartial & pathPrefix("api")) { siloId =>
+    authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
+      writeRoutes.compose(requestContext => {
+        val newUri = Uri("/" + siloId + requestContext.unmatchedPath.toString).path
+        requestContext.copy(unmatchedPath = newUri)
+      })
     }
+  }
 
   val copygrinderWriteRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
     handleRejections(RejectionHandler.Default) {
       authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
-        postRoutes ~ putRoutes ~ deleteRoutes
+        adminRoutes ~ writeRoutes
       }
     }
   })

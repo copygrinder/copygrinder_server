@@ -48,7 +48,7 @@ class Configuration {
 
   loggingContext.getLogger("org.copygrinder").setLevel(Level.toLevel(loggingLevel))
 
-  lazy val passwordHash = Try(config.getString("user.admin.hash")).getOrElse("")
+  def passwordHash = Try(config.getString("user.admin.hash")).getOrElse("")
 
   def updatePasswordHash(hash: String): Unit = {
     config = config.withValue("user.admin.hash", ConfigValueFactory.fromAnyRef(hash))

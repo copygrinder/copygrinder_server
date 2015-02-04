@@ -16,6 +16,7 @@ package org.copygrinder.impure.api
 
 import akka.actor.ActorContext
 import com.typesafe.scalalogging.LazyLogging
+import org.copygrinder.impure.copybean.controller.SecurityController
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
 import play.api.libs.json._
 import shapeless.{::, HNil}
@@ -24,6 +25,7 @@ import spray.httpx.PlayJsonSupport
 import spray.httpx.marshalling.ToResponseMarshallable
 import spray.httpx.unmarshalling.{Deserialized, FromRequestUnmarshaller, MalformedContent}
 import spray.routing._
+import spray.routing.authentication.UserPass
 
 import scala.concurrent.{Future, _}
 
@@ -35,6 +37,8 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
   implicit def executionContext: ExecutionContext = ac.dispatcher
 
   implicit def ac: ActorContext
+
+  val securityController: SecurityController
 
   protected implicit def unmarshaller[T](implicit r: Reads[T]) = new FromRequestUnmarshaller[T] {
     override def apply(req: HttpRequest): Deserialized[T] = {
@@ -80,6 +84,10 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
   protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & path(Segment)
 
   protected val passwordPath = siloPathPartial & path("password")
+
+  protected val adminPathPartial = siloPathPartial & pathPrefix("admin")
+
+  protected val adminPath = adminPathPartial & pathEndOrSingleSlash
 
   protected object BuildRoute {
 
@@ -142,5 +150,14 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
       }
     }
   }
+
+  protected def authenticator(userPass: Option[UserPass]): Future[Option[String]] =
+    Future {
+      if (securityController.auth(userPass)) {
+        Some(userPass.getOrElse(UserPass("", "")).user.toLowerCase)
+      } else {
+        None
+      }
+    }
 
 }

@@ -13,16 +13,19 @@
  */
 package org.copygrinder.impure.api
 
-import java.io.{IOException, PrintWriter, StringWriter}
+import java.io.{File, IOException, PrintWriter, StringWriter}
 
 import com.fasterxml.jackson.core.JsonParseException
+import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.persistence.JsonWrites
 import spray.http.HttpHeaders._
-import spray.http.MediaType
+import spray.http._
 import spray.http.StatusCodes._
+import spray.routing
 import spray.routing._
+import spray.routing.authentication.BasicAuth
 
 import scala.concurrent.Future
 
@@ -105,9 +108,49 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
     }
   }
 
+  protected val adminReadRoute = {
+    adminPath { siloId =>
+      authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
+        adminIndex(siloId)
+      }
+    } ~ (adminPathPartial & pathPrefix("api")) { siloId =>
+      authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
+        copybeanReadRoute.compose(requestContext => {
+          val newUri = Uri("/" + siloId + requestContext.unmatchedPath.toString).path
+          requestContext.copy(unmatchedPath = newUri)
+        })
+      }
+    } ~ (adminPathPartial & get) { siloId =>
+      unmatchedPath { unmatched =>
+        authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
+          val adminDir = new File("admin")
+          val reqFile = new File(adminDir, unmatched.toString)
+          if (reqFile.exists()) {
+            getFromFile(reqFile)
+          } else {
+            adminIndex(siloId)
+          }
+        }
+      }
+    }
+  }
+
+  protected def adminIndex(siloId: String) = {
+    requestUri { uri =>
+      futureComplete {
+        val html = FileUtils.readFileToString(new File("admin/index.html"))
+        val uriString = uri.toString()
+        val adminResource = s"$siloId/admin/"
+        val strippedUri = uriString.take(uriString.indexOf(adminResource) + adminResource.length)
+        val newHtml = html.replace( """<base href="http://localhost:9000/">""", s"""<base href="$strippedUri">""")
+        HttpEntity(MediaTypes.`text/html`, HttpData(newHtml))
+      }
+    }
+  }
+
 
   val copygrinderReadRoutes: Route = cors(handleExceptions(readExceptionHandler) {
-    rootRoute ~ copybeanReadRoute
+    rootRoute ~ copybeanReadRoute ~ adminReadRoute
   })
 
 }

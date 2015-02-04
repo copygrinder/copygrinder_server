@@ -133,7 +133,7 @@ class CopybeanTest extends FlatSpec with Matchers {
 
     }
 
-    Await.result(responseFuture, 1 second)
+    Await.result(responseFuture, 2 second)
   }
 
   it should "POST new copybeans" in {
