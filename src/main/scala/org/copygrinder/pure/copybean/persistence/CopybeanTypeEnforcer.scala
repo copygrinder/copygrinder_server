@@ -87,6 +87,7 @@ class CopybeanTypeEnforcer() {
         if (fType != FieldType.List) {
           throw new TypeValidationException(s"$fieldId must be a list, not: $value")
         }
+      case null =>
       case _ =>
         throw new TypeValidationException(s"$fieldId with value $value was an unexpected type: ${value.getClass}")
     }

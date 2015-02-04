@@ -13,6 +13,7 @@
  */
 package org.copygrinder.pure.copybean.persistence
 
+import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.pure.copybean.model._
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
@@ -23,7 +24,7 @@ import scala.collection.Seq
 import scala.collection.immutable.ListMap
 
 
-trait JsonReads extends JsonReadUtils {
+trait JsonReads extends JsonReadUtils with LazyLogging {
 
   def metaValueToJsValue(value: JsValue): JsResult[Any] = {
     value match {
@@ -55,7 +56,13 @@ trait JsonReads extends JsonReadUtils {
         val map = ListMap((for (item <- list) yield (item._1, item._2)): _*)
         JsSuccess(map)
       }
-      case x => JsError(x.toString())
+      case JsNull => {
+        JsSuccess(null)
+      }
+      case x => {
+        logger.debug("Couldn't unmarshall " + x)
+        JsError(x.toString())
+      }
     }
   }
 

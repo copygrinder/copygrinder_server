@@ -37,6 +37,7 @@ trait JsonWrites extends DefaultWrites {
         case list: List[_] => {
           convertList(list)
         }
+        case null => JsNull
         case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
       }
       (key, jsValue)
