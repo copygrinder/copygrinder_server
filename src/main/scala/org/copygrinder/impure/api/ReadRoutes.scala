@@ -140,9 +140,9 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
       futureComplete {
         val html = FileUtils.readFileToString(new File("admin/index.html"))
         val uriString = uri.toString()
-        val adminResource = s"$siloId/admin/"
+        val adminResource = s"$siloId/admin"
         val strippedUri = uriString.take(uriString.indexOf(adminResource) + adminResource.length)
-        val newHtml = html.replace( """<base href="http://localhost:9000/">""", s"""<base href="$strippedUri">""")
+        val newHtml = html.replace( """<base href="http://localhost:9000/">""", s"""<base href="$strippedUri/">""")
         HttpEntity(MediaTypes.`text/html`, HttpData(newHtml))
       }
     }
