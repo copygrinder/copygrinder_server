@@ -1,0 +1,3 @@
+[submodule "admin-src"]
+	path = admin-src
+	url = https://github.com/copygrinder/copygrinder_admin.git
