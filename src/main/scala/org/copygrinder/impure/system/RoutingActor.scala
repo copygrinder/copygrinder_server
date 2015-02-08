@@ -44,9 +44,9 @@ class RouteExecutingActor(apiFactory: (ActorContext) => CopygrinderApi) extends 
   val api = apiFactory(context)
 
   protected val route = context.parent.path.name match {
-    case "copygrinder-service-actor" => api.allCopygrinderRoutes
-    case "copygrinder-read-service-actor" => api.copygrinderReadRoutes
-    case "copygrinder-write-service-actor" => api.copygrinderWriteRoutes
+    case "copygrinder-service-actor" => api.wrappedAllCopygrinderRoutes
+    case "copygrinder-read-service-actor" => api.wrappedCopygrinderReadRoutes
+    case "copygrinder-write-service-actor" => api.wrappedCopygrinderWriteRoutes
   }
 
   override def receive = doSprayCan orElse doRoute

@@ -149,8 +149,6 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
   }
 
 
-  val copygrinderReadRoutes: Route = cors(handleExceptions(readExceptionHandler) {
-    rootRoute ~ copybeanReadRoute ~ adminReadRoute
-  })
+  val copygrinderReadRoutes: Route = rootRoute ~ copybeanReadRoute ~ adminReadRoute
 
 }

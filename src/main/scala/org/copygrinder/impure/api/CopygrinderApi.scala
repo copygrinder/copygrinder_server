@@ -25,7 +25,7 @@ class CopygrinderApi(
  _fileController: FileController,
  _securityController: SecurityController,
  siloScope: SiloScopeFactory
- ) extends ReadRoutes with WriteRoutes {
+ ) extends ReadRoutes with WriteRoutes with CorsSupport {
 
   override implicit def ac: ActorContext = _ac
 
@@ -40,5 +40,23 @@ class CopygrinderApi(
   override val securityController: SecurityController = _securityController
 
   val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes
+
+  lazy val wrappedAllCopygrinderRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
+    handleRejections(RejectionHandler.Default) {
+      allCopygrinderRoutes
+    }
+  })
+
+  lazy val wrappedCopygrinderReadRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
+    handleRejections(RejectionHandler.Default) {
+      copygrinderReadRoutes
+    }
+  })
+
+  lazy val wrappedCopygrinderWriteRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
+    handleRejections(RejectionHandler.Default) {
+      copygrinderWriteRoutes
+    }
+  })
 
 }

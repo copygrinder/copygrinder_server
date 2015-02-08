@@ -27,7 +27,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-class CopybeanTest extends FlatSpec with Matchers {
+class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
   val siloId = "integrationtest"
 
@@ -492,16 +492,6 @@ class CopybeanTest extends FlatSpec with Matchers {
     }
 
     Await.result(responseFuture3, 1 second)
-  }
-
-  def checkStatus(req: Req, response: Response, code: Int = 200) = {
-    val status = response.getStatusCode
-    if (status != code) {
-      println("REQUEST: " + req.toRequest)
-      println("REQUEST BODY: " + req.toRequest.getStringData)
-      println("RESPONSE: " + response.getResponseBody)
-      assert(status == code)
-    }
   }
 
 }

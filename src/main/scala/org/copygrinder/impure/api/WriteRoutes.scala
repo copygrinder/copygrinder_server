@@ -139,12 +139,9 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     }
   }
 
-  val copygrinderWriteRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
-    handleRejections(RejectionHandler.Default) {
-      authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
-        adminRoutes ~ writeRoutes
-      }
+  val copygrinderWriteRoutes: Route =
+    authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
+      adminRoutes ~ writeRoutes
     }
-  })
 
 }

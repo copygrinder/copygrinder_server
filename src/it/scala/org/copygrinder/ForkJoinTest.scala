@@ -21,7 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-class ForkJoinTest extends FlatSpec with Matchers {
+class ForkJoinTest extends FlatSpec with Matchers with TestSupport {
 
   TestWiring
 
@@ -35,16 +35,24 @@ class ForkJoinTest extends FlatSpec with Matchers {
 
     val longReq = url("http://localhost:9999/longpause")
 
-    Await.result(Http(shortReq OK as.String), 1 second)
+    val responseFuture = Http(shortReq).map { response =>
+      checkStatus(shortReq, response)
+    }
+
+    Await.result(responseFuture, 1 second)
 
     val time1 = System.nanoTime()
 
     val longFutures = 1.to(2).map { _ =>
-      Http(longReq OK as.String)
+      Http(longReq).map { response =>
+        checkStatus(longReq, response)
+      }
     }
 
     val shortFutures = 1.to(10).map { _ =>
-      Http(shortReq OK as.String)
+      Http(shortReq).map { response =>
+        checkStatus(shortReq, response)
+      }
     }
 
     val futureSeq = Future.sequence(longFutures ++ shortFutures)

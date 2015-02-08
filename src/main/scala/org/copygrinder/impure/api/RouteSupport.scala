@@ -30,7 +30,7 @@ import spray.routing.authentication.UserPass
 import scala.concurrent.{Future, _}
 
 
-trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with CorsSupport {
+trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
 
   val siloScopeFactory: SiloScopeFactory
 
@@ -65,25 +65,25 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging with
 
   protected val siloPathPartial = pathPrefix(Segment)
 
-  protected val siloPath = path(Segment)
+  protected val siloPath = siloPathPartial & pathEndOrSingleSlash
 
   protected val copybeansPathPartial = siloPathPartial & pathPrefix("copybeans")
 
-  protected val copybeansPath = siloPathPartial & path("copybeans")
+  protected val copybeansPath = copybeansPathPartial & pathEndOrSingleSlash
 
-  protected val copybeansIdPath = copybeansPathPartial & path(Segment)
+  protected val copybeansIdPath = copybeansPathPartial & pathPrefix(Segment) & pathEndOrSingleSlash
 
   protected val copybeansTypesPathPartial = copybeansPathPartial & pathPrefix("types")
 
-  protected val copybeansTypesPath = copybeansPathPartial & path("types")
+  protected val copybeansTypesPath = copybeansPathPartial & pathPrefix("types") & pathEndOrSingleSlash
 
-  protected val copybeansTypeIdPath = copybeansTypesPathPartial & path(Segment)
+  protected val copybeansTypeIdPath = copybeansTypesPathPartial & pathPrefix(Segment) & pathEndOrSingleSlash
 
-  protected val filePath = siloPathPartial & path("files")
+  protected val filePath = siloPathPartial & pathPrefix("files") & pathEndOrSingleSlash
 
-  protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & path(Segment)
+  protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & pathPrefix(Segment) & pathEndOrSingleSlash
 
-  protected val passwordPath = siloPathPartial & path("password")
+  protected val passwordPath = siloPathPartial & pathPrefix("password") & pathEndOrSingleSlash
 
   protected val adminPathPartial = siloPathPartial & pathPrefix("admin")
 
