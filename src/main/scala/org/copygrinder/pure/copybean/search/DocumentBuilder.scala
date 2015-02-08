@@ -59,7 +59,7 @@ class DocumentBuilder {
         map.foreach(value => {
           addFieldsToDoc(doc, value._2, prefix + "." + value._1)
         })
-      case null =>
+      case null => //scalastyle:ignore
       case u: JsUndefined =>
     }
 

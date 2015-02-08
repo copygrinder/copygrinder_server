@@ -29,8 +29,14 @@ class SecurityController(config: Configuration) {
     }
   }
 
+  val CPU_COST = 16384
+
+  val MEMORY_COST = 8
+
+  val PARALLEL_COST = 1
+
   def updatePassword(pass: String): Unit = {
-    val hash = SCryptUtil.scrypt(pass, 16384, 8, 1)
+    val hash = SCryptUtil.scrypt(pass, CPU_COST, MEMORY_COST, PARALLEL_COST)
     config.updatePasswordHash(hash)
   }
 

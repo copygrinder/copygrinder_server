@@ -57,6 +57,6 @@ class RouteExecutingActor(apiFactory: (ActorContext) => CopygrinderApi) extends 
     }
   }
 
-  def doRoute = runRoute(route)
+  protected def doRoute = runRoute(route)
 
 }

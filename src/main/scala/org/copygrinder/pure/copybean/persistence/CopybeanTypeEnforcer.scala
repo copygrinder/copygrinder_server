@@ -14,6 +14,7 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.TypeValidationException
+import org.copygrinder.pure.copybean.model.FieldType.FieldType
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.validator.FieldValidator
 
@@ -56,40 +57,61 @@ class CopybeanTypeEnforcer() {
   protected def checkField(fieldId: String, value: Any, fType: FieldType.FieldType, fieldDef: CopybeanFieldDef) = {
     value match {
       case string: String =>
-        if (fType != FieldType.String && fType != FieldType.Reference && fType != FieldType.Html) {
-          throw new TypeValidationException(s"$fieldId must be a String but was: $value")
-        }
+        checkString(fieldId, value, fType)
       case int: Int =>
-        if (fType != FieldType.Integer) {
-          throw new TypeValidationException(s"$fieldId must be an Integer but was: $value")
-        }
+        checkInt(fieldId, value, fType)
       case long: Long =>
-        if (fType != FieldType.Long) {
-          throw new TypeValidationException(s"$fieldId must be an Long but was: $value")
-        }
+        checkLong(fieldId, value, fType)
       case map: Map[_, _] =>
-        if (fType != FieldType.Reference && fType != FieldType.File && fType != FieldType.Image) {
-          throw new TypeValidationException(s"$fieldId can not be a map: $value")
-        } else if (fType == FieldType.File || fType == FieldType.Image) {
-          val fileData = caster.castData[Map[String, String]](value, fieldId, fieldDef)
-          if (fileData.get("filename").isEmpty) {
-            throw new TypeValidationException(s"$fieldId is a file and requires a filename")
-          }
-          if (fileData.get("hash").isEmpty) {
-            throw new TypeValidationException(s"$fieldId is a file and requires a hash")
-          }
-          val badKeys = fileData.keySet.filter(key => key != "filename" && key != "hash")
-          if (badKeys.nonEmpty) {
-            throw new TypeValidationException(s"$fieldId is a file and has unknown keys: ${badKeys.mkString(",")}")
-          }
-        }
+        checkMap(fieldId, value, fType, fieldDef)
       case seq: Seq[_] =>
-        if (fType != FieldType.List) {
-          throw new TypeValidationException(s"$fieldId must be a list, not: $value")
-        }
-      case null =>
+        checkSeq(fieldId, value, fType)
+      case null => //scalastyle:ignore
       case _ =>
         throw new TypeValidationException(s"$fieldId with value $value was an unexpected type: ${value.getClass}")
+    }
+  }
+
+
+  protected def checkString(fieldId: String, value: Any, fType: FieldType): Unit = {
+    if (fType != FieldType.String && fType != FieldType.Reference && fType != FieldType.Html) {
+      throw new TypeValidationException(s"$fieldId must be a String but was: $value")
+    }
+  }
+
+  protected def checkInt(fieldId: String, value: Any, fType: FieldType): Unit = {
+    if (fType != FieldType.Integer) {
+      throw new TypeValidationException(s"$fieldId must be an Integer but was: $value")
+    }
+  }
+
+  protected def checkLong(fieldId: String, value: Any, fType: FieldType): Unit = {
+    if (fType != FieldType.Long) {
+      throw new TypeValidationException(s"$fieldId must be an Long but was: $value")
+    }
+  }
+
+  protected def checkMap(fieldId: String, value: Any, fType: FieldType, fieldDef: CopybeanFieldDef): Unit = {
+    if (fType != FieldType.Reference && fType != FieldType.File && fType != FieldType.Image) {
+      throw new TypeValidationException(s"$fieldId can not be a map: $value")
+    } else if (fType == FieldType.File || fType == FieldType.Image) {
+      val fileData = caster.castData[Map[String, String]](value, fieldId, fieldDef)
+      if (fileData.get("filename").isEmpty) {
+        throw new TypeValidationException(s"$fieldId is a file and requires a filename")
+      }
+      if (fileData.get("hash").isEmpty) {
+        throw new TypeValidationException(s"$fieldId is a file and requires a hash")
+      }
+      val badKeys = fileData.keySet.filter(key => key != "filename" && key != "hash")
+      if (badKeys.nonEmpty) {
+        throw new TypeValidationException(s"$fieldId is a file and has unknown keys: ${badKeys.mkString(",")}")
+      }
+    }
+  }
+
+  protected def checkSeq(fieldId: String, value: Any, fType: FieldType): Unit = {
+    if (fType != FieldType.List) {
+      throw new TypeValidationException(s"$fieldId must be a list, not: $value")
     }
   }
 

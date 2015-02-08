@@ -43,27 +43,31 @@ trait JsonReads extends JsonReadUtils with LazyLogging {
         JsSuccess(values)
       }
       case JsObject(m) => {
-        val list = m.map(f => {
-          val value = metaValueToJsValue(f._2)
-          val unwrapedValue = if (value.isInstanceOf[JsSuccess[_]]) {
-            value.asInstanceOf[JsSuccess[_]].value
-          } else {
-            value
-          }
-          (f._1, unwrapedValue)
-        })
-
-        val map = ListMap((for (item <- list) yield (item._1, item._2)): _*)
-        JsSuccess(map)
+        handleObject(m)
       }
       case JsNull => {
-        JsSuccess(null)
+        JsSuccess(null) //scalastyle:ignore
       }
       case x => {
         logger.debug("Couldn't unmarshall " + x)
         JsError(x.toString())
       }
     }
+  }
+
+  protected def handleObject(m: scala.Seq[(String, JsValue)]): JsSuccess[ListMap[String, Any]] = {
+    val list = m.map(f => {
+      val value = metaValueToJsValue(f._2)
+      val unwrapedValue = if (value.isInstanceOf[JsSuccess[_]]) {
+        value.asInstanceOf[JsSuccess[_]].value
+      } else {
+        value
+      }
+      (f._1, unwrapedValue)
+    })
+
+    val map = ListMap((for (item <- list) yield (item._1, item._2)): _*)
+    JsSuccess(map)
   }
 
   def listMapReads[V](implicit fmtv: Reads[V]): Reads[ListMap[String, V]] = new Reads[ListMap[String, V]] {
