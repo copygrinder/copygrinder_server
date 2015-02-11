@@ -123,7 +123,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
     } ~ (adminPathPartial & get) { siloId =>
       unmatchedPath { unmatched =>
         authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
-          val adminDir = new File("admin")
+          val adminDir = new File(getClass.getClassLoader.getResource("admin/index.html").getFile).getParentFile
           val reqFile = new File(adminDir, unmatched.toString)
           if (reqFile.exists()) {
             getFromFile(reqFile)
@@ -138,7 +138,8 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
   protected def adminIndex(siloId: String) = {
     requestUri { uri =>
       futureComplete {
-        val html = FileUtils.readFileToString(new File("admin/index.html"))
+        val file = getClass.getClassLoader.getResource("admin/index.html").getFile
+        val html = FileUtils.readFileToString(new File(file))
         val uriString = uri.toString()
         val adminResource = s"$siloId/admin"
         val strippedUri = uriString.take(uriString.indexOf(adminResource) + adminResource.length)

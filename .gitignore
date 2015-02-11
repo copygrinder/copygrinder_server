@@ -20,4 +20,4 @@ gatling/.idea
 copygrinder.conf
 .floo
 .flooignore
-admin
+src/main/resources/admin
