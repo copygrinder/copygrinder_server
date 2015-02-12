@@ -34,7 +34,11 @@ class ActorSystemInit() {
   }
 }
 
-class ServerInit(config: Configuration, routingActor: Props)(implicit system: ActorSystem) {
+class ServerInit(config: Configuration, routingActor: Props)(implicit system: ActorSystem) extends SslConfig {
+
+  override val keyStoreLocation = config.keyStoreLocation
+
+  override val keyStorePassword = config.keyStorePassword
 
   def init: Future[Any] = {
 

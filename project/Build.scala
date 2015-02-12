@@ -50,7 +50,8 @@ object CopygrinderBuild extends Build {
        "ch.qos.logback" % "logback-classic" % "1.1.2",
        "org.apache.lucene" % "lucene-analyzers-common" % "4.10.3",
        "org.apache.lucene" % "lucene-join" % "4.10.3",
-       "com.lambdaworks" % "scrypt" % "1.4.0"
+       "com.lambdaworks" % "scrypt" % "1.4.0",
+       "org.apache.camel" % "camel-core" % "2.14.1"
      ),
 
      /* TEST LIBS */

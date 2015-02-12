@@ -48,6 +48,10 @@ class Configuration {
 
   loggingContext.getLogger("org.copygrinder").setLevel(Level.toLevel(loggingLevel))
 
+  lazy val keyStoreLocation = Try(config.getString("keystore.file")).getOrElse("")
+
+  lazy val keyStorePassword = Try(config.getString("keystore.password")).getOrElse("")
+
   def passwordHash: String = Try(config.getString("user.admin.hash")).getOrElse("")
 
   def updatePasswordHash(hash: String): Unit = {
