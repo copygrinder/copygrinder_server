@@ -21,9 +21,8 @@ import org.copygrinder.impure.copybean.controller.{BeanController, FileControlle
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.persistence.JsonWrites
 import spray.http.HttpHeaders._
-import spray.http._
 import spray.http.StatusCodes._
-import spray.routing
+import spray.http._
 import spray.routing._
 import spray.routing.authentication.BasicAuth
 
@@ -73,7 +72,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
       }
     }
 
-  protected val rootRoute = path("") {
+  protected val rootRoute = pathEndOrSingleSlash {
     get {
       complete {
         "Copygrinder is running.  Check out the apis under /copybeans"
@@ -143,13 +142,28 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
         val uriString = uri.toString()
         val adminResource = s"$siloId/admin"
         val strippedUri = uriString.take(uriString.indexOf(adminResource) + adminResource.length)
-        val newHtml = html.replace( """<base href="http://localhost:9000/">""", s"""<base href="$strippedUri/">""")
+        val newHtml = html.replace(
+          """<base id="baseMetaTag" href="http://localhost:9000/" data-copygrinder-url="http://127.0.0.1:19836/integrationtest">""",
+          s"""<base id="baseMetaTag" href="$strippedUri/" data-copygrinder-url="$strippedUri/api">"""
+        )
         HttpEntity(MediaTypes.`text/html`, HttpData(newHtml))
       }
     }
   }
 
+  protected val hostRoute = hostName { host =>
+    if (host != "localhost" && host != "127.0.0.1") {
+      innerRoutes.compose(requestContext => {
+        val newUri = Uri("/" + host + requestContext.unmatchedPath.toString).path
+        requestContext.copy(unmatchedPath = newUri)
+      })
+    } else {
+      reject
+    }
+  }
 
-  val copygrinderReadRoutes: Route = rootRoute ~ copybeanReadRoute ~ adminReadRoute
+  val innerRoutes:Route = copybeanReadRoute ~ adminReadRoute
+
+  val copygrinderReadRoutes: Route = hostRoute ~ rootRoute ~ innerRoutes
 
 }
