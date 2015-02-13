@@ -24,22 +24,27 @@ trait CorsSupport {
   protected final val `24HoursInSeconds` = 60 * 60 * 24
 
   protected val allowOriginHeader = `Access-Control-Allow-Origin`(AllOrigins)
+
+  def cors[T]: Directive0 = mapRequestContext {
+    ctx => ctx.withHttpResponseHeadersMapped { headers =>
+      allowOriginHeader :: headers
+    }
+  }
+
   protected val optionsCorsHeaders = List(
     `Access-Control-Allow-Headers`(
       "Origin, X-Requested-With, Content-Type, Accept, Accept-Encoding, Accept-Language, Host, Referer, User-Agent"),
     `Access-Control-Max-Age`(`24HoursInSeconds`)
   )
 
-  def cors[T]: Directive0 = mapRequestContext {
+  def innerCors[T]: Directive0 = mapRequestContext {
     ctx => ctx.withRouteResponseHandling({
-      case Rejected(x) if ctx.request.method.equals(HttpMethods.OPTIONS) && x.exists(_.isInstanceOf[MethodRejection]) => {
+      case Rejected(x) if ctx.request.method.equals(HttpMethods.OPTIONS)
+       && x.exists(_.isInstanceOf[MethodRejection]) => {
         ctx.complete(HttpResponse().withHeaders(
-          `Access-Control-Allow-Methods`(OPTIONS, GET, POST, PUT, DELETE) :: allowOriginHeader ::
-           optionsCorsHeaders
+          `Access-Control-Allow-Methods`(OPTIONS, GET, POST, PUT, DELETE) :: optionsCorsHeaders
         ))
       }
-    }).withHttpResponseHeadersMapped { headers =>
-      allowOriginHeader :: headers
-    }
+    })
   }
 }

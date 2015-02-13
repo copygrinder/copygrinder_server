@@ -43,13 +43,17 @@ class CopygrinderApi(
 
   lazy val wrappedAllCopygrinderRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
     handleRejections(RejectionHandler.Default) {
-      allCopygrinderRoutes
+      innerCors {
+        allCopygrinderRoutes
+      }
     }
   })
 
   lazy val wrappedCopygrinderReadRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
     handleRejections(RejectionHandler.Default) {
-      copygrinderReadRoutes
+      innerCors {
+        copygrinderReadRoutes
+      }
     }
   })
 

@@ -122,47 +122,51 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
     } ~ (adminPathPartial & get) { siloId =>
       unmatchedPath { unmatched =>
         authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
-          val adminDir = new File(getClass.getClassLoader.getResource("admin/index.html").getFile).getParentFile
-          val reqFile = new File(adminDir, unmatched.toString)
-          if (reqFile.exists()) {
-            getFromFile(reqFile)
+          val resource = getClass.getClassLoader.getResource("admin" + unmatched.toString)
+          // scalastyle:off null
+          if (resource != null) {
+            getFromResource("admin" + unmatched.toString)
           } else {
             adminIndex(siloId)
           }
+          // scalastyle:on null
         }
       }
     }
   }
 
   protected def adminIndex(siloId: String) = {
-    requestUri { uri =>
-      futureComplete {
-        val file = getClass.getClassLoader.getResource("admin/index.html").getFile
-        val html = FileUtils.readFileToString(new File(file))
-        val uriString = uri.toString()
-        val adminResource = s"$siloId/admin"
-        val strippedUri = uriString.take(uriString.indexOf(adminResource) + adminResource.length)
-        val newHtml = html.replace(
-          """<base id="baseMetaTag" href="http://localhost:9000/" data-copygrinder-url="http://127.0.0.1:19836/integrationtest">""",
-          s"""<base id="baseMetaTag" href="$strippedUri/" data-copygrinder-url="$strippedUri/api">"""
-        )
-        HttpEntity(MediaTypes.`text/html`, HttpData(newHtml))
+    requestUri {
+      uri =>
+        futureComplete {
+          val stream = getClass.getClassLoader.getResourceAsStream("admin/index.html")
+          val scanner = new java.util.Scanner(stream).useDelimiter("\\A")
+          val html = scanner.next()
+          val uriString = uri.toString()
+          val adminResource = s"$siloId/admin"
+          val strippedUri = uriString.take(uriString.indexOf(adminResource) + adminResource.length)
+          val newHtml = html.replace(
+            """<base id="baseMetaTag" href="http://localhost:9000/" data-copygrinder-url="http://127.0.0.1:19836/integrationtest">""",
+            s"""<base id="baseMetaTag" href="$strippedUri/" data-copygrinder-url="$strippedUri/api">"""
+          )
+          HttpEntity(MediaTypes.`text/html`, HttpData(newHtml))
+        }
+    }
+  }
+
+  protected val hostRoute = hostName {
+    host =>
+      if (host != "localhost" && host != "127.0.0.1") {
+        innerRoutes.compose(requestContext => {
+          val newUri = Uri("/" + host + requestContext.unmatchedPath.toString).path
+          requestContext.copy(unmatchedPath = newUri)
+        })
+      } else {
+        reject
       }
-    }
   }
 
-  protected val hostRoute = hostName { host =>
-    if (host != "localhost" && host != "127.0.0.1") {
-      innerRoutes.compose(requestContext => {
-        val newUri = Uri("/" + host + requestContext.unmatchedPath.toString).path
-        requestContext.copy(unmatchedPath = newUri)
-      })
-    } else {
-      reject
-    }
-  }
-
-  val innerRoutes:Route = copybeanReadRoute ~ adminReadRoute
+  val innerRoutes: Route = copybeanReadRoute ~ adminReadRoute
 
   val copygrinderReadRoutes: Route = hostRoute ~ rootRoute ~ innerRoutes
 
