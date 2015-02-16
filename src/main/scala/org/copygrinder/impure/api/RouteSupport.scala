@@ -20,7 +20,7 @@ import org.copygrinder.impure.copybean.controller.SecurityController
 import org.copygrinder.impure.system.{SiloScope, SiloScopeFactory}
 import play.api.libs.json._
 import shapeless.{::, HNil}
-import spray.http.HttpRequest
+import spray.http.{Uri, HttpRequest}
 import spray.httpx.PlayJsonSupport
 import spray.httpx.marshalling.ToResponseMarshallable
 import spray.httpx.unmarshalling.{Deserialized, FromRequestUnmarshaller, MalformedContent}
@@ -159,5 +159,19 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
         None
       }
     }
+
+  protected def hostRoute(route: Route) = {
+    hostName {
+      host =>
+        if (host != "localhost" /*&& host != "127.0.0.1"*/ ) {
+          route.compose(requestContext => {
+            val newUri = Uri("/" + host + requestContext.unmatchedPath.toString).path
+            requestContext.copy(unmatchedPath = newUri)
+          })
+        } else {
+          reject
+        }
+    }
+  }
 
 }

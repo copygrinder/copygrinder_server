@@ -154,20 +154,8 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
     }
   }
 
-  protected val hostRoute = hostName {
-    host =>
-      if (host != "localhost" && host != "127.0.0.1") {
-        innerRoutes.compose(requestContext => {
-          val newUri = Uri("/" + host + requestContext.unmatchedPath.toString).path
-          requestContext.copy(unmatchedPath = newUri)
-        })
-      } else {
-        reject
-      }
-  }
+  protected val readInnerRoutes: Route = copybeanReadRoute ~ adminReadRoute
 
-  val innerRoutes: Route = copybeanReadRoute ~ adminReadRoute
-
-  val copygrinderReadRoutes: Route = hostRoute ~ rootRoute ~ innerRoutes
+  val copygrinderReadRoutes: Route = hostRoute(readInnerRoutes) ~ rootRoute ~ readInnerRoutes
 
 }

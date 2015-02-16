@@ -139,9 +139,11 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
     }
   }
 
+  protected val writeInnerRoutes = adminRoutes ~ writeRoutes
+
   val copygrinderWriteRoutes: Route =
     authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
-      adminRoutes ~ writeRoutes
+      hostRoute(writeInnerRoutes) ~ writeInnerRoutes
     }
 
 }
