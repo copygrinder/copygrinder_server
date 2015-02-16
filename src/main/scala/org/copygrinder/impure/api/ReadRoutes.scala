@@ -143,7 +143,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
           val scanner = new java.util.Scanner(stream).useDelimiter("\\A")
           val html = scanner.next()
           val uriString = uri.toString()
-          val adminResource = s"$siloId/admin"
+          val adminResource = s"/admin"
           val strippedUri = uriString.take(uriString.indexOf(adminResource) + adminResource.length)
           val newHtml = html.replace(
             """<base id="baseMetaTag" href="http://localhost:9000/" data-copygrinder-url="http://127.0.0.1:19836/integrationtest">""",
