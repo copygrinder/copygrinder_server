@@ -34,7 +34,7 @@ class Configuration {
 
   lazy val serviceWritePort = Try(config.getInt("service.writePort")).getOrElse(defaultPortNumber)
 
-  lazy val serviceHost = Try(config.getString("service.host")).getOrElse("localhost")
+  lazy val serviceHost = Try(config.getString("service.host")).getOrElse("0.0.0.0")
 
   lazy val serviceThreads = Try(config.getInt("service.threads")).getOrElse(Runtime.getRuntime.availableProcessors())
 
