@@ -66,7 +66,8 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
   lazy val securityController = new SecurityController(globalModule.configuration)
 
   def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-    new CopygrinderApi(ac, typeController, beanController, fileController, securityController, siloScopeFactory)
+    new CopygrinderApi(ac, typeController, beanController, fileController, securityController, siloScopeFactory,
+      globalModule.configuration.adminForceHttps)
   }
 
   lazy val routeExecutingActor = Props(new RouteExecutingActor(copygrinderApiFactory))

@@ -36,6 +36,8 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
 
   val fileController: FileController
 
+  val adminForceHttps: Boolean
+
   protected def readExceptionHandler() =
     ExceptionHandler {
       case ex: Exception => {
@@ -145,9 +147,14 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
           val uriString = uri.toString()
           val adminResource = s"/admin"
           val strippedUri = uriString.take(uriString.indexOf(adminResource) + adminResource.length)
+          val newUrl = if (adminForceHttps) {
+            strippedUri.replace("http:", "https:")
+          } else {
+            strippedUri
+          }
           val newHtml = html.replace(
             """<base id="baseMetaTag" href="http://localhost:9000/" data-copygrinder-url="http://127.0.0.1:19836/integrationtest">""",
-            s"""<base id="baseMetaTag" href="$strippedUri/" data-copygrinder-url="$strippedUri/api">"""
+            s"""<base id="baseMetaTag" href="$newUrl/" data-copygrinder-url="$newUrl/api">"""
           )
           HttpEntity(MediaTypes.`text/html`, HttpData(newHtml))
         }

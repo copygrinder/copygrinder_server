@@ -61,4 +61,6 @@ class Configuration {
     FileUtils.writeStringToFile(new File("copygrinder.conf"), newConfig)
   }
 
+  lazy val adminForceHttps = Try(config.getBoolean("admin.forceHttps")).getOrElse(false)
+
 }

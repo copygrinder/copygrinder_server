@@ -24,20 +24,23 @@ class CopygrinderApi(
  _beanController: BeanController,
  _fileController: FileController,
  _securityController: SecurityController,
- siloScope: SiloScopeFactory
+ siloScope: SiloScopeFactory,
+ _adminForceHttps: Boolean
  ) extends ReadRoutes with WriteRoutes with CorsSupport {
 
-  override implicit def ac: ActorContext = _ac
+  override implicit def ac = _ac
 
-  override val typeController: TypeController = _typeController
+  override val typeController = _typeController
 
-  override val beanController: BeanController = _beanController
+  override val beanController = _beanController
 
-  override val fileController: FileController = _fileController
+  override val fileController = _fileController
 
-  override val siloScopeFactory: SiloScopeFactory = siloScope
+  override val siloScopeFactory = siloScope
 
-  override val securityController: SecurityController = _securityController
+  override val securityController = _securityController
+
+  override val adminForceHttps = _adminForceHttps
 
   val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes
 
