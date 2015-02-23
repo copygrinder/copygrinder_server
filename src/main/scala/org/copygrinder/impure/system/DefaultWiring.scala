@@ -126,7 +126,7 @@ class SiloScope(_siloId: String, documentBuilder: DocumentBuilder, queryBuilder:
 
   lazy val indexer = new Indexer(indexDir, documentBuilder, queryBuilder, config.indexMaxResults)
 
-  lazy val beanCache: Cache[ReifiedCopybean] = LruCache()
+  lazy val beanCache= new BeanCacheWrapper()
 
   lazy val typeCache: Cache[CopybeanType] = LruCache()
 

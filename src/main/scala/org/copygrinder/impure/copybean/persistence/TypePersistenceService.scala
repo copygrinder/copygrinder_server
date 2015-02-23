@@ -22,9 +22,13 @@ import org.copygrinder.pure.copybean.persistence._
 import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
-class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes, typeEnforcer: TypeEnforcer
+
+class TypePersistenceService(
+ _predefinedCopybeanTypes: PredefinedCopybeanTypes,
+ typeEnforcer: TypeEnforcer
  ) extends PersistenceSupport {
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
@@ -65,9 +69,21 @@ class TypePersistenceService(_predefinedCopybeanTypes: PredefinedCopybeanTypes, 
       throw new CopybeanTypeNotFound(copybeanType.id)
     }
     siloScope.typeGitRepo.update(file, json)
+    invalidateOnTypeChange(copybeanType)
     siloScope.typeCache.remove(copybeanType.id)
 
     siloScope.indexer.updateCopybeanType(copybeanType)
+  }
+
+  protected def invalidateOnTypeChange(newType: CopybeanType)(implicit siloScope: SiloScope) = {
+    siloScope.typeCache.get(newType.id).map(future => {
+      val resultFutureOpt = future.map(oldType => {
+        if (oldType.instanceNameFormat != newType.instanceNameFormat) {
+          siloScope.beanCache.invalidateBeansOfType(newType.id)
+        }
+      })
+      Await.result(resultFutureOpt, 5 seconds)
+    })
   }
 
   def store(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
