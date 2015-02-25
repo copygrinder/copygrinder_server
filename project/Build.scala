@@ -89,6 +89,8 @@ object CopygrinderBuild extends Build {
    ).settings(
      addCommandAlias("check", ";scalastyle;scoverage:test"): _*
    ).settings(
+     addCommandAlias("buildAdmin", """;eval Process("grunt toServer", new java.io.File("admin-src")) ! """): _*
+   ).settings(
      Defaults.itSettings: _*
    ).configs(IntegrationTest)
 }
