@@ -15,6 +15,7 @@ package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.model._
 
+import scala.collection.immutable.ListMap
 import scala.language.implicitConversions
 
 class PredefinedCopybeanTypes {
@@ -30,7 +31,7 @@ class PredefinedCopybeanTypes {
     id = "copygrinderAdminMetatype",
     displayName = "Copygrinder Admin Metabean",
     fields = Seq(
-      new CopybeanFieldDef("siloName", "Silo Name", FieldType.String, validators = Seq(
+      CopybeanFieldDef.cast("siloName", "Silo Name", FieldType.String, validators = Seq(
         new CopybeanFieldValidatorDef("required")
       ))
     )
@@ -42,7 +43,7 @@ class PredefinedCopybeanTypes {
     displayName = "Class Backed Field Validator Type",
     instanceNameFormat = "$displayName$",
     fields = Seq(
-      new CopybeanFieldDef("class", "Class", FieldType.String, validators = Seq(
+      CopybeanFieldDef.cast("class", "Class", FieldType.String, validators = Seq(
         new CopybeanFieldValidatorDef("required")
       ))
     )
@@ -53,13 +54,14 @@ class PredefinedCopybeanTypes {
     displayName = "File Metadata Type",
     instanceNameFormat = "$displayName$",
     fields = Seq(
-      new CopybeanFieldDef("filenames", "File Names", FieldType.List, validators = Seq(
+      CopybeanFieldDef.cast("filenames", "File Names", FieldType.List, ListMap("listType" -> "String"),
+        validators = Seq(
+          new CopybeanFieldValidatorDef("required")
+        )),
+      CopybeanFieldDef.cast("hash", "Hash", FieldType.String, validators = Seq(
         new CopybeanFieldValidatorDef("required")
       )),
-      new CopybeanFieldDef("hash", "Hash", FieldType.String, validators = Seq(
-        new CopybeanFieldValidatorDef("required")
-      )),
-      new CopybeanFieldDef("sizeInBytes", "Size in Bytes", FieldType.Long, validators = Seq(
+      CopybeanFieldDef.cast("sizeInBytes", "Size in Bytes", FieldType.Long, validators = Seq(
         new CopybeanFieldValidatorDef("required")
       ))
     )

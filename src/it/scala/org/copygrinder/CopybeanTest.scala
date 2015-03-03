@@ -368,15 +368,15 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
     val json =
       s"""
-        |{
-        |  "enforcedTypeIds": [
-        |    "testtype1"
-        |  ],
-        |  "content": {
-        |    "testfield1":"1",
-        |    "testfield3":"!REF!:$id"
-        |  }
-        |}""".stripMargin
+         |{
+         |"enforcedTypeIds": [
+         |"testtype1"
+         |],
+         |"content": {
+         |"testfield1":"1",
+         |"testfield3":"!REF!:$id"
+                                   |}
+                                   |}""".stripMargin
 
     val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -404,18 +404,18 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
     val json =
       s"""
-        |{
-        |  "enforcedTypeIds": [
-        |    "testtype1"
-        |  ],
-        |  "content": {
-        |    "testfield1": "abc",
-        |    "testfield4": {
-        |      "filename": "developer.md",
-        |      "hash": "$hash"
-        |    }
-        |  }
-        |}""".stripMargin
+         |{
+         |"enforcedTypeIds": [
+         |"testtype1"
+         |],
+         |"content": {
+         |"testfield1": "abc",
+         |"testfield4": {
+         | "filename": "developer.md",
+         | "hash": "$hash"
+                           |}
+                           |}
+                           |}""".stripMargin
 
     val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -460,18 +460,18 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
     val json =
       s"""
-        |{
-        |  "enforcedTypeIds": [
-        |    "testtype1"
-        |  ],
-        |  "content": {
-        |    "testfield1": "abc",
-        |    "testfield5": {
-        |      "filename": "test.jpg",
-        |      "hash": "$hash"
-        |    }
-        |  }
-        |}""".stripMargin
+         |{
+         |"enforcedTypeIds": [
+         |"testtype1"
+         |],
+         |"content": {
+         |"testfield1": "abc",
+         |"testfield5": {
+         | "filename": "test.jpg",
+         | "hash": "$hash"
+                           |}
+                           |}
+                           |}""".stripMargin
 
     val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -492,6 +492,76 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
     }
 
     Await.result(responseFuture3, 1 second)
+  }
+
+  it should "handle lists" in {
+
+    val json =
+      """
+        |{
+        |  "id": "listtype",
+        |  "displayName": "List Example",
+        |  "instanceNameFormat": "List type",
+        |  "fields":
+        |    [{
+        |      "id": "stringlist",
+        |      "type": "List",
+        |      "displayName": "String List field",
+        |      "attributes": {
+        |        "listType": "String"
+        |      }
+        |    },{
+        |      "id": "intlist",
+        |      "type": "List",
+        |      "displayName": "Integer List field",
+        |      "attributes": {
+        |        "listType": "Integer"
+        |      }
+        |    },{
+        |      "id": "reflist",
+        |      "type": "List",
+        |      "displayName": "Reference List field",
+        |      "attributes": {
+        |        "listType": "Reference",
+        |        "refs": [
+        |          {"refValidationTypes": ["testtype2"], "refDisplayType": "testtype2"}
+        |        ]
+        |      }
+        |    }
+        |  ],
+        |  "cardinality": "Many"
+        |}""".stripMargin
+
+    val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+    }
+
+    Await.result(responseFuture, 1 second)
+
+    val id = getId()
+
+    val json2 =
+      s"""
+        |{
+        |  "enforcedTypeIds": [
+        |    "listtype"
+        |  ],
+        |  "content": {
+        |    "stringlist": ["Lorem Ipsum", "123"],
+        |    "intlist": [456, 789],
+        |    "reflist": ["!REF!:$id"]
+        |  }
+        |}""".stripMargin
+
+    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json2)
+
+    val responseFuture2 = Http(req2).map { response =>
+      checkStatus(req, response)
+    }
+
+    Await.result(responseFuture2, 1 second)
   }
 
 }

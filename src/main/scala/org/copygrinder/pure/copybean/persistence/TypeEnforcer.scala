@@ -20,20 +20,29 @@ class TypeEnforcer() {
 
   protected val caster = new UntypedCaster()
 
-  def enforceType(
-   copybeanType: CopybeanType
-   ): Unit = {
+  def enforceType(copybeanType: CopybeanType): Unit = {
     if (copybeanType.fields.isDefined) {
       copybeanType.fields.get.map { fieldDef =>
-        val fType = fieldDef.`type`
-        if (fType == FieldType.Reference) {
-          checkRefsAttrs(fieldDef)
+        fieldDef.`type` match {
+          case FieldType.Reference => checkRefs(fieldDef)
+          case FieldType.List => checkList(fieldDef)
+          case other =>
         }
       }
     }
   }
 
-  protected def checkRefsAttrs(fieldDef: CopybeanFieldDef): Option[String] = {
+  protected def checkList(fieldDef: CopybeanFieldDef) = {
+
+    val listType = caster.castAttr[String](fieldDef, "listType")
+
+    if (!FieldType.values.exists(_.toString == listType)) {
+      throw new TypeValidationException(s"${fieldDef.id} must have a valid list type, not '$listType'")
+    }
+
+  }
+
+  protected def checkRefs(fieldDef: CopybeanFieldDef) = {
     val castAttrs = caster.castAttr[Seq[Map[String, Either[String, Seq[String]]]]](fieldDef, "refs")
     castAttrs.foreach(ref => {
 
@@ -59,7 +68,6 @@ class TypeEnforcer() {
       }
 
     })
-    None
   }
 
 }

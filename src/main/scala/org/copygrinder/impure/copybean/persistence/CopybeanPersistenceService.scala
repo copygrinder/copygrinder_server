@@ -195,14 +195,23 @@ class CopybeanPersistenceService(
     }
   }
 
-  protected def checkRefs(refs: Set[String])(implicit siloScope: SiloScope, ec: ExecutionContext) = {
+  protected def checkRefs(refs: Map[String, CopybeanFieldDef])(implicit siloScope: SiloScope, ec: ExecutionContext) = {
     if (refs.nonEmpty) {
-      val params = refs.toSeq.map(ref => ("id~", ref))
+      val params = refs.toSeq.map(ref => ("id~", ref._1))
       val ids = siloScope.indexer.findCopybeanIds(params).toSet
-      val diffs = refs.diff(ids)
+      val diffs = refs.map(_._1).toSet.diff(ids)
       if (diffs.nonEmpty) {
         throw new TypeValidationException(s"Reference(s) made to non-existent bean(s): " + diffs.mkString)
       }
+      val copybeans = Await.result(fetchCopybeans(ids.toSeq), 5 seconds)
+      copybeans.foreach(bean => {
+        val refField = refs.get(bean.id).get.asInstanceOf[ReferenceType]
+        refField.refs.exists(ref => {
+          ref.validationTypes.forall(refTypeId => {
+            bean.enforcedTypeIds.contains(refTypeId)
+          })
+        })
+      })
     }
   }
 

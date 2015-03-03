@@ -26,7 +26,7 @@ trait AnonymousCopybean {
 trait Copybean extends AnonymousCopybean {
   val id: String
 
-  def copyCopybean(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String): AnonymousCopybean
+  def copyCopybean(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String): Copybean
 }
 
 trait ReifiedCopybean extends Copybean {
@@ -44,7 +44,7 @@ case class CopybeanImpl(id: String, enforcedTypeIds: Set[String], content: ListM
     copy(enforcedTypeIds = enforcedTypeIds, content = content)
   }
 
-  override def copyCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content, id: String = id): AnonymousCopybean = {
+  override def copyCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content, id: String = id): Copybean = {
     copy(enforcedTypeIds = enforcedTypeIds, content = content, id = id)
   }
 }
@@ -54,7 +54,7 @@ case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[St
     copy(enforcedTypeIds = enforcedTypeIds, content = content)
   }
 
-  override def copyCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content, id: String = id): AnonymousCopybean = {
+  override def copyCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content, id: String = id): Copybean = {
     copy(enforcedTypeIds = enforcedTypeIds, content = content, id = id)
   }
 }

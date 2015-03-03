@@ -50,6 +50,8 @@ trait JsonWrites extends DefaultWrites {
       val head = list.head
       if (head.isInstanceOf[String]) {
         traversableWrites[String].writes(list.asInstanceOf[List[String]])
+      } else if (head.isInstanceOf[Int]) {
+        traversableWrites[Int].writes(list.asInstanceOf[List[Int]])
       } else if (head.isInstanceOf[Map[_, _]]) {
         val newList = list.asInstanceOf[List[Map[String, Any]]].map(map => {
           val newMap = map.map(entry => {

@@ -21,7 +21,7 @@ import scala.reflect.runtime.universe._
 class UntypedCaster {
 
   def castData[T](data: Any, field: String, fieldDef: CopybeanFieldDef)(implicit typeTag: TypeTag[T]): T = {
-    val castData = doCast(data, fieldDef, field, typeTag.tpe)
+    val castData = doCast(data, fieldDef.id, field, typeTag.tpe)
     castData.asInstanceOf[T]
   }
 
@@ -38,67 +38,67 @@ class UntypedCaster {
     castData(data, attr, fieldDef)(typeTag)
   }
 
-  protected def doCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type): Any = {
+  protected def doCast(data: Any, fieldId: String, parent: String, tpe: Type): Any = {
 
     tpe.typeConstructor.toString match {
       case s if s.endsWith("Seq") => {
-        handleSeqCast(data, fieldDef, parent, tpe)
+        handleSeqCast(data, fieldId, parent, tpe)
       }
       case m if m.endsWith("Map") => {
-        handleMapCast(data, fieldDef, parent, tpe)
+        handleMapCast(data, fieldId, parent, tpe)
       }
       case e if e.endsWith("Either") => {
-        handleEitherCast(data, fieldDef, parent, tpe)
+        handleEitherCast(data, fieldId, parent, tpe)
       }
       case "String" => data
-      case other => throw new TypeValidationException(s"${fieldDef.id} has unknown type '$other'")
+      case other => throw new TypeValidationException(s"$fieldId has unknown type '$other'")
     }
 
   }
 
-  protected def handleSeqCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
+  protected def handleSeqCast(data: Any, fieldId: String, parent: String, tpe: Type) = {
     if (data.isInstanceOf[Seq[_]]) {
       val seq = data.asInstanceOf[Seq[Any]].zipWithIndex
       seq.map(pair => {
         val (innerData, index) = pair
         val newParent = s"$parent[$index]"
-        doCast(innerData, fieldDef, newParent, tpe.typeArgs.head)
+        doCast(innerData, fieldId, newParent, tpe.typeArgs.head)
       })
     } else {
-      throw new TypeValidationException(s"${fieldDef.id} requires $parent to be an array")
+      throw new TypeValidationException(s"$fieldId requires $parent to be an array")
     }
   }
 
-  protected def handleMapCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
+  protected def handleMapCast(data: Any, fieldId: String, parent: String, tpe: Type) = {
     if (data.isInstanceOf[Map[_, _]]) {
       val map = data.asInstanceOf[Map[Any, Any]]
       map.map(entry => {
         if (entry._1.isInstanceOf[String]) {
-          entry._1 -> doCast(entry._2, fieldDef, parent + "." + entry._1, tpe.typeArgs(1))
+          entry._1 -> doCast(entry._2, fieldId, parent + "." + entry._1, tpe.typeArgs(1))
         } else {
-          throw new TypeValidationException(s"${fieldDef.id} requires $parent.${entry._1} to be an string")
+          throw new TypeValidationException(s"$fieldId requires $parent.${entry._1} to be an string")
         }
       })
     } else {
-      throw new TypeValidationException(s"${fieldDef.id} requires $parent to be an object")
+      throw new TypeValidationException(s"$fieldId requires $parent to be an object")
     }
   }
 
-  protected def handleEitherCast(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type) = {
-    val isLeft = checkEither(data, fieldDef, parent, tpe.typeArgs(0))
-    val isRight = checkEither(data, fieldDef, parent, tpe.typeArgs(1))
+  protected def handleEitherCast(data: Any, fieldId: String, parent: String, tpe: Type) = {
+    val isLeft = checkEither(data, fieldId, parent, tpe.typeArgs(0))
+    val isRight = checkEither(data, fieldId, parent, tpe.typeArgs(1))
     if (isLeft) {
-      Left(doCast(data, fieldDef, parent, tpe.typeArgs(0)))
+      Left(doCast(data, fieldId, parent, tpe.typeArgs(0)))
     } else if (isRight) {
-      Right(doCast(data, fieldDef, parent, tpe.typeArgs(1)))
+      Right(doCast(data, fieldId, parent, tpe.typeArgs(1)))
     } else {
       throw new TypeValidationException(
-        s"${fieldDef.id} $parent is neither ${tpe.typeArgs(0)} nor ${tpe.typeArgs(1)}"
+        s"$fieldId $parent is neither ${tpe.typeArgs(0)} nor ${tpe.typeArgs(1)}"
       )
     }
   }
 
-  protected def checkEither(data: Any, fieldDef: CopybeanFieldDef, parent: String, tpe: Type): Boolean = {
+  protected def checkEither(data: Any, fieldId: String, parent: String, tpe: Type): Boolean = {
     tpe.typeConstructor.toString match {
       case "String" => {
         if (data.isInstanceOf[String]) {
@@ -116,7 +116,7 @@ class UntypedCaster {
       }
       case other =>
         throw new TypeValidationException(
-          s"${fieldDef.id} attribute $parent has an unknown Either type '$other'"
+          s"$fieldId attribute $parent has an unknown Either type '$other'"
         )
     }
   }

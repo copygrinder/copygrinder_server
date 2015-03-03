@@ -13,9 +13,11 @@
  */
 package org.copygrinder.pure.copybean.model
 
+import org.copygrinder.pure.copybean.persistence.UntypedCaster2
+
 import scala.collection.immutable.ListMap
 
-case class CopybeanFieldDef(
+case class CopybeanFieldDef private(
  id: String,
  displayName: String,
  `type`: FieldType.FieldType,
@@ -23,10 +25,65 @@ case class CopybeanFieldDef(
  validators: Option[Seq[CopybeanFieldValidatorDef]] = None
  )
 
+object CopybeanFieldDef {
+
+  import FieldType._
+
+  def cast(
+   id: String,
+   displayName: String,
+   `type`: FieldType.FieldType,
+   attributes: Option[ListMap[String, Any]] = None,
+   validators: Option[Seq[CopybeanFieldValidatorDef]] = None
+   ): CopybeanFieldDef = {
+    `type` match {
+      case Reference => new CopybeanFieldDef(id, displayName, `type`, attributes, validators) with ReferenceType
+      case List => new CopybeanFieldDef(id, displayName, `type`, attributes, validators) with ListType
+      case _ => new CopybeanFieldDef(id, displayName, `type`, attributes, validators)
+    }
+  }
+}
+
 object FieldType extends Enumeration {
 
   type FieldType = Value
 
   val String, Integer, Long, Reference, File, Image, List, Html = Value
+
+}
+
+trait FieldTypeSupport {
+  val id: String
+
+  val attributes: Option[ListMap[String, Any]]
+
+  protected val caster = new UntypedCaster2()
+}
+
+trait ReferenceType extends FieldTypeSupport {
+
+  case class Ref(validationTypes: Set[String], displayType: String)
+
+  val refs = {
+    caster.optToMapThen(attributes, s"Field $id", "attributes") {
+      caster.mapGetToSeqThen(_, "refs", _, _) {
+        caster.seqToMapThen(_, _, _) { (map, fieldId, targetId) =>
+          val validationTypes = caster.mapGetToSeqThen(map, "refValidationTypes", fieldId, targetId)(
+            caster.seqToSeqString)
+          val displayType = caster.mapGetToString(map, "refDisplayType", fieldId, targetId)
+          new Ref(validationTypes.toSet, displayType)
+        }
+      }
+    }
+  }
+}
+
+trait ListType extends FieldTypeSupport {
+
+  val listType = {
+    caster.optToMapThen(attributes, s"Field $id", "attributes") { (map, fieldId, targetId) =>
+      caster.mapGetToString(map, "listType", fieldId, targetId)
+    }
+  }
 
 }

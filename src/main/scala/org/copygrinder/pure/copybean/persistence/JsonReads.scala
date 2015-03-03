@@ -14,6 +14,7 @@
 package org.copygrinder.pure.copybean.persistence
 
 import com.typesafe.scalalogging.LazyLogging
+import org.copygrinder.pure.copybean.model.FieldType.FieldType
 import org.copygrinder.pure.copybean.model._
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
@@ -114,7 +115,13 @@ trait JsonReads extends JsonReadUtils with LazyLogging {
 
   implicit val anonymousCopybeanValidatorDefReads = Json.reads[CopybeanFieldValidatorDef]
 
-  implicit val copybeanFieldDefReads = Json.reads[CopybeanFieldDef]
+  implicit val copybeanFieldDefReads = (
+   (JsPath \ "id").read[String] and
+    (JsPath \ "displayName").read[String] and
+    (JsPath \ "type").read[FieldType] and
+    (JsPath \ "attributes").readNullable[ListMap[String, Any]] and
+    (JsPath \ "validators").readNullable[Seq[CopybeanFieldValidatorDef]]
+   )(CopybeanFieldDef.cast _)
 
   implicit val cardinalityReads = enumReads(Cardinality)
 
