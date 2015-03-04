@@ -70,7 +70,7 @@ object CopygrinderBuild extends Build {
    ).settings(
      net.virtualvoid.sbt.graph.Plugin.graphSettings: _*
    ).settings(
-     addCommandAlias("check", ";scalastyle;coverage;test;it:test"): _*
+     addCommandAlias("check", ";scalastyle;coverage;test;it:test;reload"): _*
    ).settings(
      addCommandAlias("buildAdminNpm", """;eval Process("npm install", new java.io.File("admin-src")) ! """): _*
    ).settings(

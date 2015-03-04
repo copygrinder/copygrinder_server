@@ -15,6 +15,8 @@ package org.copygrinder.impure.system
 
 object Boot extends App {
 
+  println("Starting Copygrinder") //scalastyle:ignore
+
   new DefaultWiring().serverModule.serverInit.init
 
 }
