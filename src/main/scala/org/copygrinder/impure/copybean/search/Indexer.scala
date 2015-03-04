@@ -30,9 +30,9 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   protected lazy val analyzer = new KeywordAnalyzer()
 
-  protected lazy val indexDirectory = FSDirectory.open(indexDir)
+  protected lazy val indexDirectory = FSDirectory.open(indexDir.toPath)
 
-  protected lazy val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_4_10_3, analyzer)
+  protected lazy val indexWriterConfig = new IndexWriterConfig(analyzer)
 
   protected lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
