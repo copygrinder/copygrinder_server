@@ -64,6 +64,9 @@ class CopybeanTypeEnforcer() {
       case long: Long =>
         checkLong(fieldId, value, fType)
         None
+      case dec: BigDecimal =>
+        checkLong(fieldId, value, fType)
+        None
       case map: Map[_, _] =>
         checkMap(fieldId, value, fType, fieldDef)
         None
@@ -85,7 +88,7 @@ class CopybeanTypeEnforcer() {
   }
 
   protected def checkInt(fieldId: String, value: Any, fType: FieldType): Unit = {
-    if (fType != FieldType.Integer) {
+    if (fType != FieldType.Integer && fType != FieldType.Long) {
       throw new TypeValidationException(s"$fieldId with value '$value' was an Integer but should have been a $fType")
     }
   }

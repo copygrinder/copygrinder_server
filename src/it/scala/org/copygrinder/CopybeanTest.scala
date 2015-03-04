@@ -368,15 +368,15 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
     val json =
       s"""
-         |{
-         |"enforcedTypeIds": [
-         |"testtype1"
-         |],
-         |"content": {
-         |"testfield1":"1",
-         |"testfield3":"!REF!:$id"
-                                   |}
-                                   |}""".stripMargin
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "content": {
+        |    "testfield1":"1",
+        |    "testfield3":"!REF!:$id"
+        |  }
+        |}""".stripMargin
 
     val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -404,18 +404,18 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
     val json =
       s"""
-         |{
-         |"enforcedTypeIds": [
-         |"testtype1"
-         |],
-         |"content": {
-         |"testfield1": "abc",
-         |"testfield4": {
-         | "filename": "developer.md",
-         | "hash": "$hash"
-                           |}
-                           |}
-                           |}""".stripMargin
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "content": {
+        |    "testfield1": "abc",
+        |    "testfield4": {
+        |      "filename": "developer.md",
+        |      "hash": "$hash"
+        |    }
+        |  }
+        |}""".stripMargin
 
     val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -460,18 +460,18 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
     val json =
       s"""
-         |{
-         |"enforcedTypeIds": [
-         |"testtype1"
-         |],
-         |"content": {
-         |"testfield1": "abc",
-         |"testfield5": {
-         | "filename": "test.jpg",
-         | "hash": "$hash"
-                           |}
-                           |}
-                           |}""".stripMargin
+        |{
+        |  "enforcedTypeIds": [
+        |    "testtype1"
+        |  ],
+        |  "content": {
+        |    "testfield1": "abc",
+        |    "testfield5": {
+        |      "filename": "test.jpg",
+        |      "hash": "$hash"
+        |    }
+        |  }
+        |}""".stripMargin
 
     val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -518,6 +518,13 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |        "listType": "Integer"
         |      }
         |    },{
+        |      "id": "longlist",
+        |      "type": "List",
+        |      "displayName": "Long List field",
+        |      "attributes": {
+        |        "listType": "Long"
+        |      }
+        |    },{
         |      "id": "reflist",
         |      "type": "List",
         |      "displayName": "Reference List field",
@@ -526,6 +533,20 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |        "refs": [
         |          {"refValidationTypes": ["testtype2"], "refDisplayType": "testtype2"}
         |        ]
+        |      }
+        |    },{
+        |      "id": "filelist",
+        |      "type": "List",
+        |      "displayName": "File List field",
+        |      "attributes": {
+        |        "listType": "File"
+        |      }
+        |    },{
+        |      "id": "htmllist",
+        |      "type": "List",
+        |      "displayName": "Html List field",
+        |      "attributes": {
+        |        "listType": "Html"
         |      }
         |    }
         |  ],
@@ -551,7 +572,16 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |  "content": {
         |    "stringlist": ["Lorem Ipsum", "123"],
         |    "intlist": [456, 789],
-        |    "reflist": ["!REF!:$id"]
+        |    "longlist": [456, ${Long.MaxValue}],
+        |    "reflist": ["!REF!:$id"],
+        |    "filelist": [{
+        |      "filename": "test2.jpg",
+        |      "hash": "abc"
+        |    },{
+        |      "filename": "test3.jpg",
+        |      "hash": "abc"
+        |    }],
+        |    "htmllist": ["<b>hello</b>", "world"]
         |  }
         |}""".stripMargin
 

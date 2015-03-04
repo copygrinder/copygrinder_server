@@ -38,6 +38,7 @@ class DocumentBuilder {
     doc
   }
 
+  // scalastyle:off cyclomatic.complexity
   protected def addFieldsToDoc(doc: Document, field: Any, prefix: String): Unit = {
 
     field match {
@@ -49,6 +50,8 @@ class DocumentBuilder {
         doc.add(new IntField(prefix, i, Field.Store.NO))
       case long: Long =>
         doc.add(new LongField(prefix, long, Field.Store.NO))
+      case dec: BigDecimal =>
+        doc.add(new LongField(prefix, dec.toLongExact, Field.Store.NO))
       case bool: Boolean =>
         doc.add(new StringField(prefix, bool.toString, Field.Store.NO))
       case array: Seq[_] =>
@@ -63,7 +66,7 @@ class DocumentBuilder {
       case u: JsUndefined =>
     }
 
-  }
+  } // scalastyle:on cyclomatic.complexity
 
   def buildDocument(copybeanType: CopybeanType): Document = {
     val doc = new Document
