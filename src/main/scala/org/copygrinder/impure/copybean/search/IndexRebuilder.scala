@@ -34,12 +34,10 @@ class IndexRebuilder(
   rebuildIfNeeded()
 
   def rebuildIfNeeded(): Unit = {
-    if (indexDir.exists()) {
-      if (!indexer.upgrade()) {
-        rebuild()
-      } else {
-        indexer.init()
-      }
+    if (indexDir.exists() && indexer.upgrade()) {
+      indexer.init()
+    } else {
+      rebuild()
     }
   }
 
@@ -68,7 +66,7 @@ class IndexRebuilder(
 
   protected def addTypes(): Unit = {
     if (typesDir.exists()) {
-      val typeFiles = FileUtils.listFiles(typesDir, Array(".json"), true)
+      val typeFiles = FileUtils.listFiles(typesDir, Array("json"), true)
       typeFiles.foreach(typeFile => {
         val json = FileUtils.readFileToByteArray(typeFile)
         val cbType = implicitly[Reads[CopybeanType]].reads(Json.parse(json)).get
@@ -79,7 +77,7 @@ class IndexRebuilder(
 
   protected def addBeans(): Unit = {
     if (beanDir.exists()) {
-      val beanFiles = FileUtils.listFiles(beanDir, Array(".json"), true)
+      val beanFiles = FileUtils.listFiles(beanDir, Array("json"), true)
       beanFiles.foreach(beanFile => {
         val json = FileUtils.readFileToByteArray(beanFile)
         val bean = implicitly[Reads[CopybeanImpl]].reads(Json.parse(json)).get
