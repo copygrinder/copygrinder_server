@@ -34,10 +34,12 @@ class IndexRebuilder(
   rebuildIfNeeded()
 
   def rebuildIfNeeded(): Unit = {
-    if (indexDir.exists() && indexer.upgrade()) {
-      indexer.init()
-    } else {
-      rebuild()
+    if (beanDir.exists() || typesDir.exists()) {
+      if (indexDir.exists() && indexer.upgrade()) {
+        indexer.init()
+      } else {
+        rebuild()
+      }
     }
   }
 

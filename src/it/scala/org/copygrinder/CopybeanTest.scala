@@ -258,6 +258,18 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
     Await.result(responseFuture, 1 second)
   }
 
+  it should "search for predefined types" in {
+
+    val req = copybeanTypeIdUrl("classBackedFieldValidator").GET
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+      assert(response.getResponseBody.contains("classBackedFieldValidator"))
+    }
+
+    Await.result(responseFuture, 1 second)
+  }
+
   def getId() = {
     val req = copybeansUrl.GET
 

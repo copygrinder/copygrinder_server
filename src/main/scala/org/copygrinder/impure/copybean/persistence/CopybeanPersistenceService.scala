@@ -225,6 +225,9 @@ class CopybeanPersistenceService(
   }
 
   def createSilo()(implicit siloScope: SiloScope): Unit = {
+    if (siloScope.indexDir.exists) {
+      throw new SiloAlreadyInitialized(siloScope.siloId)
+    }
     siloScope.indexRebuilder.rebuild()
   }
 
