@@ -225,10 +225,7 @@ class CopybeanPersistenceService(
   }
 
   def createSilo()(implicit siloScope: SiloScope): Unit = {
-    val beans = predefinedCopybeans.predefinedBeans.map(_._2)
-    beans.foreach { bean =>
-      siloScope.indexer.addCopybean(bean)
-    }
+    siloScope.indexRebuilder.rebuild()
   }
 
 

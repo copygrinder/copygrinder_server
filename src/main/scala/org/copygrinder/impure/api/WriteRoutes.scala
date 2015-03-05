@@ -65,7 +65,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
             complete(BadRequest, e.getMessage)
           case e: JsonParseException =>
             complete(BadRequest, e.getMessage)
-          case e: IOException =>
+          case e =>
             requestUri { uri =>
               logger.error(s"Error occurred while processing request to $uri", e)
               complete(InternalServerError, "Error occurred")

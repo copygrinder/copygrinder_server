@@ -18,11 +18,9 @@ import java.io.File
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.index._
-import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
-import org.apache.lucene.util.Version
-import org.copygrinder.pure.copybean.model.{FileMetadata, Copybean, CopybeanType}
+import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
 import org.copygrinder.pure.copybean.search.{DocTypes, DocumentBuilder, QueryBuilder}
 
 class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: QueryBuilder, defaultMaxResults: Int)
@@ -46,9 +44,24 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
     trackingIndexWriter, searcherManager, indexRefreshTime, 0
   )
 
+  protected lazy val indexUpgrader = new IndexUpgrader(indexDirectory)
+
   protected var reopenToken = 0L
 
-  indexRefresher.start()
+  def upgrade(): Boolean = {
+    try {
+      indexUpgrader.upgrade()
+      true
+    } catch {
+      case e@(_: IllegalArgumentException | _: IndexNotFoundException) => {
+        false
+      }
+    }
+  }
+
+  def init(): Unit = {
+    indexRefresher.start()
+  }
 
   protected def close() = {
     indexRefresher.interrupt()

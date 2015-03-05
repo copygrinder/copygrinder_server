@@ -109,12 +109,8 @@ class TypePersistenceService(
   }
 
   def createSilo()(implicit siloScope: SiloScope): Unit = {
-    if (siloScope.root.exists) {
+    if (siloScope.indexDir.exists) {
       throw new SiloAlreadyInitialized(siloScope.siloId)
-    }
-    val types = predefinedCopybeanTypes.predefinedTypes.map(_._2)
-    types.foreach { beanType =>
-      siloScope.indexer.addCopybeanType(beanType)
     }
   }
 
