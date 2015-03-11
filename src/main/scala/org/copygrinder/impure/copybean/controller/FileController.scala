@@ -33,9 +33,8 @@ class FileController(
   def getFile(id: String, field: String)(implicit siloScope: SiloScope, ec: ExecutionContext): (String, Array[Byte], String, String) = {
     val beanFuture = copybeanPersistenceService.cachedFetchCopybean(id)
     val bean = Await.result(beanFuture, 5 seconds)
-    val value = bean.content.getOrElse(field,
-      throw new JsonInputException("Field $field was not found in bean $id")
-    )
+
+    val value = getValue(field, bean)
 
     val fileData = value.asInstanceOf[Map[String, String]]
     val hash = fileData.get("hash").get
@@ -55,15 +54,35 @@ class FileController(
         }))
       })
     })
-    val typeField = Await.result(Future.sequence(typeFutures), 5 seconds).flatten.head
+    val futures = Future.sequence(typeFutures)
+    val typeField = Await.result(futures, 5 seconds)
 
-    val disposition = if (typeField.`type` == FieldType.Image) {
+    println("VALUE: " + typeField)
+
+    val disposition = if (typeField.head.get.`type` == FieldType.Image) {
       "inline"
     } else {
       "attachment"
     }
 
     (filename, array, contentType, disposition)
+  }
+
+  protected def getValue(field: String, bean: ReifiedCopybean): Any = {
+    val result: Option[Any] = if (field.endsWith(")")) {
+      val fieldId = field.takeWhile(_ != '(')
+      val index = field.dropWhile(_ != '(').drop(1).takeWhile(_ != ')').toInt
+      bean.content.get(fieldId).map(uncastSeq => {
+        val seq = uncastSeq.asInstanceOf[Seq[Any]]
+        seq(index)
+      })
+    } else {
+      bean.content.get(field)
+    }
+
+    result.getOrElse(
+       throw new JsonInputException("Field $field was not found in bean $id")
+     )
   }
 
   def storeFile(data: MultipartContent)(implicit siloScope: SiloScope): JsValue = {

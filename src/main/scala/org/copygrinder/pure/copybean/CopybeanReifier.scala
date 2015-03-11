@@ -14,10 +14,13 @@
 package org.copygrinder.pure.copybean
 
 import org.copygrinder.pure.copybean.model._
+import org.copygrinder.pure.copybean.persistence.UntypedCaster2
 
 import scala.collection.immutable.ListMap
 
 class CopybeanReifier {
+
+  protected val caster = new UntypedCaster2()
 
   def reify(copybean: CopybeanImpl, types: Set[CopybeanType]): ReifiedCopybean = {
 
@@ -31,7 +34,7 @@ class CopybeanReifier {
       }
     }).flatten.toMap
 
-    new ReifiedCopybeanImpl(copybean.enforcedTypeIds, decoratedCopybean.content, copybean.id, names)
+    new ReifiedCopybeanImpl(copybean.enforcedTypeIds, decoratedCopybean.content, copybean.id, names, types)
   }
 
   protected def resolveName(format: String, copybean: CopybeanImpl, cbType: CopybeanType): String = {
@@ -60,10 +63,28 @@ class CopybeanReifier {
 
   protected def addFileUrls(copybean: CopybeanImpl, types: Set[CopybeanType]) = {
 
-    val fields: Set[CopybeanFieldDef] = findImageAndFileFields(types)
+    val imageAndFilefields: Set[CopybeanFieldDef] = findImageAndFileFields(types)
 
-    modifyContent(copybean, fields) { (fieldData, field) =>
-      fieldData + ("url" -> s"copybeans/${copybean.id}/${field.id}")
+    def addUrl(fieldData: Any, copybean: CopybeanImpl, fieldId: String) = {
+      val fieldMap = caster.anyToMapThen(fieldData, s"bean ${copybean.id}", s"Field $fieldId") {
+        caster.mapToMapStringString
+      }
+      fieldMap + ("url" -> s"copybeans/${copybean.id}/$fieldId")
+    }
+
+    val decoratedCopybean = modifyContent(copybean, imageAndFilefields) { (fieldData, field) =>
+      addUrl(fieldData, copybean, field.id)
+    }
+
+    val listFields = findListFieldsWithFileOrImage(types)
+
+    modifyContent(decoratedCopybean, listFields) { (fieldData, field) =>
+      caster.anyToSeqThen(fieldData, s"bean ${copybean.id}", s"Field ${field.id}") { (seq, _, _) =>
+        seq.zipWithIndex.map(valueAndIndex => {
+          val (value, index) = valueAndIndex
+          addUrl(value, copybean, s"${field.id}($index)")
+        })
+      }
     }
   }
 
@@ -76,13 +97,27 @@ class CopybeanReifier {
     fields
   }
 
+  protected def findListFieldsWithFileOrImage(types: Set[CopybeanType]): Set[CopybeanFieldDef] = {
+    val typesWithFields = types.filter(_.fields.isDefined)
+
+    val fields = typesWithFields.flatMap(_.fields.get.filter(field =>
+      field.`type` == FieldType.List
+    )).filter(field => {
+      field match {
+        case l: ListType => l.listType == "File" || l.listType == "Image"
+        case other => false
+      }
+    })
+    fields
+  }
+
   protected def modifyContent[T <: AnonymousCopybean](copybean: T, fields: Set[CopybeanFieldDef])
-   (func: (ListMap[String, String], CopybeanFieldDef) => ListMap[String, String]): T = {
+   (func: (Any, CopybeanFieldDef) => Any): T = {
     val newContent = fields.foldLeft(copybean.content) { (result, field) =>
       val fieldId = field.id
       val fieldDataOpt = result.get(fieldId)
       if (fieldDataOpt.isDefined) {
-        val fieldData = fieldDataOpt.get.asInstanceOf[ListMap[String, String]]
+        val fieldData = fieldDataOpt.get
         val newFieldData = func(fieldData, field)
         result.updated(fieldId, newFieldData)
       } else {
@@ -98,7 +133,10 @@ class CopybeanReifier {
     val fields: Set[CopybeanFieldDef] = findImageAndFileFields(types)
 
     modifyContent[T](copybean, fields) { (fieldData, field) =>
-      fieldData - "url"
+      val fieldMap = caster.anyToMapThen(fieldData, s"bean ${copybean.toString}", s"Field ${field.id}") {
+        caster.mapToMapStringString
+      }
+      fieldMap - "url"
     }
 
   }

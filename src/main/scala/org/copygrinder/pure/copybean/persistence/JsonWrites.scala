@@ -116,8 +116,7 @@ trait JsonWrites extends DefaultWrites {
           w.writes(c)
         }
         case rc: ReifiedCopybeanImpl => {
-          val w = Json.writes[ReifiedCopybeanImpl]
-          w.writes(rc)
+          reifiedCopybeanWrites.writes(rc)
         }
         case unknown => throw new RuntimeException("Unhandled copybean type: " + unknown)
       }

@@ -31,7 +31,7 @@ class PredefinedCopybeanTypes {
     id = "copygrinderAdminMetatype",
     displayName = "Copygrinder Admin Metabean",
     fields = Seq(
-      CopybeanFieldDef.cast("siloName", "Silo Name", FieldType.String, validators = Seq(
+      CopybeanFieldDef.cast("siloName", FieldType.String, "Silo Name", validators = Seq(
         new CopybeanFieldValidatorDef("required")
       ))
     )
@@ -43,7 +43,7 @@ class PredefinedCopybeanTypes {
     displayName = "Class Backed Field Validator Type",
     instanceNameFormat = "$displayName$",
     fields = Seq(
-      CopybeanFieldDef.cast("class", "Class", FieldType.String, validators = Seq(
+      CopybeanFieldDef.cast("class", FieldType.String, "Class", validators = Seq(
         new CopybeanFieldValidatorDef("required")
       ))
     )
@@ -54,14 +54,14 @@ class PredefinedCopybeanTypes {
     displayName = "File Metadata Type",
     instanceNameFormat = "$displayName$",
     fields = Seq(
-      CopybeanFieldDef.cast("filenames", "File Names", FieldType.List, ListMap("listType" -> "String"),
+      CopybeanFieldDef.cast("filenames", FieldType.List, "File Names", ListMap("listType" -> "String"),
         validators = Seq(
           new CopybeanFieldValidatorDef("required")
         )),
-      CopybeanFieldDef.cast("hash", "Hash", FieldType.String, validators = Seq(
+      CopybeanFieldDef.cast("hash", FieldType.String, "Hash", validators = Seq(
         new CopybeanFieldValidatorDef("required")
       )),
-      CopybeanFieldDef.cast("sizeInBytes", "Size in Bytes", FieldType.Long, validators = Seq(
+      CopybeanFieldDef.cast("sizeInBytes", FieldType.Long, "Size in Bytes", validators = Seq(
         new CopybeanFieldValidatorDef("required")
       ))
     )

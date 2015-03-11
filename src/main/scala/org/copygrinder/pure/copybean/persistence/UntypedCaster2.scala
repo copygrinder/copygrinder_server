@@ -104,4 +104,45 @@ class UntypedCaster2 {
     }
   }
 
+  def anyToMap(data: Any, parentId: String, targetId: String): Map[Any, Any] = {
+    if (data.isInstanceOf[Map[_, _]]) {
+      data.asInstanceOf[Map[Any, Any]]
+    } else {
+      throw new TypeValidationException(s"$parentId requires $targetId to be a Map")
+    }
+  }
+
+  def anyToMapThen[T](data: Any, parentId: String, targetId: String)
+   (func: (Map[Any, Any], String, String) => T): T = {
+    val map = anyToMap(data, parentId, targetId)
+    func(map, parentId, targetId)
+  }
+
+  def mapToMapStringString(data: Map[Any, Any], parentId: String, targetId: String): Map[String, String] = {
+    data.foreach(entry => {
+      if (entry._1.isInstanceOf[String]) {
+        if (!entry._2.isInstanceOf[String]) {
+          throw new TypeValidationException(s"$parentId requires the data of $targetId to be a String, not ${entry._2}")
+        }
+      } else {
+        throw new TypeValidationException(s"$parentId requires the keys of $targetId to be a String, not ${entry._1}")
+      }
+    })
+    data.asInstanceOf[Map[String, String]]
+  }
+
+  def anyToSeq(data: Any, parentId: String, targetId: String): Seq[Any] = {
+    if (data.isInstanceOf[Seq[_]]) {
+      data.asInstanceOf[Seq[Any]]
+    } else {
+      throw new TypeValidationException(s"$parentId requires $targetId to be a Seq")
+    }
+  }
+
+  def anyToSeqThen[T](data: Any, parentId: String, targetId: String)
+   (func: (Seq[Any], String, String) => T): T = {
+    val seq = anyToSeq(data, parentId, targetId)
+    func(seq, parentId, targetId)
+  }
+
 }

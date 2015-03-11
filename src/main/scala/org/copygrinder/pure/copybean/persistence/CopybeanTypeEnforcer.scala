@@ -132,7 +132,7 @@ class CopybeanTypeEnforcer() {
       val (value, index) = values
       val id = s"${fieldDef.id}[$index]"
       val nestedDef = CopybeanFieldDef.cast(
-        id, fieldDef.displayName, FieldType.withName(listType), fieldDef.attributes, fieldDef.validators
+        id, FieldType.withName(listType), fieldDef.displayName, fieldDef.attributes, fieldDef.validators
       )
       checkField(value, nestedDef)
     }).flatten.toMap

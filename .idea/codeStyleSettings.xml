@@ -7,6 +7,16 @@
         <XML>
           <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
         </XML>
+        <editorconfig>
+          <option name="ENABLED" value="false" />
+        </editorconfig>
+        <codeStyleSettings language="JavaScript">
+          <indentOptions>
+            <option name="INDENT_SIZE" value="2" />
+            <option name="CONTINUATION_INDENT_SIZE" value="2" />
+            <option name="TAB_SIZE" value="2" />
+          </indentOptions>
+        </codeStyleSettings>
         <codeStyleSettings language="Scala">
           <option name="ALIGN_MULTILINE_PARAMETERS" value="false" />
           <indentOptions>

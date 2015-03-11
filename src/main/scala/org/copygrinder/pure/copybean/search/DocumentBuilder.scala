@@ -51,7 +51,7 @@ class DocumentBuilder {
       case long: Long =>
         doc.add(new LongField(prefix, long, Field.Store.NO))
       case dec: BigDecimal =>
-        doc.add(new LongField(prefix, dec.toLongExact, Field.Store.NO))
+        doc.add(new LongField(prefix, dec.toLong, Field.Store.NO))
       case bool: Boolean =>
         doc.add(new StringField(prefix, bool.toString, Field.Store.NO))
       case array: Seq[_] =>

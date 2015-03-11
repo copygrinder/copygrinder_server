@@ -19,8 +19,8 @@ import scala.collection.immutable.ListMap
 
 case class CopybeanFieldDef private(
  id: String,
- displayName: String,
  `type`: FieldType.FieldType,
+ displayName: Option[String] = None,
  attributes: Option[ListMap[String, Any]] = None,
  validators: Option[Seq[CopybeanFieldValidatorDef]] = None
  )
@@ -31,15 +31,15 @@ object CopybeanFieldDef {
 
   def cast(
    id: String,
-   displayName: String,
    `type`: FieldType.FieldType,
+   displayName: Option[String] = None,
    attributes: Option[ListMap[String, Any]] = None,
    validators: Option[Seq[CopybeanFieldValidatorDef]] = None
    ): CopybeanFieldDef = {
     `type` match {
-      case Reference => new CopybeanFieldDef(id, displayName, `type`, attributes, validators) with ReferenceType
-      case List => new CopybeanFieldDef(id, displayName, `type`, attributes, validators) with ListType
-      case _ => new CopybeanFieldDef(id, displayName, `type`, attributes, validators)
+      case Reference => new CopybeanFieldDef(id, `type`, displayName, attributes, validators) with ReferenceType
+      case List => new CopybeanFieldDef(id, `type`, displayName, attributes, validators) with ListType
+      case _ => new CopybeanFieldDef(id, `type`, displayName, attributes, validators)
     }
   }
 }
@@ -48,7 +48,7 @@ object FieldType extends Enumeration {
 
   type FieldType = Value
 
-  val String, Integer, Long, Reference, File, Image, List, Html = Value
+  val String, Integer, Long, Reference, File, Image, List, Html, Unknown = Value
 
 }
 

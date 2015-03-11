@@ -40,6 +40,7 @@ class Indexer(indexDir: File, documentBuilder: DocumentBuilder, queryBuilder: Qu
 
   protected val indexRefreshTime = 60
 
+  //TODO: This keeps a thread running per silo scope.  We should probably just manually refresh the index on change.
   protected lazy val indexRefresher = new ControlledRealTimeReopenThread[IndexSearcher](
     trackingIndexWriter, searcherManager, indexRefreshTime, 0
   )

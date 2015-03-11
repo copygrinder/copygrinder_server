@@ -117,8 +117,8 @@ trait JsonReads extends JsonReadUtils with LazyLogging {
 
   implicit val copybeanFieldDefReads = (
    (JsPath \ "id").read[String] and
-    (JsPath \ "displayName").read[String] and
     (JsPath \ "type").read[FieldType] and
+    (JsPath \ "displayName").readNullable[String] and
     (JsPath \ "attributes").readNullable[ListMap[String, Any]] and
     (JsPath \ "validators").readNullable[Seq[CopybeanFieldValidatorDef]]
    )(CopybeanFieldDef.cast _)
