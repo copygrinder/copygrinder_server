@@ -49,7 +49,13 @@ object ReifiedField {
   }
 
   trait StringReifiedField extends ReifiedFieldSupport {
-    lazy val castVal = caster.anyToString(value, parent, target)
+    lazy val castVal = {
+      if (value == null) { //scalastyle:ignore
+        ""
+      } else {
+        caster.anyToString(value, parent, target)
+      }
+    }
   }
 
   trait IntReifiedField extends ReifiedFieldSupport {
@@ -62,14 +68,7 @@ object ReifiedField {
 
   trait ReferenceReifiedField extends ReifiedFieldSupport {
     lazy val castVal = {
-      val string = caster.anyToString(value, parent, target)
-      if (string.startsWith("!REF!:")) {
-        string.replace("!REF!:", "")
-      } else {
-        throw new TypeValidationException(
-          s"${fieldDef.id} must be an Reference but didn't start with !REF!: $string"
-        )
-      }
+      caster.anyToMapThen(value, parent, target)(caster.mapGetToString(_, "ref", _, _))
     }
   }
 

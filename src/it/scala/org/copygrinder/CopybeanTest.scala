@@ -360,7 +360,7 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |  ],
         |  "content": {
         |    "testfield1":"1",
-        |    "testfield3":"!REF!:1"
+        |    "testfield3": {"ref":"1"}
         |  }
         |}""".stripMargin
 
@@ -386,7 +386,7 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |  ],
         |  "content": {
         |    "testfield1":"1",
-        |    "testfield3":"!REF!:$id"
+        |    "testfield3": {"ref":"$id"}
         |  }
         |}""".stripMargin
 
@@ -585,7 +585,7 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |    "stringlist": ["Lorem Ipsum", "123"],
         |    "intlist": [456, 789],
         |    "longlist": [456, ${Long.MaxValue}],
-        |    "reflist": ["!REF!:$id"],
+        |    "reflist": [{"ref":"$id"}],
         |    "filelist": [{
         |      "filename": "test2.jpg",
         |      "hash": "abc"
