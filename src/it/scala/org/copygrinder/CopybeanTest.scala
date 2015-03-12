@@ -39,7 +39,7 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
   val copybeansUrl = baseUrl / "copybeans"
 
-  val copybeansTypesUrl = copybeansUrl / "types"
+  val copybeansTypesUrl = baseUrl / "types"
 
   def copybeanIdUrl(id: String) = copybeansUrl / id
 

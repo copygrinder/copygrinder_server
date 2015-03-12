@@ -73,15 +73,16 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
 
   protected val copybeansIdPath = copybeansPathPartial & pathPrefix(Segment) & pathEndOrSingleSlash
 
-  protected val copybeansTypesPathPartial = copybeansPathPartial & pathPrefix("types")
+  protected val copybeansTypesPathPartial = siloPathPartial & pathPrefix("types")
 
-  protected val copybeansTypesPath = copybeansPathPartial & pathPrefix("types") & pathEndOrSingleSlash
+  protected val copybeansTypesPath = copybeansTypesPathPartial & pathEndOrSingleSlash
 
   protected val copybeansTypeIdPath = copybeansTypesPathPartial & pathPrefix(Segment) & pathEndOrSingleSlash
 
   protected val filePath = siloPathPartial & pathPrefix("files") & pathEndOrSingleSlash
 
-  protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & pathPrefix(Segment) & pathEndOrSingleSlash
+  protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & pathPrefix(Segment) &
+   pathEndOrSingleSlash
 
   protected val passwordPath = siloPathPartial & pathPrefix("password") & pathEndOrSingleSlash
 
@@ -163,7 +164,7 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
   protected def hostRoute(route: Route) = {
     hostName {
       host =>
-        if (host != "localhost" /*&& host != "127.0.0.1"*/ ) {
+        if (host != "localhost" && host != "127.0.0.1" ) {
           route.compose(requestContext => {
             val newUri = Uri("/" + host + requestContext.unmatchedPath.toString).path
             requestContext.copy(unmatchedPath = newUri)

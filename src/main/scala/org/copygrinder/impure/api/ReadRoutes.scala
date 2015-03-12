@@ -74,10 +74,16 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
       }
     }
 
-  protected val rootRoute = pathEndOrSingleSlash {
+  protected val rootRoute = siloPath { silo =>
     get {
       complete {
         "Copygrinder is running.  Check out the apis under /copybeans"
+      }
+    }
+  } ~ pathEndOrSingleSlash {
+    get {
+      complete {
+        "Copygrinder is running.  Check out the apis under /YOUR_SILO_NAME/copybeans"
       }
     }
   }
@@ -163,6 +169,6 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
 
   protected val readInnerRoutes: Route = copybeanReadRoute ~ adminReadRoute
 
-  val copygrinderReadRoutes: Route = hostRoute(readInnerRoutes) ~ rootRoute ~ readInnerRoutes
+  val copygrinderReadRoutes: Route = rootRoute ~ readInnerRoutes ~ hostRoute(readInnerRoutes)
 
 }
