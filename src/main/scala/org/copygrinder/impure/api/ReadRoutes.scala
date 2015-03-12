@@ -169,6 +169,6 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
 
   protected val readInnerRoutes: Route = copybeanReadRoute ~ adminReadRoute
 
-  val copygrinderReadRoutes: Route = rootRoute ~ readInnerRoutes ~ hostRoute(readInnerRoutes)
+  val copygrinderReadRoutes: Route = hostRoute(readInnerRoutes) ~ rootRoute ~ readInnerRoutes
 
 }
