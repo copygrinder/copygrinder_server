@@ -61,7 +61,7 @@ case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[St
       } else {
         fieldDefs.head
       }
-      result + (id -> ReifiedField.cast(fieldDef, value))
+      result + (id -> ReifiedField.cast(fieldDef, value, s"bean $id"))
     })
   }
 
@@ -73,12 +73,3 @@ case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[St
     copy(enforcedTypeIds = enforcedTypeIds, content = content, id = id)
   }
 }
-
-case class ReifiedField private(fieldDef: CopybeanFieldDef, value: Any)
-
-object ReifiedField {
-  def cast(fieldDef: CopybeanFieldDef, value: Any) = {
-    new ReifiedField(fieldDef, value)
-  }
-}
-

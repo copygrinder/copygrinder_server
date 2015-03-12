@@ -14,110 +14,168 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.TypeValidationException
-import org.copygrinder.pure.copybean.model.CopybeanFieldDef
 
-import scala.reflect.runtime.universe._
 
 class UntypedCaster {
 
-  def castData[T](data: Any, field: String, fieldDef: CopybeanFieldDef)(implicit typeTag: TypeTag[T]): T = {
-    val castData = doCast(data, fieldDef.id, field, typeTag.tpe)
-    castData.asInstanceOf[T]
-  }
-
-  def castAttr[T](fieldDef: CopybeanFieldDef, attr: String)(implicit typeTag: TypeTag[T]): T = {
-
-    val attrs = fieldDef.attributes.getOrElse(
-      throw new TypeValidationException(s"${fieldDef.id} requires attribute $attr")
-    )
-
-    val data = attrs.getOrElse(attr,
-      throw new TypeValidationException(s"${fieldDef.id} requires attribute $attr")
-    )
-
-    castData(data, attr, fieldDef)(typeTag)
-  }
-
-  protected def doCast(data: Any, fieldId: String, parent: String, tpe: Type): Any = {
-
-    tpe.typeConstructor.toString match {
-      case s if s.endsWith("Seq") => {
-        handleSeqCast(data, fieldId, parent, tpe)
+  def optToMap(data: Option[Any], parentId: String, targetId: String): Map[Any, Any] = {
+    if (data.isDefined) {
+      if (data.get.isInstanceOf[Map[_, _]]) {
+        data.get.asInstanceOf[Map[Any, Any]]
+      } else {
+        throw new TypeValidationException(s"$parentId requires $targetId to be a Map, not $data")
       }
-      case m if m.endsWith("Map") => {
-        handleMapCast(data, fieldId, parent, tpe)
-      }
-      case e if e.endsWith("Either") => {
-        handleEitherCast(data, fieldId, parent, tpe)
-      }
-      case "String" => data
-      case other => throw new TypeValidationException(s"$fieldId has unknown type '$other'")
-    }
-
-  }
-
-  protected def handleSeqCast(data: Any, fieldId: String, parent: String, tpe: Type) = {
-    if (data.isInstanceOf[Seq[_]]) {
-      val seq = data.asInstanceOf[Seq[Any]].zipWithIndex
-      seq.map(pair => {
-        val (innerData, index) = pair
-        val newParent = s"$parent[$index]"
-        doCast(innerData, fieldId, newParent, tpe.typeArgs.head)
-      })
     } else {
-      throw new TypeValidationException(s"$fieldId requires $parent to be an array")
+      throw new TypeValidationException(s"$parentId requires $targetId")
     }
   }
 
-  protected def handleMapCast(data: Any, fieldId: String, parent: String, tpe: Type) = {
+  def optToMapThen[T](data: Option[Any], parentId: String, targetId: String)
+   (func: (Map[Any, Any], String, String) => T): T = {
+    val map = optToMap(data, parentId, targetId)
+    func(map, parentId, targetId)
+  }
+
+  def mapGetToSeq(data: Map[Any, Any], key: Any, parentId: String, targetId: String): Seq[Any] = {
+
+    val valueOpt = data.get(key)
+    if (valueOpt.isDefined) {
+      val value = valueOpt.get
+      if (value.isInstanceOf[Seq[_]]) {
+        value.asInstanceOf[Seq[Any]]
+      } else {
+        throw new TypeValidationException(s"$parentId requires Map $targetId.$key to be a list, not $value")
+      }
+    } else {
+      throw new TypeValidationException(s"$parentId requires Map $targetId to contain key $key")
+    }
+  }
+
+  def mapGetToSeqThen[T](data: Map[Any, Any], key: Any, parentId: String, targetId: String)
+   (func: (Seq[Any], String, String) => T): T = {
+    val seq = mapGetToSeq(data, key, parentId, targetId)
+    func(seq, parentId, s"$targetId.$key")
+  }
+
+  def seqToMap(data: Seq[Any], parentId: String, targetId: String): Seq[Map[Any, Any]] = {
+
+    data.zipWithIndex.map(valueAndIndex => {
+      val (value, index) = valueAndIndex
+      if (value.isInstanceOf[Map[_, _]]) {
+        value.asInstanceOf[Map[Any, Any]]
+      } else {
+        throw new TypeValidationException(s"$parentId requires $targetId[$index] to be a map, not $value")
+      }
+    })
+  }
+
+  def seqToMapThen[T](data: Seq[Any], parentId: String, targetId: String)
+   (func: (Map[Any, Any], String, String) => T): Seq[T] = {
+    seqToMap(data, parentId, targetId).zipWithIndex.map(valueAndIndex => {
+      val (value, index) = valueAndIndex
+      func(value, parentId, s"$targetId[$index]")
+    })
+  }
+
+  def seqToSeqString(data: Seq[Any], parentId: String, targetId: String): Seq[String] = {
+
+    data.zipWithIndex.map(valueAndIndex => {
+      val (value, index) = valueAndIndex
+      if (value.isInstanceOf[String]) {
+        value.asInstanceOf[String]
+      } else {
+        throw new TypeValidationException(s"$parentId requires List $targetId[$index] to be a String, not $value")
+      }
+    })
+  }
+
+  def mapGetToString(data: Map[Any, Any], key: Any, parentId: String, targetId: String): String = {
+
+    val valueOpt = data.get(key)
+    if (valueOpt.isDefined) {
+      val value = valueOpt.get
+      if (value.isInstanceOf[String]) {
+        value.asInstanceOf[String]
+      } else {
+        throw new TypeValidationException(s"$parentId requires Map $targetId.$key to be a String, not $value")
+      }
+    } else {
+      throw new TypeValidationException(s"$parentId requires Map $targetId to contain key $key")
+    }
+  }
+
+  def anyToMap(data: Any, parentId: String, targetId: String): Map[Any, Any] = {
     if (data.isInstanceOf[Map[_, _]]) {
-      val map = data.asInstanceOf[Map[Any, Any]]
-      map.map(entry => {
-        if (entry._1.isInstanceOf[String]) {
-          entry._1 -> doCast(entry._2, fieldId, parent + "." + entry._1, tpe.typeArgs(1))
-        } else {
-          throw new TypeValidationException(s"$fieldId requires $parent.${entry._1} to be an string")
-        }
-      })
+      data.asInstanceOf[Map[Any, Any]]
     } else {
-      throw new TypeValidationException(s"$fieldId requires $parent to be an object")
+      throw new TypeValidationException(s"$parentId requires $targetId to be a Map, not $data")
     }
   }
 
-  protected def handleEitherCast(data: Any, fieldId: String, parent: String, tpe: Type) = {
-    val isLeft = checkEither(data, fieldId, parent, tpe.typeArgs(0))
-    val isRight = checkEither(data, fieldId, parent, tpe.typeArgs(1))
-    if (isLeft) {
-      Left(doCast(data, fieldId, parent, tpe.typeArgs(0)))
-    } else if (isRight) {
-      Right(doCast(data, fieldId, parent, tpe.typeArgs(1)))
+  def anyToMapThen[T](data: Any, parentId: String, targetId: String)
+   (func: (Map[Any, Any], String, String) => T): T = {
+    val map = anyToMap(data, parentId, targetId)
+    func(map, parentId, targetId)
+  }
+
+  def mapToMapStringString(data: Map[Any, Any], parentId: String, targetId: String): Map[String, String] = {
+    data.foreach(entry => {
+      if (entry._1.isInstanceOf[String]) {
+        if (!entry._2.isInstanceOf[String]) {
+          throw new TypeValidationException(s"$parentId requires the data of $targetId to be a String, not ${entry._2}")
+        }
+      } else {
+        throw new TypeValidationException(s"$parentId requires the keys of $targetId to be a String, not ${entry._1}")
+      }
+    })
+    data.asInstanceOf[Map[String, String]]
+  }
+
+  def anyToSeq(data: Any, parentId: String, targetId: String): Seq[Any] = {
+    if (data.isInstanceOf[Seq[_]]) {
+      data.asInstanceOf[Seq[Any]]
     } else {
-      throw new TypeValidationException(
-        s"$fieldId $parent is neither ${tpe.typeArgs(0)} nor ${tpe.typeArgs(1)}"
-      )
+      throw new TypeValidationException(s"$parentId requires $targetId to be a Seq, not $data")
     }
   }
 
-  protected def checkEither(data: Any, fieldId: String, parent: String, tpe: Type): Boolean = {
-    tpe.typeConstructor.toString match {
-      case "String" => {
-        if (data.isInstanceOf[String]) {
-          true
-        } else {
-          false
-        }
-      }
-      case s if s.endsWith("Seq") => {
-        if (data.isInstanceOf[Seq[_]]) {
-          true
-        } else {
-          false
-        }
-      }
-      case other =>
-        throw new TypeValidationException(
-          s"$fieldId attribute $parent has an unknown Either type '$other'"
-        )
+  def anyToSeqThen[T](data: Any, parentId: String, targetId: String)
+   (func: (Seq[Any], String, String) => T): T = {
+    val seq = anyToSeq(data, parentId, targetId)
+    func(seq, parentId, targetId)
+  }
+
+  def anyToString(data: Any, parentId: String, targetId: String): String = {
+    if (data.isInstanceOf[String]) {
+      data.asInstanceOf[String]
+    } else {
+      throw new TypeValidationException(s"$parentId requires $targetId to be a String, not $data")
+    }
+  }
+
+  def anyToStringThen[T](data: Any, parentId: String, targetId: String)
+   (func: (String, String, String) => T): T = {
+    val string = anyToString(data, parentId, targetId)
+    func(string, parentId, targetId)
+  }
+
+  def anyToInt(data: Any, parentId: String, targetId: String): Int = {
+    if (data.isInstanceOf[Int]) {
+      data.asInstanceOf[Int]
+    } else {
+      throw new TypeValidationException(s"$parentId requires $targetId to be a Int, not $data")
+    }
+  }
+
+  def anyToLong(data: Any, parentId: String, targetId: String): Long = {
+    if (data.isInstanceOf[Long]) {
+      data.asInstanceOf[Long]
+    } else if (data.isInstanceOf[Int]) {
+      data.asInstanceOf[Int].toLong
+    } else if (data.isInstanceOf[BigDecimal]) {
+      data.asInstanceOf[BigDecimal].toLong
+    } else {
+      throw new TypeValidationException(s"$parentId requires $targetId to be a Long, not $data")
     }
   }
 

@@ -98,9 +98,7 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val predefinedCopybeanTypes = new PredefinedCopybeanTypes()
 
-  lazy val typeEnforcer = new TypeEnforcer()
-
-  lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes, typeEnforcer)
+  lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes)
 
   lazy val predefinedCopybeans = new PredefinedCopybeans()
 

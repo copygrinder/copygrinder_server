@@ -63,7 +63,8 @@ class CopybeanPersistenceService(
     types
   }
 
-  def cachedFetchCopybean(id: String)(implicit siloScope: SiloScope): Future[ReifiedCopybean] = siloScope.beanCache(id) {
+  def cachedFetchCopybean(id: String)
+   (implicit siloScope: SiloScope): Future[ReifiedCopybean] = siloScope.beanCache(id) {
     fetchCopybean(id)
   }
 
@@ -107,7 +108,8 @@ class CopybeanPersistenceService(
     }
   }
 
-  protected def fetchCopybeans(copybeanIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
+  protected def fetchCopybeans(copybeanIds: Seq[String])
+   (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     val futures = copybeanIds.map(id => {
       cachedFetchCopybean(id)
     })
@@ -140,12 +142,19 @@ class CopybeanPersistenceService(
       cachedFetchCopybeanType(typeId).map { copybeanType =>
         val validatorBeansMap = fetchValidators(copybeanType)
         val validatorInstances = fetchClassBackedValidators(validatorBeansMap.map(_._2))
-        val refs = copybeanTypeEnforcer.enforceType(copybeanType, copybean, validatorBeansMap, validatorInstances)
-        checkRefs(refs)
+        (copybeanType, validatorBeansMap, validatorInstances)
       }
     }
     val futureSeq = Future.sequence(future)
-    Await.result(futureSeq, 5 seconds)
+    val typesAndValidatorMaps = Await.result(futureSeq, 5 seconds)
+
+    val copybeanTypes = typesAndValidatorMaps.map(_._1)
+    val validatorBeansMap = typesAndValidatorMaps.flatMap(_._2).toMap
+    val validatorInstances = typesAndValidatorMaps.flatMap(_._3).toMap
+
+    val refs = copybeanTypeEnforcer.enforceTypes(copybeanTypes, copybean, validatorBeansMap, validatorInstances)
+    checkRefs(refs)
+
   }
 
   protected def fetchClassBackedValidators(validators: Iterable[Copybean]) = {
@@ -164,7 +173,9 @@ class CopybeanPersistenceService(
               result + (classNameString -> Class.forName(classNameString).newInstance().asInstanceOf[FieldValidator])
             } catch {
               case e: ClassNotFoundException =>
-                throw new TypeValidationException(s"Couldn't find class '$classNameString' for validator '${validator.id}'")
+                throw new TypeValidationException(
+                  s"Couldn't find class '$classNameString' for validator '${validator.id}'"
+                )
             }
           }
           case x => throw new TypeValidationException(
@@ -178,12 +189,15 @@ class CopybeanPersistenceService(
 
   }
 
-  protected def fetchValidators(copybeanType: CopybeanType)(implicit siloScope: SiloScope, ec: ExecutionContext): Map[String, ReifiedCopybean] = {
+  protected def fetchValidators(copybeanType: CopybeanType)
+   (implicit siloScope: SiloScope, ec: ExecutionContext): Map[String, ReifiedCopybean] = {
     if (copybeanType.fields.isDefined) {
       copybeanType.fields.get.foldLeft(Map[String, ReifiedCopybean]()) { (result, field) =>
         if (field.validators.isDefined) {
           val validatorTypes = field.validators.get.map(_.`type`)
-          val validatorBeansFuture = Future.sequence(validatorTypes.map(typeId => cachedFetchCopybean(s"validator.$typeId")))
+          val validatorBeansFuture = Future.sequence(
+            validatorTypes.map(typeId => cachedFetchCopybean(s"validator.$typeId"))
+          )
           val validatorBeans = Await.result(validatorBeansFuture, 5 seconds)
           result ++ validatorBeans.map(validator => validator.id -> validator).toMap
         } else {

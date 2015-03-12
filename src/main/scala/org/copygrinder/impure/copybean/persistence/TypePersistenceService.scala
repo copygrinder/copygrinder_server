@@ -27,8 +27,7 @@ import scala.concurrent.{Await, Future}
 
 
 class TypePersistenceService(
- _predefinedCopybeanTypes: PredefinedCopybeanTypes,
- typeEnforcer: TypeEnforcer
+ _predefinedCopybeanTypes: PredefinedCopybeanTypes
  ) extends PersistenceSupport {
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
@@ -61,8 +60,6 @@ class TypePersistenceService(
 
     checkSiloExists()
 
-    typeEnforcer.enforceType(copybeanType)
-
     val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
     val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
     if (!file.exists()) {
@@ -89,8 +86,6 @@ class TypePersistenceService(
   def store(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
 
     checkSiloExists()
-
-    typeEnforcer.enforceType(copybeanType)
 
     val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
     val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
