@@ -61,10 +61,10 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
       checkStatus(req, response)
     }
 
-    Await.result(responseFuture, 1 second)
+    Await.result(responseFuture, 2 second)
   }
 
-  "Copygrinder" should "initalize a silo" in {
+  "Copygrinder" should "create and initalize a silo" in {
 
     val req = baseUrl.POST
 
@@ -72,14 +72,14 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
       checkStatus(req, response)
     }
 
-    Await.result(responseFuture, 1 second)
+    Await.result(responseFuture, 2 second)
 
     val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
     assert(siloDir.exists)
 
   }
 
-  "Copygrinder" should "create a new silo and POST types" in {
+  "Copygrinder" should "POST new types" in {
 
     val json =
       """
