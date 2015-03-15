@@ -49,7 +49,13 @@ class CopybeanTypeEnforcer() {
   protected def getRefs(fields: Iterable[ReifiedField]) = {
     fields.flatMap(field => {
       field match {
-        case r: ReferenceReifiedField => Option((r.castVal, r.fieldDef))
+        case r: ReferenceReifiedField => {
+          if (r.castVal.nonEmpty) {
+            Option((r.castVal, r.fieldDef))
+          } else {
+            None
+          }
+        }
         case _ => None
       }
     }).toMap

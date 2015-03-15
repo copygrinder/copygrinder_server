@@ -89,8 +89,11 @@ trait ListType extends FieldTypeSupport {
 
   val listType = {
     caster.optToMapThen(attributes, s"Field $id", "attributes") { (map, fieldId, targetId) =>
-      caster.mapGetToString(map, "listType", fieldId, targetId)
+      val listType = caster.mapGetToString(map, "listType", fieldId, targetId)
+      CopybeanFieldDef.cast(id, FieldType.withName(listType), None, attributes)
+      listType
     }
   }
+
 
 }
