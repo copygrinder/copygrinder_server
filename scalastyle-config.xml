@@ -23,7 +23,7 @@
  */]]></parameter>
         </parameters>
     </check>
-    <check level="warning" class="org.scalastyle.scalariform.SpacesAfterPlusChecker" enabled="true"></check>
+    <check level="warning" class="org.scalastyle.scalariform.SpacesAfterPlusChecker" enabled="false"></check>
     <check level="warning" class="org.scalastyle.file.WhitespaceEndOfLineChecker" enabled="true"></check>
     <check level="warning" class="org.scalastyle.scalariform.SpacesBeforePlusChecker" enabled="true"></check>
     <check level="warning" class="org.scalastyle.file.FileLineLengthChecker" enabled="true">

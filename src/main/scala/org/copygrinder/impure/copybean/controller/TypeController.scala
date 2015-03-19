@@ -26,7 +26,7 @@ import scala.concurrent.ExecutionContext
 class TypeController(persistenceService: TypePersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
   def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): JsValue = {
-    val (fields, nonFieldParams) = extractFields(params)
+    val (fields, nonFieldParams) = partitionIncludedFields(params)
     val futures = persistenceService.findCopybeanTypes(nonFieldParams)
     validateAndFilterFields(fields, Json.toJson(futures), copybeanTypeReservedWords)
   }

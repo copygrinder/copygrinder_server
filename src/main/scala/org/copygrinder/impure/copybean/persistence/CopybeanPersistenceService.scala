@@ -19,6 +19,7 @@ import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.exception._
+import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence._
 import org.copygrinder.pure.copybean.validator.FieldValidator
@@ -51,7 +52,47 @@ class CopybeanPersistenceService(
     }
 
     val types: Set[CopybeanType] = resolveTypes(copybean)
-    copybeanReifier.reify(copybean, types)
+    copybeanReifier.decorate(copybean, types)
+  }
+
+  protected def expandRefs(copybean: ReifiedCopybean, expandableBeans: Map[String, ReifiedCopybean])
+   (implicit siloScope: SiloScope) = {
+
+  }
+
+  def findExpandableBeans(copybean: ReifiedCopybean, expandableFields: Set[String])
+   (implicit siloScope: SiloScope): Map[String, ReifiedCopybean] = {
+
+    if (expandableFields.nonEmpty) {
+      val expandAll = expandableFields.contains("*")
+
+      val referenceFields = copybean.fields.flatMap(field => {
+        if (expandAll || expandableFields.contains(field._1)) {
+          field._2 match {
+            case r: ReferenceReifiedField => Seq(Some(r))
+            case l: ListReifiedField => l.castVal.map(field => {
+              if (field.isInstanceOf[ReferenceReifiedField]) {
+                Some(field.asInstanceOf[ReferenceReifiedField])
+              } else {
+                None
+              }
+            })
+            case _ => Seq(None)
+          }
+        } else {
+          Seq(None)
+        }
+      }).flatten.toSet
+
+      val future = fetchCopybeans(referenceFields.map(_.castVal).toSeq)
+      val beans = Await.result(future, 5 seconds)
+
+      referenceFields.map(field => {
+        (field.fieldDef.id, beans.find(_.id == field.castVal).get)
+      }).toMap
+    } else {
+      Map()
+    }
   }
 
   protected def resolveTypes(copybean: AnonymousCopybean)(implicit siloScope: SiloScope): Set[CopybeanType] = {

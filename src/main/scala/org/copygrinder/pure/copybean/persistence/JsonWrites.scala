@@ -14,6 +14,7 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.JsonWriteException
+import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ReifiedFieldSupport}
 import org.copygrinder.pure.copybean.model._
 import play.api.libs.json._
 
@@ -26,23 +27,30 @@ trait JsonWrites extends DefaultWrites {
   protected def stringAnyMapToJsObject(map: Map[String, Any]): JsObject = {
     val fields = map.map(entry => {
       val (key, value) = entry
-      val jsValue: JsValue = value match {
-        case b: Boolean => JsBoolean(b)
-        case i: Int => JsNumber(i)
-        case long: Long => JsNumber(long)
-        case s: String => JsString(s)
-        case m: ListMap[_, _] => {
-          convertListMap(m)
-        }
-        case list: List[_] => {
-          convertList(list)
-        }
-        case null => JsNull //scalastyle:ignore
-        case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
-      }
+      val jsValue: JsValue = convertAny(value)
       (key, jsValue)
     }).toSeq
     JsObject(fields)
+  }
+
+  protected def convertAny(value: Any): JsValue = {
+    value match {
+      case b: Boolean => JsBoolean(b)
+      case i: Int => JsNumber(i)
+      case long: Long => JsNumber(long)
+      case s: String => JsString(s)
+      case m: ListMap[_, _] => {
+        convertListMap(m)
+      }
+      case list: List[_] => {
+        convertList(list)
+      }
+      case field: ReifiedField with ReifiedFieldSupport => {
+        reifiedFieldWrites.writes(field)
+      }
+      case null => JsNull //scalastyle:ignore
+      case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
+    }
   }
 
   protected def convertList(list: List[Any]): JsArray = {
@@ -67,6 +75,8 @@ trait JsonWrites extends DefaultWrites {
           stringAnyMapToJsObject(newMap)
         })
         JsArray(newList)
+      } else if (head.isInstanceOf[ReifiedField]) {
+        traversableWrites[ReifiedField].writes(list.asInstanceOf[List[ReifiedField]])
       } else {
         throw new JsonWriteException(s"Can't write JSON for list with value '$head")
       }
@@ -108,6 +118,12 @@ trait JsonWrites extends DefaultWrites {
     }
   }
 
+  implicit val reifiedFieldWrites = new Writes[ReifiedField] {
+    override def writes(field: ReifiedField): JsValue = {
+      convertAny(field.value)
+    }
+  }
+
   implicit val copybeanWrites = new Writes[Copybean] {
     override def writes(copybean: Copybean): JsValue = {
       copybean match {
@@ -138,7 +154,7 @@ trait JsonWrites extends DefaultWrites {
       Json.obj(
         "id" -> bean.id,
         "enforcedTypeIds" -> bean.enforcedTypeIds,
-        "content" -> convertListMap(bean.content),
+        "content" -> bean.fields,
         "names" -> bean.names
       )
     }

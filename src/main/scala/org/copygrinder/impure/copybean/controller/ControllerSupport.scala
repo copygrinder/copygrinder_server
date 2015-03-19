@@ -14,6 +14,8 @@
 package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.pure.copybean.exception.JsonInputException
+import org.copygrinder.pure.copybean.model.ReifiedField.ListReifiedField
+import org.copygrinder.pure.copybean.model.{ReifiedField, ReifiedCopybeanImpl}
 import play.api.libs.json.{JsArray, JsObject, JsUndefined, JsValue}
 
 import scala.collection.Seq
@@ -21,10 +23,14 @@ import scala.collection.Seq
 
 trait ControllerSupport {
 
-  protected def extractFields(params: Seq[(String, String)]) = {
-    val (fields, nonFieldParams) = params.partition(_._1 == "fields")
-    val flatFields = fields.flatMap(_._2.split(',')).toSet
-    (flatFields, nonFieldParams)
+  protected def partitionFields(params: Seq[(String, String)], key: String) = {
+    val (matchingParams, nonMatchingParams) = params.partition(_._1 == key)
+    val flatFields = matchingParams.flatMap(_._2.split(',')).toSet
+    (flatFields, nonMatchingParams)
+  }
+
+  protected def partitionIncludedFields(params: Seq[(String, String)]) = {
+    partitionFields(params, "fields")
   }
 
   protected def validateAndFilterFields(keepFields: Set[String], jsValue: JsValue, allowedWords: Set[String]) = {
@@ -77,6 +83,17 @@ trait ControllerSupport {
       }
     })
     JsArray(emptiesRemoved)
+  }
+
+  protected def parseField[T](field: String)(singleFunc: (String) => T)
+   (arrayFunc: (String, Int) => T): T = {
+    if (field.endsWith(")")) {
+      val fieldId = field.takeWhile(_ != '(')
+      val index = field.dropWhile(_ != '(').drop(1).takeWhile(_ != ')').toInt
+      arrayFunc(fieldId, index)
+    } else {
+      singleFunc(field)
+    }
   }
 
 }

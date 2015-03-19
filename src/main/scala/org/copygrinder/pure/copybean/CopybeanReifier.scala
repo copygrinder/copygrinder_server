@@ -23,6 +23,10 @@ class CopybeanReifier {
   protected val caster = new UntypedCaster()
 
   def reify(copybean: Copybean, types: Set[CopybeanType]): ReifiedCopybeanImpl = {
+    new ReifiedCopybeanImpl(copybean.enforcedTypeIds, copybean.content, copybean.id, Map(), types)
+  }
+
+  def decorate(copybean: Copybean, types: Set[CopybeanType]): ReifiedCopybeanImpl = {
 
     val decoratedCopybean = addFileUrls(copybean, types)
 
@@ -65,7 +69,7 @@ class CopybeanReifier {
 
     val imageAndFilefields: Set[CopybeanFieldDef] = findImageAndFileFields(types)
 
-    def addUrl(fieldData: Any, copybean: Copybean, fieldId: String):Map[String, String] = {
+    def addUrl(fieldData: Any, copybean: Copybean, fieldId: String): Map[String, String] = {
       val fieldMap = caster.anyToMapThen(fieldData, s"bean ${copybean.id}", s"Field $fieldId") {
         caster.mapToMapStringString
       }

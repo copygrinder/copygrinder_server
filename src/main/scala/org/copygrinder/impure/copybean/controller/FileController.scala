@@ -62,14 +62,12 @@ class FileController(
   }
 
   protected def getValue(field: String, bean: ReifiedCopybeanImpl): ReifiedField = {
-    val result = if (field.endsWith(")")) {
-      val fieldId = field.takeWhile(_ != '(')
-      val index = field.dropWhile(_ != '(').drop(1).takeWhile(_ != ')').toInt
+    val result = parseField(field) { fieldId =>
+      bean.fields.get(field)
+    } { (fieldId, index) =>
       bean.fields.get(fieldId).map(field => {
         field.asInstanceOf[ListReifiedField].castVal(index)
       })
-    } else {
-      bean.fields.get(field)
     }
 
     result.getOrElse(

@@ -16,9 +16,12 @@ package org.copygrinder.impure.copybean.controller
 import org.copygrinder.impure.copybean.persistence.CopybeanPersistenceService
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
-import org.copygrinder.pure.copybean.model.{AnonymousCopybean, Copybean}
+import org.copygrinder.pure.copybean.model.{ReifiedCopybean, AnonymousCopybean, Copybean}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import play.api.libs.json.{JsNull, JsString, JsValue, Json}
+import play.api.libs.json._
+import scala.concurrent.duration._
+
+import scala.concurrent.Await
 
 class BeanController(persistenceService: CopybeanPersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
@@ -40,16 +43,55 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
   protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content", "type", "names")
 
   def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): JsValue = {
-    val (fields, nonFieldParams) = extractFields(params)
+    val (includedFields, nonFieldParams) = partitionIncludedFields(params)
 
-    nonFieldParams.foreach(param => {
+    val (expandFields, regularFields) = partitionFields(nonFieldParams, "expand")
+
+    val filteredExpandFields = if (includedFields.nonEmpty) {
+      expandFields.intersect(includedFields)
+    } else {
+      expandFields
+    }
+
+    regularFields.foreach(param => {
       if (!copybeansReservedWords.exists(reservedWord => param._1.startsWith(reservedWord))) {
         throw new UnknownQueryParameter(param._1)
       }
     })
 
-    val futures = persistenceService.find(nonFieldParams)
-    validateAndFilterFields(fields, Json.toJson(futures), copybeansReservedWords)
+    val future = persistenceService.find(regularFields)
+    val beans = Await.result(future, 5 seconds)
+
+    val filteredJsValue = validateAndFilterFields(includedFields, Json.toJson(beans),
+      copybeansReservedWords).as[JsArray]
+
+    expandRefs(filteredJsValue, beans, filteredExpandFields)
+  }
+
+  protected def expandRefs(filteredJsValue: JsArray, beans: Seq[ReifiedCopybean], expandFields: Set[String])
+   (implicit siloScope: SiloScope): JsArray = {
+    filteredJsValue.value.zipWithIndex.foldLeft(filteredJsValue)((resultArray, jsValueAndIndex) => {
+      val (jsValue, index) = jsValueAndIndex
+      val fieldToBeanMap = persistenceService.findExpandableBeans(beans(index), expandFields)
+      fieldToBeanMap.foldLeft(resultArray)((resultArray, fieldToBean) => {
+        val resultObj = jsValue.as[JsObject]
+        val (fieldId, bean) = fieldToBean
+        val contentObj = resultObj.\("content").as[JsObject]
+
+        val refOrArray = parseField[JsValue](fieldId) { fieldId =>
+          val refObj = contentObj.\(fieldId).as[JsObject]
+          refObj +("expand", Json.toJson(bean))
+        } { (fieldId, index) =>
+          val refArray = contentObj.\(fieldId).as[JsArray]
+          val newRefObj = refArray.value(index).as[JsObject] +("expand", Json.toJson(bean))
+          JsArray(refArray.value.updated(index, newRefObj))
+        }
+
+        val newContentObj = JsObject(contentObj.value.updated(fieldId, refOrArray).toSeq)
+        val newBeanFields = resultObj.value.updated("content", newContentObj)
+        JsArray(resultArray.value.updated(index, JsObject(newBeanFields.toSeq)))
+      })
+    })
   }
 
   def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): JsValue = {

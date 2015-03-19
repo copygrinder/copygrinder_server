@@ -31,6 +31,8 @@ trait Copybean extends AnonymousCopybean {
 
 trait ReifiedCopybean extends Copybean {
   val names: Map[String, String]
+
+  val fields: ListMap[String, ReifiedField]
 }
 
 case class AnonymousCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any]) extends AnonymousCopybean {

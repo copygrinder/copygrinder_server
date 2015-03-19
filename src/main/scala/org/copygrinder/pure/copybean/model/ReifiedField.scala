@@ -91,7 +91,7 @@ object ReifiedField {
     lazy val castVal = seq.zipWithIndex.map(valueAndIndex => {
       val (value, index) = valueAndIndex
       val nestedFieldDef = CopybeanFieldDef.cast(
-        s"${fieldDef.id}[$index]", FieldType.withName(listType), None, fieldDef.attributes
+        s"${fieldDef.id}($index)", FieldType.withName(listType), None, fieldDef.attributes
       )
       val nestedReifiedField = cast(nestedFieldDef, value, parent)
       nestedReifiedField.castVal.toString
