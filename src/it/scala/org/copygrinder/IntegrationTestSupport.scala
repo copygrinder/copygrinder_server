@@ -14,6 +14,7 @@
 package org.copygrinder
 
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.ning.http.client.Response
 import dispatch.Defaults._
@@ -71,4 +72,52 @@ trait IntegrationTestSupport extends FlatSpec with Matchers {
       response
     }
   }
+
+  def deleteSilo() = {
+
+    val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
+
+    FileUtils.deleteDirectory(siloDir)
+
+    val req = rootUrl.GET
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+    }
+
+    Await.result(responseFuture, 2 second)
+
+    note("Deleted old silo")
+  }
+
+  def initSilo() = {
+
+    val req = baseUrl.POST
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+    }
+
+    Await.result(responseFuture, 2 second)
+
+    val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
+    assert(siloDir.exists)
+
+    note("Initialized new silo")
+  }
+
+  Bootstrap.bootstrap(this)
+}
+
+object Bootstrap {
+
+  val hasInit = new AtomicBoolean(false)
+
+  def bootstrap(it: IntegrationTestSupport) = {
+    if (hasInit.compareAndSet(false, true)) {
+      it.deleteSilo()
+      it.initSilo()
+    }
+  }
+
 }
