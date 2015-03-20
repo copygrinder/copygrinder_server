@@ -2,21 +2,20 @@ Prerequisites
 -------------
 - Git 2.0+
 - Java 6+ (8+ provides significantly better performance)
-- SBT 0.13+
+- SBT 0.13.5+
 
-Recommended IDE - IntelliJ IDEA 13+ with the Scala Plugin installed
+Recommended IDE - IntelliJ IDEA 14+ with the Scala Plugin installed
 
 
 Getting Started
 ---------------
 1.  Clone the git repo (git clone https://github.com/copygrinder/copygrinder.git)
 2.  Run SBT in the root of the cloned directory from from a terminal
-3.  Run "gen-idea" (without quotes).  This will create the .idea folder.
-4.  Open the cloned root directory in IDEA.  If you open the Build.scala file, you will be prompted to
-    import the SBT project.  It is recommended that you DO NOT import the SBT project (choose ignore).
-5.  You can now run the project from SBT or by creating a new Application Run configuration pointing to
+3.  Open the cloned root directory in IDEA.  If you open the Build.scala file, you will be prompted to
+    import the SBT project.
+4.  You can now run the project from SBT or by creating a new Application Run configuration pointing to
     the main class org.copygrinder.impure.system.Boot
-6.  If you'd like the "problems" view which shows any compilation issues on-the-fly, turn on
+5.  If you'd like the "problems" view which shows any compilation issues on-the-fly, turn on
     Preferences > Compiler > Make Project Automatically
 
 

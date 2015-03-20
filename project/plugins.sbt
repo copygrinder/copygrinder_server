@@ -1,8 +1,11 @@
+resolvers += Resolver.url("jetbrains-bintray",
+  url("http://dl.bintray.com/jetbrains/sbt-plugins/"))(Resolver.ivyStylePatterns)
+
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.7.2")
 
 addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "2.4.0")
 
-addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.6.0")
+addSbtPlugin("org.jetbrains" % "sbt-ide-settings" % "0.1.0")
 
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.1.8")
 

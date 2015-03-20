@@ -2,7 +2,7 @@ import sbt.Keys._
 import sbt._
 import spray.revolver.RevolverPlugin.Revolver
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
-import org.sbtidea.SbtIdeaPlugin._
+import sbtide.Keys._
 
 object CopygrinderBuild extends Build {
 
@@ -63,7 +63,9 @@ object CopygrinderBuild extends Build {
      EclipseKeys.withSource := true,
      incOptions := incOptions.value.withNameHashing(true),
      fork := true,
-     ideaExcludeFolders := ".idea" :: ".idea_modules" :: "target" :: "data" :: "gatling" :: Nil,
+     ideExcludedDirectories := List(".idea", ".idea_modules", "target", "data", "gatling", "admin-src/.tmp",
+       "admin-src/dist", "admin-src/node_modules", "admin-src/target", "admin-src/app/components",
+       "src/main/resources/admin").map(new File(_)),
      testOptions in IntegrationTest += Tests.Argument("-oS")
    ).settings(
      Revolver.settings: _*
