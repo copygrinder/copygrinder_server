@@ -18,17 +18,17 @@ import play.api.libs.json.{JsArray, JsString, Json}
 
 class ReferenceTest extends IntegrationTestSupport {
 
-  def getId() = {
+  def getId(index: Int) = {
     val req = copybeansUrl.GET
 
     doReqThen(req) { response =>
       checkStatus(req, response)
       val json = Json.parse(response.getResponseBody).as[JsArray]
-      val bean = json.value.find { bean =>
+      val bean = json.value.filter { bean =>
         val ids = bean.\("enforcedTypeIds").as[JsArray]
         ids.value.contains(JsString("reftype2"))
       }
-      bean.get.\("id").as[JsString].value
+      bean(index).\("id").as[JsString].value
     }
 
   }
@@ -86,21 +86,14 @@ class ReferenceTest extends IntegrationTestSupport {
 
     val json =
       """
-        |[{
-        |  "enforcedTypeIds": [
-        |    "reftype2"
-        |  ],
-        |  "content": {
-        |    "stringfield": "Awesome Value"
-        |  }
-        |},{
+        |{
         |  "enforcedTypeIds": [
         |    "reftype1"
         |  ],
         |  "content": {
         |    "ref-field": {"ref":"1"}
         |  }
-        |}]""".stripMargin
+        |}""".stripMargin
 
     val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -112,9 +105,32 @@ class ReferenceTest extends IntegrationTestSupport {
 
   it should "handle good references" in {
 
-    val id = getId()
+    val json1 =
+      """
+        |[{
+        |  "enforcedTypeIds": [
+        |    "reftype2"
+        |  ],
+        |  "content": {
+        |    "stringfield": "Awesome Value"
+        |  }
+        |},{
+        |  "enforcedTypeIds": [
+        |    "reftype2"
+        |  ],
+        |  "content": {
+        |    "stringfield": "Other Value"
+        |  }
+        |}]""".stripMargin
 
-    val json =
+    val req1 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json1)
+
+    doReq(req1)
+
+    val id0 = getId(0)
+    val id1 = getId(1)
+
+    val json2 =
       """
         |{
         |  "enforcedTypeIds": [
@@ -122,13 +138,13 @@ class ReferenceTest extends IntegrationTestSupport {
         |  ],
         |  "content": {
         |    "ref-field": {"ref":"%s"},
-        |    "reflist": [{"ref": "%s"}]
+        |    "reflist": [{"ref": "%s"},{"ref": "%s"}]
         |  }
-        |}""".stripMargin.format(id, id)
+        |}""".stripMargin.format(id0, id0, id1)
 
-    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json2)
 
-    doReq(req)
+    doReq(req2)
   }
 
   it should "handle expanding references" in {
@@ -137,11 +153,11 @@ class ReferenceTest extends IntegrationTestSupport {
     val req2 = req1.addQueryParameter("expand", "*")
 
     doReqThen(req1) { response =>
-      assert(response.getResponseBody.contains("Awesome Value") == false)
+      assert(response.getResponseBody.contains("Other Value") == false)
     }
 
     doReqThen(req2) { response =>
-      assert(response.getResponseBody.contains("Awesome Value"))
+      assert(response.getResponseBody.contains("Other Value"))
     }
 
   }

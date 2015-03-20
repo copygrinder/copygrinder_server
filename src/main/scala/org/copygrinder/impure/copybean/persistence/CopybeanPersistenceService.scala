@@ -67,7 +67,7 @@ class CopybeanPersistenceService(
       val expandAll = expandableFields.contains("*")
 
       val referenceFields = copybean.fields.flatMap(field => {
-        if (expandAll || expandableFields.contains(field._1)) {
+        if (expandAll || expandableFields.contains("content." + field._1)) {
           field._2 match {
             case r: ReferenceReifiedField => Seq(Some(r))
             case l: ListReifiedField => l.castVal.map(field => {

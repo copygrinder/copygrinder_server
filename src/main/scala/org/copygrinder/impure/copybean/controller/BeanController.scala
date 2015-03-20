@@ -15,7 +15,7 @@ package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.impure.copybean.persistence.CopybeanPersistenceService
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
+import org.copygrinder.pure.copybean.exception.{JsonInputException, UnknownQueryParameter}
 import org.copygrinder.pure.copybean.model.{ReifiedCopybean, AnonymousCopybean, Copybean}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
@@ -48,7 +48,15 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
     val (expandFields, regularFields) = partitionFields(nonFieldParams, "expand")
 
     val filteredExpandFields = if (includedFields.nonEmpty) {
-      expandFields.intersect(includedFields)
+      expandFields.map(expandField => {
+        if (includedFields.exists(expandField.startsWith(_))) {
+          Some(expandField)
+        } else if (expandField == "*") {
+          Some(expandField)
+        } else {
+          None
+        }
+      }).flatten
     } else {
       expandFields
     }

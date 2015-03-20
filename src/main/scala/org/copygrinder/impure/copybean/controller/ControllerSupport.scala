@@ -19,6 +19,7 @@ import org.copygrinder.pure.copybean.model.{ReifiedField, ReifiedCopybeanImpl}
 import play.api.libs.json.{JsArray, JsObject, JsUndefined, JsValue}
 
 import scala.collection.Seq
+import scala.collection.immutable.ListMap
 
 
 trait ControllerSupport {
@@ -37,7 +38,7 @@ trait ControllerSupport {
     if (keepFields.nonEmpty) {
       val (validFields, invalidFields) = keepFields.partition(field => {
         allowedWords.exists(word => {
-          field == word
+          field == word || field.startsWith(word + ".")
         })
       })
 
@@ -62,14 +63,25 @@ trait ControllerSupport {
   }
 
   def filterObject(keepFields: Set[String], obj: JsObject): JsObject = {
-    val fields = keepFields.foldLeft(Seq[(String, JsValue)]())((result, field) => {
-      val value = obj.\(field)
+    val fields = keepFields.foldLeft(ListMap[String, JsValue]())((result, field) => {
+      val (fieldId, value) = if (field.contains('.')) {
+        val (prefix, suffixDot) = field.span(_ != '.')
+        val suffix = suffixDot.drop(1)
+        val nestedJsValue = filterFields(Set(suffix), obj.\(prefix))
+        (prefix, nestedJsValue)
+      } else {
+        (field, obj.\(field))
+      }
       value match {
         case _: JsUndefined => result
-        case _ => result :+(field, value)
+        case a: JsArray if (a.value.isEmpty) => result
+        case obj: JsObject if (obj.fields.isEmpty) => result
+        case _ => {
+          result.updated(fieldId, value)
+        }
       }
     })
-    JsObject(fields)
+    JsObject(fields.toSeq)
   }
 
   def filterArray(keepFields: Set[String], array: JsArray): JsArray = {
