@@ -19,65 +19,13 @@ import com.ning.http.client.Response
 import com.ning.http.multipart.FilePart
 import dispatch.Defaults._
 import dispatch._
-import org.apache.commons.io.FileUtils
-import org.scalatest.{FlatSpec, Matchers}
 import play.api.libs.json.{JsArray, JsObject, JsString, Json}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-class CopybeanTest extends FlatSpec with Matchers with TestSupport {
-
-  val siloId = "integrationtest"
-
-  val wiring = TestWiring.wiring
-
-  val rootUrl = url(s"http://localhost:9999/")
-
-  val baseUrl = rootUrl / siloId
-
-  val copybeansUrl = baseUrl / "copybeans"
-
-  val copybeansTypesUrl = baseUrl / "types"
-
-  def copybeanIdUrl(id: String) = copybeansUrl / id
-
-  def copybeanTypeIdUrl(id: String) = copybeansTypesUrl / id
-
-  val filesUrl = baseUrl / "files"
-
-  def copybeanFileUrl(id: String, field: String) = copybeansUrl / id / field
-
-  "Copygrinder" should "give a basic response to root GETs" in {
-
-    val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
-
-    FileUtils.deleteDirectory(siloDir)
-
-    val req = rootUrl.GET
-
-    val responseFuture = Http(req).map { response =>
-      checkStatus(req, response)
-    }
-
-    Await.result(responseFuture, 2 second)
-  }
-
-  "Copygrinder" should "create and initalize a silo" in {
-
-    val req = baseUrl.POST
-
-    val responseFuture = Http(req).map { response =>
-      checkStatus(req, response)
-    }
-
-    Await.result(responseFuture, 2 second)
-
-    val siloDir = new File(wiring.globalModule.configuration.copybeanDataRoot, siloId)
-    assert(siloDir.exists)
-
-  }
+class CopybeanTest extends IntegrationTestSupport {
 
   "Copygrinder" should "POST new types" in {
 
@@ -97,13 +45,6 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |      "id": "testfield2",
         |      "type": "Integer",
         |      "displayName": "Integer field"
-        |    },{
-        |      "id": "testfield3",
-        |      "type": "Reference",
-        |      "displayName": "Reference field",
-        |      "attributes": {"refs": [
-        |        {"refValidationTypes": ["testtype2"], "refDisplayType": "testtype2"}
-        |      ]}
         |    },{
         |      "id": "testfield4",
         |      "type": "File",
@@ -128,9 +69,7 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
     val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
     val responseFuture = Http(req).map { response =>
-
       checkStatus(req, response)
-
     }
 
     Await.result(responseFuture, 2 second)
@@ -350,55 +289,6 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
     Await.result(responseFuture2, 1 second)
   }
 
-  it should "handle bad references" in {
-
-    val json =
-      """
-        |{
-        |  "enforcedTypeIds": [
-        |    "testtype1"
-        |  ],
-        |  "content": {
-        |    "testfield1":"1",
-        |    "testfield3": {"ref":"1"}
-        |  }
-        |}""".stripMargin
-
-    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
-
-    val responseFuture = Http(req).map { response =>
-      checkStatus(req, response, 400)
-      assert(response.getResponseBody.contains("non-existent bean"))
-    }
-
-    Await.result(responseFuture, 1 second)
-  }
-
-  it should "handle good references" in {
-
-    val id = getId()
-
-    val json =
-      s"""
-        |{
-        |  "enforcedTypeIds": [
-        |    "testtype1"
-        |  ],
-        |  "content": {
-        |    "testfield1":"1",
-        |    "testfield3": {"ref":"$id"}
-        |  }
-        |}""".stripMargin
-
-    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
-
-    val responseFuture = Http(req).map { response =>
-      checkStatus(req, response)
-    }
-
-    Await.result(responseFuture, 1 second)
-  }
-
   it should "handle File fields" in {
 
     val file = new File("developer.md")
@@ -415,7 +305,7 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
     val hash = Await.result(responseFuture, 1 second)
 
     val json =
-      s"""
+      """
         |{
         |  "enforcedTypeIds": [
         |    "testtype1"
@@ -424,10 +314,10 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |    "testfield1": "abc",
         |    "testfield4": {
         |      "filename": "developer.md",
-        |      "hash": "$hash"
+        |      "hash": "%s"
         |    }
         |  }
-        |}""".stripMargin
+        |}""".stripMargin.format(hash)
 
     val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
@@ -463,15 +353,12 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
       new FilePart("upload", file, "image/jpeg", null)
     ).setHeader("Transfer-Encoding", "chunked")
 
-    val responseFuture = Http(req).map { response =>
-      checkStatus(req, response)
+    val hash = doReqThen(req) { response =>
       getHash(response)
     }
 
-    val hash = Await.result(responseFuture, 1 second)
-
     val json =
-      s"""
+      """
         |{
         |  "enforcedTypeIds": [
         |    "testtype1"
@@ -480,30 +367,24 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |    "testfield1": "abc",
         |    "testfield5": {
         |      "filename": "test.jpg",
-        |      "hash": "$hash"
+        |      "hash": "%s"
         |    }
         |  }
-        |}""".stripMargin
+        |}""".stripMargin.format(hash)
 
     val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
-    val responseFuture2 = Http(req2).map { response =>
-      checkStatus(req2, response)
+    val id = doReqThen(req2) { response =>
       val body = response.getResponseBody
       body.substring(1, body.length - 1)
     }
 
-    val id = Await.result(responseFuture2, 2 second)
-
     val req3 = copybeanFileUrl(id, "testfield5").GET
 
-    val responseFuture3 = Http(req3).map { response =>
-      checkStatus(req3, response)
+    doReqThen(req3) { response =>
       val body = response.getResponseBody
       assert(body.length == 30128)
     }
-
-    Await.result(responseFuture3, 1 second)
   }
 
   it should "handle lists" in {
@@ -537,16 +418,6 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |        "listType": "Long"
         |      }
         |    },{
-        |      "id": "reflist",
-        |      "type": "List",
-        |      "displayName": "Reference List field",
-        |      "attributes": {
-        |        "listType": "Reference",
-        |        "refs": [
-        |          {"refValidationTypes": ["testtype2"], "refDisplayType": "testtype2"}
-        |        ]
-        |      }
-        |    },{
         |      "id": "filelist",
         |      "type": "List",
         |      "displayName": "File List field",
@@ -567,16 +438,10 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
     val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
-    val responseFuture = Http(req).map { response =>
-      checkStatus(req, response)
-    }
-
-    Await.result(responseFuture, 1 second)
-
-    val id = getId()
+    doReq(req)
 
     val json2 =
-      s"""
+      """
         |{
         |  "enforcedTypeIds": [
         |    "listtype"
@@ -584,8 +449,7 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
         |  "content": {
         |    "stringlist": ["Lorem Ipsum", "123"],
         |    "intlist": [456, 789],
-        |    "longlist": [456, ${Long.MaxValue}],
-        |    "reflist": [{"ref":"$id"}],
+        |    "longlist": [456, 9223372036854775807],
         |    "filelist": [{
         |      "filename": "test2.jpg",
         |      "hash": "abc"
@@ -599,11 +463,7 @@ class CopybeanTest extends FlatSpec with Matchers with TestSupport {
 
     val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json2)
 
-    val responseFuture2 = Http(req2).map { response =>
-      checkStatus(req, response)
-    }
-
-    Await.result(responseFuture2, 1 second)
+    doReq(req2)
   }
 
 }

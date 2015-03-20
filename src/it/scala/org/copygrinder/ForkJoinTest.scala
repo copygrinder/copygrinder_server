@@ -21,9 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-class ForkJoinTest extends FlatSpec with Matchers with TestSupport {
-
-  TestWiring
+class ForkJoinTest extends IntegrationTestSupport {
 
   val testDuration = 1000
 
