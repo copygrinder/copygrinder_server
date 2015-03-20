@@ -60,29 +60,31 @@ class CopybeanPersistenceService(
 
   }
 
-  def findExpandableBeans(copybean: ReifiedCopybean, expandableFields: Set[String])
+  def findExpandableBeans(copybeans: Seq[ReifiedCopybean], expandableFields: Set[String])
    (implicit siloScope: SiloScope): Map[String, ReifiedCopybean] = {
 
     if (expandableFields.nonEmpty) {
       val expandAll = expandableFields.contains("*")
 
-      val referenceFields = copybean.fields.flatMap(field => {
-        if (expandAll || expandableFields.contains("content." + field._1)) {
-          field._2 match {
-            case r: ReferenceReifiedField => Seq(Some(r))
-            case l: ListReifiedField => l.castVal.map(field => {
-              if (field.isInstanceOf[ReferenceReifiedField]) {
-                Some(field.asInstanceOf[ReferenceReifiedField])
-              } else {
-                None
-              }
-            })
-            case _ => Seq(None)
+      val referenceFields = copybeans.flatMap(copybean => {
+        copybean.fields.flatMap(field => {
+          if (expandAll || expandableFields.contains("content." + field._1)) {
+            field._2 match {
+              case r: ReferenceReifiedField => Seq(Some(r))
+              case l: ListReifiedField => l.castVal.map(field => {
+                if (field.isInstanceOf[ReferenceReifiedField]) {
+                  Some(field.asInstanceOf[ReferenceReifiedField])
+                } else {
+                  None
+                }
+              })
+              case _ => Seq(None)
+            }
+          } else {
+            Seq(None)
           }
-        } else {
-          Seq(None)
-        }
-      }).flatten.toSet
+        }).flatten.toSet
+      })
 
       val future = fetchCopybeans(referenceFields.map(_.castVal).toSeq)
       val beans = Await.result(future, 5 seconds)

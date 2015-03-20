@@ -16,7 +16,8 @@ package org.copygrinder.impure.copybean.controller
 import org.copygrinder.impure.copybean.persistence.CopybeanPersistenceService
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.{JsonInputException, UnknownQueryParameter}
-import org.copygrinder.pure.copybean.model.{ReifiedCopybean, AnonymousCopybean, Copybean}
+import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField}
+import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 import scala.concurrent.duration._
@@ -70,36 +71,46 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
     val future = persistenceService.find(regularFields)
     val beans = Await.result(future, 5 seconds)
 
-    val filteredJsValue = validateAndFilterFields(includedFields, Json.toJson(beans),
-      copybeansReservedWords).as[JsArray]
+    val decoratedBeans = decorateExpandRefs(beans, filteredExpandFields)
 
-    expandRefs(filteredJsValue, beans, filteredExpandFields)
+    validateAndFilterFields(includedFields, Json.toJson(decoratedBeans), copybeansReservedWords).as[JsArray]
   }
 
-  protected def expandRefs(filteredJsValue: JsArray, beans: Seq[ReifiedCopybean], expandFields: Set[String])
-   (implicit siloScope: SiloScope): JsArray = {
-    filteredJsValue.value.zipWithIndex.foldLeft(filteredJsValue)((resultArray, jsValueAndIndex) => {
-      val (jsValue, index) = jsValueAndIndex
-      val fieldToBeanMap = persistenceService.findExpandableBeans(beans(index), expandFields)
-      fieldToBeanMap.foldLeft(resultArray)((resultArray, fieldToBean) => {
-        val resultObj = jsValue.as[JsObject]
-        val (fieldId, bean) = fieldToBean
-        val contentObj = resultObj.\("content").as[JsObject]
+  protected def decorateExpandRefs(beans: Seq[ReifiedCopybean], expandFields: Set[String])
+   (implicit siloScope: SiloScope): Seq[ReifiedCopybean] = {
 
-        val refOrArray = parseField[JsValue](fieldId) { fieldId =>
-          val refObj = contentObj.\(fieldId).as[JsObject]
-          refObj +("expand", Json.toJson(bean))
-        } { (fieldId, index) =>
-          val refArray = contentObj.\(fieldId).as[JsArray]
-          val newRefObj = refArray.value(index).as[JsObject] +("expand", Json.toJson(bean))
-          JsArray(refArray.value.updated(index, newRefObj))
-        }
+    val fieldToBeanMap = persistenceService.findExpandableBeans(beans, expandFields)
 
-        val newContentObj = JsObject(contentObj.value.updated(fieldId, refOrArray).toSeq)
-        val newBeanFields = resultObj.value.updated("content", newContentObj)
-        JsArray(resultArray.value.updated(index, JsObject(newBeanFields.toSeq)))
+    beans.map(bean => {
+      val newFields = bean.fields.map(field => {
+        val decoratedField = decorateField(field._2, fieldToBeanMap)
+        (field._1, decoratedField)
       })
+      new ReifiedCopybeanImpl(bean.enforcedTypeIds, bean.content, bean.id, bean.names, bean.types) {
+        override lazy val fields = newFields
+      }
     })
+  }
+
+  protected def decorateField(field: ReifiedField, fieldToBeanMap: Map[String, ReifiedCopybean]): ReifiedField = {
+    field match {
+      case r: ReifiedField with ReferenceReifiedField => {
+        fieldToBeanMap.get(r.fieldDef.id).fold(r) { mapRefBean =>
+          new ReifiedField(r.fieldDef, r.value, r.parent) with ReferenceReifiedField {
+            override val refBean = Some(mapRefBean)
+          }
+        }
+      }
+      case list: ReifiedField with ListReifiedField => {
+        val newSeq = list.castVal.map(seqField => {
+          decorateField(seqField, fieldToBeanMap)
+        })
+        new ReifiedField(list.fieldDef, list.value, list.parent) with ListReifiedField {
+          override lazy val castVal = newSeq
+        }
+      }
+      case r: ReifiedField => r
+    }
   }
 
   def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): JsValue = {

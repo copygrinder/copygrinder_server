@@ -14,7 +14,7 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.JsonWriteException
-import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ReifiedFieldSupport}
+import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField, FileOrImageReifiedField, ReifiedFieldSupport}
 import org.copygrinder.pure.copybean.model._
 import play.api.libs.json._
 
@@ -33,11 +33,13 @@ trait JsonWrites extends DefaultWrites {
     JsObject(fields)
   }
 
+  // scalastyle:off cyclomatic.complexity
   protected def convertAny(value: Any): JsValue = {
     value match {
       case b: Boolean => JsBoolean(b)
       case i: Int => JsNumber(i)
       case long: Long => JsNumber(long)
+      case dec: BigDecimal => JsNumber(dec.toLong)
       case s: String => JsString(s)
       case m: ListMap[_, _] => {
         convertListMap(m)
@@ -51,7 +53,7 @@ trait JsonWrites extends DefaultWrites {
       case null => JsNull //scalastyle:ignore
       case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
     }
-  }
+  } // scalastyle:on cyclomatic.complexity
 
   protected def convertList(list: List[Any]): JsArray = {
     if (!list.isEmpty) {
@@ -118,13 +120,29 @@ trait JsonWrites extends DefaultWrites {
     }
   }
 
-  implicit val reifiedFieldWrites = new Writes[ReifiedField] {
+  implicit val reifiedFieldWrites: Writes[ReifiedField] = new Writes[ReifiedField] {
     override def writes(field: ReifiedField): JsValue = {
-      convertAny(field.value)
+      field match {
+        case r: ReferenceReifiedField => {
+          val jsValue = Json.obj(
+            "ref" -> r.castVal
+          )
+          r.refBean.fold(jsValue) { refBean =>
+            jsValue +("expand", copybeanWrites.writes(refBean))
+          }
+        }
+        case list: ListReifiedField => {
+          val listJsVals = list.castVal.map(listField => {
+            writes(listField)
+          })
+          JsArray(listJsVals)
+        }
+        case f: ReifiedField => convertAny(f.value)
+      }
     }
   }
 
-  implicit val copybeanWrites = new Writes[Copybean] {
+  implicit val copybeanWrites: Writes[Copybean] = new Writes[Copybean] {
     override def writes(copybean: Copybean): JsValue = {
       copybean match {
         case c: CopybeanImpl => {

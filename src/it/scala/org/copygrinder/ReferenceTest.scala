@@ -153,13 +153,24 @@ class ReferenceTest extends IntegrationTestSupport {
     val req2 = req1.addQueryParameter("expand", "*")
 
     doReqThen(req1) { response =>
+      assert(response.getResponseBody.contains("Awesome Value") == false)
       assert(response.getResponseBody.contains("Other Value") == false)
     }
 
     doReqThen(req2) { response =>
+      assert(response.getResponseBody.contains("Awesome Value"))
       assert(response.getResponseBody.contains("Other Value"))
     }
+  }
 
+  it should "handle field filtering with expanded references" in {
+    val req = copybeansUrl.GET.addQueryParameter("enforcedTypeIds", "reftype1")
+     .addQueryParameter("expand", "content.ref-field")
+
+    doReqThen(req) { response =>
+      assert(response.getResponseBody.contains("Awesome Value"))
+      assert(response.getResponseBody.contains("Other Value") == false)
+    }
   }
 
 

@@ -16,7 +16,7 @@ package org.copygrinder.pure.copybean.model
 import org.copygrinder.pure.copybean.exception.TypeValidationException
 import org.copygrinder.pure.copybean.persistence.UntypedCaster
 
-case class ReifiedField private(fieldDef: CopybeanFieldDef, value: Any, parent: String)
+case class ReifiedField (fieldDef: CopybeanFieldDef, value: Any, parent: String)
 
 object ReifiedField {
 
@@ -67,6 +67,9 @@ object ReifiedField {
   }
 
   trait ReferenceReifiedField extends ReifiedFieldSupport {
+
+    val refBean: Option[ReifiedCopybean] = None
+
     lazy val castVal = {
       caster.anyToMapThen(value, parent, target)(caster.mapGetToString(_, "ref", _, _))
     }
@@ -84,11 +87,11 @@ object ReifiedField {
 
   trait ListReifiedField extends ReifiedFieldSupport {
 
-    lazy val seq = caster.anyToSeq(value, parent, target)
+    private lazy val seq = caster.anyToSeq(value, parent, target)
 
     lazy val listType = fieldDef.asInstanceOf[ListType].listType
 
-    lazy val castVal = seq.zipWithIndex.map(valueAndIndex => {
+    lazy val castVal: Seq[ReifiedField] = seq.zipWithIndex.map(valueAndIndex => {
       val (value, index) = valueAndIndex
       val nestedFieldDef = CopybeanFieldDef.cast(
         s"${fieldDef.id}($index)", FieldType.withName(listType), None, fieldDef.attributes

@@ -32,6 +32,8 @@ trait Copybean extends AnonymousCopybean {
 trait ReifiedCopybean extends Copybean {
   val names: Map[String, String]
 
+  val types: Set[CopybeanType]
+
   val fields: ListMap[String, ReifiedField]
 }
 
@@ -54,7 +56,9 @@ case class CopybeanImpl(id: String, enforcedTypeIds: Set[String], content: ListM
 case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String,
  names: Map[String, String], types: Set[CopybeanType]) extends ReifiedCopybean {
 
-  lazy val fields: ListMap[String, ReifiedField] = {
+  lazy val fields: ListMap[String, ReifiedField] = calcFields
+
+  protected def calcFields() = {
     content.foldLeft(ListMap[String, ReifiedField]())((result, idAndValue) => {
       val (id, value) = idAndValue
       val fieldDefs = types.flatMap(_.fields.flatMap(_.find(_.id == id)))
