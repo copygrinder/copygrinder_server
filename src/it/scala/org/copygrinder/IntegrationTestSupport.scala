@@ -20,13 +20,13 @@ import com.ning.http.client.Response
 import dispatch.Defaults._
 import dispatch._
 import org.apache.commons.io.FileUtils
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{TestData, BeforeAndAfterEachTestData, FlatSpec, Matchers}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-trait IntegrationTestSupport extends FlatSpec with Matchers {
+trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterEachTestData {
 
   val wiring = TestWiring.wiring
 
@@ -104,6 +104,12 @@ trait IntegrationTestSupport extends FlatSpec with Matchers {
     assert(siloDir.exists)
 
     note("Initialized new silo")
+  }
+
+  override protected def beforeEach(testData: TestData) {
+    if (wiring.globalModule.configuration.loggingLevel == "DEBUG") {
+      println("----- Starting " + testData.text + " -----")
+    }
   }
 
   Bootstrap.bootstrap(this)

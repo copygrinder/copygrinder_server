@@ -18,7 +18,7 @@ import play.api.libs.json.{JsArray, JsString, Json}
 
 class ReferenceTest extends IntegrationTestSupport {
 
-  def getId(index: Int) = {
+  def getId(index: Int, typeId: String = "reftype2") = {
     val req = copybeansUrl.GET
 
     doReqThen(req) { response =>
@@ -26,7 +26,7 @@ class ReferenceTest extends IntegrationTestSupport {
       val json = Json.parse(response.getResponseBody).as[JsArray]
       val bean = json.value.filter { bean =>
         val ids = bean.\("enforcedTypeIds").as[JsArray]
-        ids.value.contains(JsString("reftype2"))
+        ids.value.contains(JsString(typeId))
       }
       bean(index).\("id").as[JsString].value
     }
@@ -58,7 +58,8 @@ class ReferenceTest extends IntegrationTestSupport {
         |      "attributes": {
         |        "listType": "Reference",
         |        "refs": [
-        |          {"refValidationTypes": ["reftype2"], "refDisplayType": "reftype2"}
+        |          {"refValidationTypes": ["reftype2"], "refDisplayType": "reftype2"},
+        |          {"refValidationTypes": ["reftype3"], "refDisplayType": "reftype3"}
         |        ]
         |      }
         |    }
@@ -75,11 +76,74 @@ class ReferenceTest extends IntegrationTestSupport {
         |      "type": "String",
         |      "displayName": "String Field"
         |    }]
+        |},{
+        |  "id": "reftype3",
+        |  "displayName": "Reference Type Three",
+        |  "instanceNameFormat": "$content.other-string-field$",
+        |  "cardinality": "Many",
+        |  "fields":
+        |    [{
+        |      "id": "other-string-field",
+        |      "type": "String",
+        |      "displayName": "String Field"
+        |    }]
         |}]""".stripMargin
 
     val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
 
     doReq(req)
+  }
+
+  it should "handle good references" in {
+
+    val json1 =
+      """
+        |[{
+        |  "enforcedTypeIds": [
+        |    "reftype2"
+        |  ],
+        |  "content": {
+        |    "stringfield": "Awesome Value"
+        |  }
+        |},{
+        |  "enforcedTypeIds": [
+        |    "reftype2"
+        |  ],
+        |  "content": {
+        |    "stringfield": "Other Value"
+        |  }
+        |},{
+        |  "enforcedTypeIds": [
+        |    "reftype3"
+        |  ],
+        |  "content": {
+        |    "other-string-field": "Third Value"
+        |  }
+        |}]""".stripMargin
+
+    val req1 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json1)
+
+    doReq(req1)
+
+    val id0 = getId(0)
+    val id1 = getId(1)
+    val id2 = getId(0, "reftype3")
+
+    val json2 =
+      """
+        |{
+        |  "enforcedTypeIds": [
+        |    "reftype1"
+        |  ],
+        |  "content": {
+        |    "ref-field": {"ref":"%s"},
+        |    "reflist": [{"ref": "%s"},{"ref": "%s"}]
+        |  }
+        |}""".stripMargin.format(id0, id1, id2)
+
+    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json2)
+
+    doReq(req2)
   }
 
   it should "handle bad references" in {
@@ -101,34 +165,7 @@ class ReferenceTest extends IntegrationTestSupport {
       assert(response.getResponseBody.contains("non-existent bean"))
     }
 
-  }
-
-  it should "handle good references" in {
-
-    val json1 =
-      """
-        |[{
-        |  "enforcedTypeIds": [
-        |    "reftype2"
-        |  ],
-        |  "content": {
-        |    "stringfield": "Awesome Value"
-        |  }
-        |},{
-        |  "enforcedTypeIds": [
-        |    "reftype2"
-        |  ],
-        |  "content": {
-        |    "stringfield": "Other Value"
-        |  }
-        |}]""".stripMargin
-
-    val req1 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json1)
-
-    doReq(req1)
-
-    val id0 = getId(0)
-    val id1 = getId(1)
+    val id = getId(0, "reftype3")
 
     val json2 =
       """
@@ -137,39 +174,44 @@ class ReferenceTest extends IntegrationTestSupport {
         |    "reftype1"
         |  ],
         |  "content": {
-        |    "ref-field": {"ref":"%s"},
-        |    "reflist": [{"ref": "%s"},{"ref": "%s"}]
+        |    "ref-field": {"ref":"%s"}
         |  }
-        |}""".stripMargin.format(id0, id0, id1)
+        |}""".stripMargin.format(id)
 
     val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json2)
 
-    doReq(req2)
+    doReqThen(req2, 400) { response =>
+      assert(response.getResponseBody.contains("type not contained within refValidationTypes"))
+    }
+
   }
 
   it should "handle expanding references" in {
     val req1 = copybeansUrl.GET.addQueryParameter("enforcedTypeIds", "reftype1")
 
-    val req2 = req1.addQueryParameter("expand", "*")
+    val req2 = req1.addQueryParameter("expand", "content.ref-field,content.reflist")
 
     doReqThen(req1) { response =>
       assert(response.getResponseBody.contains("Awesome Value") == false)
       assert(response.getResponseBody.contains("Other Value") == false)
+      assert(response.getResponseBody.contains("Third Value") == false)
     }
 
     doReqThen(req2) { response =>
       assert(response.getResponseBody.contains("Awesome Value"))
       assert(response.getResponseBody.contains("Other Value"))
+      assert(response.getResponseBody.contains("Third Value"))
     }
   }
 
   it should "handle field filtering with expanded references" in {
     val req = copybeansUrl.GET.addQueryParameter("enforcedTypeIds", "reftype1")
-     .addQueryParameter("expand", "content.ref-field")
+     .addQueryParameter("expand", "*").addQueryParameter("fields", "content.ref-field")
 
     doReqThen(req) { response =>
       assert(response.getResponseBody.contains("Awesome Value"))
       assert(response.getResponseBody.contains("Other Value") == false)
+      assert(response.getResponseBody.contains("Third Value") == false)
     }
   }
 

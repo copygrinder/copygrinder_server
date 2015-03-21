@@ -263,11 +263,16 @@ class CopybeanPersistenceService(
       val copybeans = Await.result(fetchCopybeans(ids.toSeq), 5 seconds)
       copybeans.foreach(bean => {
         val refField = refs.get(bean.id).get.asInstanceOf[ReferenceType]
-        refField.refs.exists(ref => {
+        val validType = refField.refs.exists(ref => {
           ref.validationTypes.forall(refTypeId => {
             bean.enforcedTypeIds.contains(refTypeId)
           })
         })
+        if (!validType) {
+          throw new TypeValidationException("Reference made to a type not contained within refValidationTypes: " +
+           bean.id + " is a " + bean.enforcedTypeIds.mkString(",") + " which is not in "
+           + refField.refs.map(_.validationTypes).flatten.mkString(","))
+        }
       })
     }
   }
