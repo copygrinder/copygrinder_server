@@ -120,7 +120,9 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
     }
 
     def withParams[R](func: (SiloScope) => (Seq[(String, String)]) => R)(implicit w: Writes[R]): Route = {
-      new TwoArgRouteBuilder(path & parameterSeq, paramsShouldReject).apply(func)
+      new TwoArgRouteBuilder(path & parameterSeq, paramsShouldReject).apply(siloScope => params => {
+        func(siloScope)(params.filter(_._1.nonEmpty))
+      })
     }
   }
 
@@ -164,7 +166,7 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
   protected def hostRoute(route: Route) = {
     hostName {
       host =>
-        if (host != "localhost" && host != "127.0.0.1" ) {
+        if (host != "localhost" && host != "127.0.0.1") {
           route.compose(requestContext => {
             val newUri = Uri("/" + host + requestContext.unmatchedPath.toString).path
             requestContext.copy(unmatchedPath = newUri)

@@ -133,11 +133,11 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
           val resource = getClass.getClassLoader.getResource("admin" + unmatched.toString)
           // scalastyle:off null
           if (resource != null) {
+            // scalastyle:on null
             getFromResource("admin" + unmatched.toString)
           } else {
             adminIndex(siloId)
           }
-          // scalastyle:on null
         }
       }
     }
