@@ -28,6 +28,7 @@ object ReifiedField {
       case FieldType.String | FieldType.Html => new ReifiedField(fieldDef, value, parent) with StringReifiedField
       case FieldType.Integer => new ReifiedField(fieldDef, value, parent) with IntReifiedField
       case FieldType.Long => new ReifiedField(fieldDef, value, parent) with LongReifiedField
+      case FieldType.Boolean => new ReifiedField(fieldDef, value, parent) with BooleanReifiedField
       case FieldType.Reference => new ReifiedField(fieldDef, value, parent) with ReferenceReifiedField
       case FieldType.File | FieldType.Image => new ReifiedField(fieldDef, value, parent) with FileOrImageReifiedField
       case FieldType.List => new ReifiedField(fieldDef, value, parent) with ListReifiedField
@@ -64,6 +65,10 @@ object ReifiedField {
 
   trait LongReifiedField extends ReifiedFieldSupport {
     lazy val castVal = caster.anyToLong(value, parent, target)
+  }
+
+  trait BooleanReifiedField extends ReifiedFieldSupport {
+    lazy val castVal = caster.anyToBoolean(value, parent, target)
   }
 
   trait ReferenceReifiedField extends ReifiedFieldSupport {

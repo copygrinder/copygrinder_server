@@ -46,6 +46,10 @@ class CopybeanTest extends IntegrationTestSupport {
         |      "type": "Integer",
         |      "displayName": "Integer field"
         |    },{
+        |      "id": "testfield3",
+        |      "type": "Boolean",
+        |      "displayName": "Boolean field"
+        |    },{
         |      "id": "testfield4",
         |      "type": "File",
         |      "displayName": "File field"
@@ -418,6 +422,13 @@ class CopybeanTest extends IntegrationTestSupport {
         |        "listType": "Long"
         |      }
         |    },{
+        |      "id": "booleanlist",
+        |      "type": "List",
+        |      "displayName": "Boolean List field",
+        |      "attributes": {
+        |        "listType": "Boolean"
+        |      }
+        |    },{
         |      "id": "filelist",
         |      "type": "List",
         |      "displayName": "File List field",
@@ -450,6 +461,7 @@ class CopybeanTest extends IntegrationTestSupport {
         |    "stringlist": ["Lorem Ipsum", "123"],
         |    "intlist": [456, 789],
         |    "longlist": [456, 9223372036854775807],
+        |    "booleanlist": [true, false],
         |    "filelist": [{
         |      "filename": "test2.jpg",
         |      "hash": "abc"

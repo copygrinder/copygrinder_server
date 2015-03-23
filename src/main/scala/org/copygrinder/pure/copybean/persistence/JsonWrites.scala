@@ -69,6 +69,8 @@ trait JsonWrites extends DefaultWrites {
             case dec: BigDecimal => dec
           }
         }))
+      } else if (list.head.isInstanceOf[Boolean]) {
+        traversableWrites[Boolean].writes(list.asInstanceOf[List[Boolean]])
       } else if (head.isInstanceOf[Map[_, _]]) {
         val newList = list.asInstanceOf[List[Map[String, Any]]].map(map => {
           val newMap = map.map(entry => {

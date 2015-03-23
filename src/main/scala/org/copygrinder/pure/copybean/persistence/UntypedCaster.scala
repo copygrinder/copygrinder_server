@@ -179,4 +179,12 @@ class UntypedCaster {
     }
   }
 
+  def anyToBoolean(data: Any, parentId: String, targetId: String): Boolean = {
+    if (data.isInstanceOf[Boolean]) {
+      data.asInstanceOf[Boolean]
+    } else {
+      throw new TypeValidationException(s"$parentId requires $targetId to be a Boolean, not $data")
+    }
+  }
+
 }
