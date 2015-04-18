@@ -21,7 +21,6 @@ object CopygrinderBuild extends Build {
 
      resolvers ++= Seq(
        "spray repo" at "http://repo.spray.io/",
-       "JGit repo" at "https://repo.eclipse.org/content/groups/releases/",
        "sonatype-releases" at "https://oss.sonatype.org/content/repositories/releases/",
        "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
      ),
@@ -41,13 +40,11 @@ object CopygrinderBuild extends Build {
 
      /* JAVA LIBS */
      libraryDependencies ++= Seq(
-       "org.eclipse.jgit" % "org.eclipse.jgit" % "3.7.0.201502260915-r",
        "commons-io" % "commons-io" % "2.4",
        "ch.qos.logback" % "logback-classic" % "1.1.2",
-       "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0",
-       "org.apache.lucene" % "lucene-join" % "5.0.0",
        "com.lambdaworks" % "scrypt" % "1.4.0",
-       "org.apache.camel" % "camel-core" % "2.14.1"
+       "org.apache.camel" % "camel-core" % "2.14.1",
+       "org.mapdb" % "mapdb" % "1.0.7"
      ),
 
      /* TEST LIBS */

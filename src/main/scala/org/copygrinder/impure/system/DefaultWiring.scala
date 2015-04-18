@@ -19,11 +19,8 @@ import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
 import org.copygrinder.impure.copybean.controller.{BeanController, FileController, SecurityController, TypeController}
 import org.copygrinder.impure.copybean.persistence._
-import org.copygrinder.impure.copybean.search.{IndexRebuilder, Indexer}
 import org.copygrinder.pure.copybean.CopybeanReifier
-import org.copygrinder.pure.copybean.model.CopybeanType
 import org.copygrinder.pure.copybean.persistence._
-import org.copygrinder.pure.copybean.search.{DocumentBuilder, QueryBuilder}
 import spray.caching.{Cache, LruCache}
 
 import scala.concurrent.duration._
@@ -53,8 +50,6 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
   implicit val actorSystem = actorSystemInit.init()
 
   val siloScopeFactory = new SiloScopeFactory(
-    persistenceServiceModule.documentBuilder,
-    persistenceServiceModule.queryBuilder,
     globalModule.configuration,
     persistenceServiceModule
   )
@@ -88,10 +83,6 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val idEncoderDecoder = new IdEncoderDecoder()
 
-  lazy val documentBuilder = new DocumentBuilder()
-
-  lazy val queryBuilder = new QueryBuilder()
-
   lazy val copybeanTypeEnforcer = new CopybeanTypeEnforcer()
 
   lazy val copybeanReifier = new CopybeanReifier()
@@ -119,8 +110,6 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
 class SiloScope(
  _siloId: String,
- documentBuilder: DocumentBuilder,
- queryBuilder: QueryBuilder,
  config: Configuration,
  predefinedCopybeans: PredefinedCopybeans,
  predefinedCopybeanTypes: PredefinedCopybeanTypes
@@ -130,34 +119,15 @@ class SiloScope(
 
   lazy val root = new File(new File(config.copybeanDataRoot), siloId)
 
-  lazy val indexDir = new File(root, "index/")
-
-  lazy val indexer = new Indexer(indexDir, documentBuilder, queryBuilder, config.indexMaxResults)
-
-  lazy val beanCache = new BeanCacheWrapper()
-
-  lazy val typeCache: Cache[CopybeanType] = LruCache()
-
-  lazy val beanDir = new File(root, "copybeans/")
-
-  lazy val beanGitRepo = new GitRepo(beanDir, new FileRepositoryBuilderWrapper())
-
-  lazy val typesDir = new File(root, "types/")
-
-  lazy val typeGitRepo = new GitRepo(typesDir, new FileRepositoryBuilderWrapper())
-
   lazy val tempDir = new File(root, "temp/")
 
   lazy val fileDir = new File(root, "files/")
 
-  val indexRebuilder = new IndexRebuilder(indexer, predefinedCopybeans, predefinedCopybeanTypes, beanDir, typesDir,
-    indexDir)
+  lazy val persistor: VersionedDataPersistor = null;
 
 }
 
 class SiloScopeFactory(
- documentBuilder: DocumentBuilder,
- queryBuilder: QueryBuilder,
  config: Configuration,
  persistenceServiceModule: PersistenceServiceModule) {
 
@@ -165,7 +135,7 @@ class SiloScopeFactory(
 
   def build(siloId: String)(implicit ex: ExecutionContext): SiloScope = {
     val future = siloScopeCache(siloId) {
-      new SiloScope(siloId, documentBuilder, queryBuilder, config, persistenceServiceModule.predefinedCopybeans,
+      new SiloScope(siloId, config, persistenceServiceModule.predefinedCopybeans,
         persistenceServiceModule.predefinedCopybeanTypes)
     }
     Await.result(future, 5 seconds)

@@ -19,7 +19,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.{CopybeanTypeNotFound, SiloNotInitialized}
-import org.copygrinder.pure.copybean.model.CopybeanType
+import org.copygrinder.pure.copybean.model.{CopybeanImpl, ReifiedCopybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites, PredefinedCopybeanTypes}
 import play.api.libs.json.{Json, Reads}
 
@@ -29,20 +29,34 @@ trait PersistenceSupport extends LazyLogging with JsonReads with JsonWrites {
 
   protected var predefinedCopybeanTypes: PredefinedCopybeanTypes
 
-  protected def fetchCopybeanType(id: String)(implicit siloScope: SiloScope, ex: ExecutionContext): CopybeanType = {
-    checkSiloExists()
-    val file = new File(siloScope.typesDir, "/" + id + ".json")
+  protected def fetchFromCommit[T](ids: Seq[String], commitId: String, namespace: String)
+   (func: (String, Option[String]) => T)(implicit siloScope: SiloScope): Future[Seq[T]] = {
 
-    if (!file.exists()) {
-      predefinedCopybeanTypes.predefinedTypes.getOrElse(id, throw new CopybeanTypeNotFound(id))
-    } else {
-      val json = FileUtils.readFileToString(file)
-      implicitly[Reads[CopybeanType]].reads(Json.parse(json)).get
-    }
+    val dataStringsFuture = siloScope.persistor.getByIdsAndCommit(namespace, ids, commitId)
+
+    dataStringsFuture.map(dataStrings => {
+      ids.zipWithIndex.map { case (id, index) =>
+        func(id, dataStrings(index))
+      }
+    })
+
   }
 
-  def cachedFetchCopybeanType(id: String)(implicit siloScope: SiloScope, ex: ExecutionContext): Future[CopybeanType] = siloScope.typeCache(id) {
-    fetchCopybeanType(id)
+  protected def fetchCopybeanTypesFromCommit(ids: Seq[String], commitId: String)
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[CopybeanType]] = {
+
+    checkSiloExists()
+
+    fetchFromCommit(ids, commitId, "type") { case (id, dataOpt) =>
+
+      if (dataOpt.isEmpty) {
+        predefinedCopybeanTypes.predefinedTypes.getOrElse(id, throw new CopybeanTypeNotFound(id))
+      } else {
+        val json = dataOpt.get
+        implicitly[Reads[CopybeanType]].reads(Json.parse(json)).get
+      }
+    }
+
   }
 
   protected def checkSiloExists()(implicit siloScope: SiloScope) = {

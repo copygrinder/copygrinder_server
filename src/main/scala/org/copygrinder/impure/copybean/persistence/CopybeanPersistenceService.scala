@@ -15,7 +15,6 @@ package org.copygrinder.impure.copybean.persistence
 
 import java.util.UUID
 
-import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.exception._
@@ -30,7 +29,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class CopybeanPersistenceService(
- hashedFileResolver: HashedFileResolver,
  copybeanTypeEnforcer: CopybeanTypeEnforcer,
  idEncoderDecoder: IdEncoderDecoder,
  copybeanReifier: CopybeanReifier,
@@ -40,28 +38,70 @@ class CopybeanPersistenceService(
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
 
-  protected def fetchCopybean(id: String)(implicit siloScope: SiloScope): ReifiedCopybean = {
-    checkSiloExists()
-    val file = hashedFileResolver.locate(id, "json", siloScope.beanDir)
+  protected def getCommitIdOfActiveHeadOfBranch(branchId: String)(implicit siloScope: SiloScope): Future[String] = {
+    //TODO: Implement real active branch head calculation
+    val headsFuture = siloScope.persistor.getBranchHeads(branchId)
 
-    val copybean = if (!file.exists()) {
-      predefinedCopybeans.predefinedBeans.getOrElse(id, throw new CopybeanTypeNotFound(id))
-    } else {
-      val json = FileUtils.readFileToByteArray(file)
-      implicitly[Reads[CopybeanImpl]].reads(Json.parse(json)).get
+    val activeHeadFuture = headsFuture.map(heads => {
+      val activeHead = heads.headOption.getOrElse(throw new BranchNotFound(branchId))
+      activeHead
+    })
+
+    activeHeadFuture
+  }
+
+  protected def fetchCopybeansFromBranchHead(id: Seq[String], branchId: String)
+   (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
+
+    getCommitIdOfActiveHeadOfBranch(branchId).flatMap(head => {
+      fetchCopybeansFromCommit(id, head)
+    })
+
+  }
+
+  protected def fetchCopybeansFromCommit(ids: Seq[String], commitId: String)
+   (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
+    checkSiloExists()
+
+    val beansFuture = fetchFromCommit(ids, commitId, "bean") { case (id, dataOpt) =>
+      if (dataOpt.isEmpty) {
+        predefinedCopybeans.predefinedBeans.getOrElse(id, throw new CopybeanNotFound(id))
+      } else {
+        val json = dataOpt.get
+        parseCopybeanJson(json)
+      }
     }
 
-    val types: Set[CopybeanType] = resolveTypes(copybean)
-    copybeanReifier.decorate(copybean, types)
-  }
-
-  protected def expandRefs(copybean: ReifiedCopybean, expandableBeans: Map[String, ReifiedCopybean])
-   (implicit siloScope: SiloScope) = {
+    beansFuture.flatMap(copybeans => {
+      reifyBeans(copybeans, commitId)
+    })
 
   }
 
-  def findExpandableBeans(copybeans: Seq[ReifiedCopybean], expandableFields: Set[String])
-   (implicit siloScope: SiloScope): Map[String, ReifiedCopybean] = {
+  protected def parseCopybeanJson(json: String) = {
+    implicitly[Reads[CopybeanImpl]].reads(Json.parse(json)).get
+  }
+
+  protected def reifyBeans(copybeans: Seq[Copybean], commitId: String): Future[Seq[ReifiedCopybean]] = {
+
+    val nestedFutures = copybeans.map(copybean => {
+      resolveTypes(copybean, commitId).map(types => {
+        copybeanReifier.decorate(copybean, types)
+      })
+    })
+    Future.sequence(nestedFutures)
+
+  }
+
+  protected def resolveTypes(copybean: AnonymousCopybean, commitId: String)
+   (implicit siloScope: SiloScope): Future[Set[CopybeanType]] = {
+
+    fetchCopybeanTypesFromCommit(copybean.enforcedTypeIds.toSeq, commitId).map(_.toSet)
+
+  }
+
+  def findExpandableBeans(copybeans: Seq[ReifiedCopybean], expandableFields: Set[String], commitId: String)
+   (implicit siloScope: SiloScope): Future[Map[String, ReifiedCopybean]] = {
 
     if (expandableFields.nonEmpty) {
       val expandAll = expandableFields.contains("*")
@@ -71,13 +111,12 @@ class CopybeanPersistenceService(
           if (expandAll || expandableFields.contains("content." + field._1)) {
             field._2 match {
               case r: ReferenceReifiedField => Seq(Some(r))
-              case l: ListReifiedField => l.castVal.map(field => {
-                if (field.isInstanceOf[ReferenceReifiedField]) {
-                  Some(field.asInstanceOf[ReferenceReifiedField])
-                } else {
+              case l: ListReifiedField => l.castVal.map {
+                case nestedRef: ReferenceReifiedField =>
+                  Some(nestedRef)
+                case _ =>
                   None
-                }
-              })
+              }
               case _ => Seq(None)
             }
           } else {
@@ -86,117 +125,124 @@ class CopybeanPersistenceService(
         }).flatten.toSet
       })
 
-      val future = fetchCopybeans(referenceFields.map(_.castVal).toSeq)
-      val beans = Await.result(future, 5 seconds)
+      val beansFuture = fetchCopybeansFromCommit(referenceFields.map(_.castVal), commitId)
 
-      referenceFields.map(field => {
-        (field.fieldDef.id, beans.find(_.id == field.castVal).get)
-      }).toMap
+      beansFuture.map(beans => {
+        referenceFields.map(field => {
+          (field.fieldDef.id, beans.find(_.id == field.castVal).get)
+        }).toMap
+      })
+
     } else {
-      Map()
+      Future(Map())
     }
   }
 
-  protected def resolveTypes(copybean: AnonymousCopybean)(implicit siloScope: SiloScope): Set[CopybeanType] = {
-    val future = copybean.enforcedTypeIds.map { typeId =>
-      cachedFetchCopybeanType(typeId)
-    }
-    val futureSeq = Future.sequence(future)
-    val types = Await.result(futureSeq, 5 seconds)
-    types
-  }
+  def storeAnonBean(anonCopybean: AnonymousCopybean, commit: NewCommit)
+   (implicit siloScope: SiloScope): Future[String] = {
 
-  def cachedFetchCopybean(id: String)
-   (implicit siloScope: SiloScope): Future[ReifiedCopybean] = siloScope.beanCache(id) {
-    fetchCopybean(id)
-  }
-
-  def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Copybean = {
     val id = idEncoderDecoder.encodeUuid(UUID.randomUUID())
     val copybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
-    store(copybean)
-    copybean
+    storeBean(copybean, commit)
   }
 
-  def store(rawCopybean: Copybean)(implicit siloScope: SiloScope): String = {
+  def storeBean(rawCopybean: Copybean, commit: NewCommit)(implicit siloScope: SiloScope): Future[String] = {
 
     checkSiloExists()
 
-    val copybean = copybeanReifier.unreify[Copybean](rawCopybean, resolveTypes(rawCopybean))
+    resolveTypes(rawCopybean, commit.parentCommitId).map(types => {
+      val copybean = copybeanReifier.unreify[Copybean](rawCopybean, types)
 
-    enforceTypes(copybean)
+      val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
+      siloScope.persistor.commit(commit, Map(("bean", copybean.id) -> json))
 
-    val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
-    val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
-    siloScope.beanGitRepo.add(file, json)
-    siloScope.indexer.addCopybean(copybean)
+      copybean.id
+    })
 
-    copybean.id
   }
 
-  def find()(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
+
+  def findAll(branchId: String)(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     checkSiloExists()
     logger.debug("Finding all copybeans")
-    val copybeanIds = siloScope.indexer.findCopybeanIds()
-    fetchCopybeans(copybeanIds)
+    val headCommitFuture = getCommitIdOfActiveHeadOfBranch(branchId)
+    headCommitFuture.flatMap(headCommit => {
+      siloScope.persistor.findAll(headCommit, 100, "bean").flatMap(beanStrings => {
+        val copybeans = beanStrings.map(parseCopybeanJson(_))
+        reifyBeans(copybeans, headCommit)
+      })
+    })
   }
 
-  def find(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
+  def find(branchId: String, params: Seq[(String, String)])
+   (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     if (params.nonEmpty) {
       checkSiloExists()
-      val copybeanIds = siloScope.indexer.findCopybeanIds(params)
-      fetchCopybeans(copybeanIds)
+      val headCommitFuture = getCommitIdOfActiveHeadOfBranch(branchId)
+      headCommitFuture.flatMap(headCommit => {
+        val query = new Query(params) //TODO: Implement a proper query builder.
+        siloScope.persistor.query(headCommit, 100, "bean", query).flatMap(beanStrings => {
+          val copybeans = beanStrings.map(parseCopybeanJson(_))
+          reifyBeans(copybeans, headCommit)
+        })
+      })
     } else {
-      find()
+      findAll(branchId)
     }
   }
 
-  protected def fetchCopybeans(copybeanIds: Seq[String])
-   (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
-    val futures = copybeanIds.map(id => {
-      cachedFetchCopybean(id)
-    })
-    Future.sequence(futures)
-  }
 
-  def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): Unit = {
+  def update(id: String, anonCopybean: AnonymousCopybean, commit: NewCommit)
+   (implicit siloScope: SiloScope): Future[String] = {
 
     checkSiloExists()
 
-    val rawCopybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
+    val existingBeanFuture = siloScope.persistor.getByIdsAndCommit("bean", Seq(id), commit.parentCommitId)
 
-    val copybean = copybeanReifier.unreify[Copybean](rawCopybean, resolveTypes(rawCopybean))
+    existingBeanFuture.map(opt => {
+      if (opt.isEmpty) {
+        throw new CopybeanNotFound(id)
+      }
+    }).flatMap { _ =>
 
-    enforceTypes(copybean)
+      val rawCopybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
 
-    val file = hashedFileResolver.locate(copybean.id, "json", siloScope.beanDir)
-    val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
-    if (!file.exists()) {
-      throw new CopybeanNotFound(id)
+      resolveTypes(rawCopybean, commit.parentCommitId).flatMap(types => {
+
+        val copybean = copybeanReifier.unreify[Copybean](rawCopybean, types)
+
+        val json = Json.stringify(implicitly[Writes[Copybean]].writes(copybean))
+        val data = Map(("bean", id) -> json)
+
+        siloScope.persistor.commit(commit, data)
+      })
     }
-    siloScope.beanGitRepo.update(file, json)
-    siloScope.beanCache.remove(id)
 
-    siloScope.indexer.updateCopybean(copybean)
   }
 
-  protected def enforceTypes(copybean: Copybean)(implicit siloScope: SiloScope, ec: ExecutionContext): Unit = {
+  //TODO: TYPE ENFORCER SHOULD TAKE A REIFIED BEAN
+/*  protected def enforceTypes(copybean: Copybean, commitId: String)
+   (implicit siloScope: SiloScope): Unit = {
+
     val future = copybean.enforcedTypeIds.map { typeId =>
-      cachedFetchCopybeanType(typeId).map { copybeanType =>
+      fetchCopybeanTypesFromCommit(Seq(typeId), commitId).map { copybeanTypes =>
+        val copybeanType = copybeanTypes.head
         val validatorBeansMap = fetchValidators(copybeanType)
         val validatorInstances = fetchClassBackedValidators(validatorBeansMap.map(_._2))
         (copybeanType, validatorBeansMap, validatorInstances)
       }
     }
     val futureSeq = Future.sequence(future)
-    val typesAndValidatorMaps = Await.result(futureSeq, 5 seconds)
 
-    val copybeanTypes = typesAndValidatorMaps.map(_._1)
-    val validatorBeansMap = typesAndValidatorMaps.flatMap(_._2).toMap
-    val validatorInstances = typesAndValidatorMaps.flatMap(_._3).toMap
+    futureSeq.map(typesAndValidatorMaps => {
 
-    val refs = copybeanTypeEnforcer.enforceTypes(copybeanTypes, copybean, validatorBeansMap, validatorInstances)
-    checkRefs(refs)
+      val copybeanTypes = typesAndValidatorMaps.map(_._1)
+      val validatorBeansMap = typesAndValidatorMaps.flatMap(_._2).toMap
+      val validatorInstances = typesAndValidatorMaps.flatMap(_._3).toMap
+
+      val refs = copybeanTypeEnforcer.enforceTypes(copybeanTypes, copybean, validatorBeansMap, validatorInstances)
+      checkRefs(refs)
+    })
 
   }
 
@@ -275,7 +321,7 @@ class CopybeanPersistenceService(
         }
       })
     }
-  }
+  }*/
 
 
   def delete(id: String)(implicit siloScope: SiloScope): Unit = {

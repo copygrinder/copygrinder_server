@@ -27,7 +27,7 @@ import scala.concurrent.Await
 class BeanController(persistenceService: CopybeanPersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
   def cachedFetchCopybean(id: String)(implicit siloScope: SiloScope): JsValue = {
-    val future = persistenceService.cachedFetchCopybean(id)
+    val future = persistenceService.fetchCopybean(id)
     Json.toJson(future)
   }
 
