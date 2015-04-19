@@ -47,9 +47,6 @@ trait JsonWrites extends DefaultWrites {
       case list: List[_] => {
         convertList(list)
       }
-      case field: ReifiedField with ReifiedFieldSupport => {
-        reifiedFieldWrites.writes(field)
-      }
       case null => JsNull //scalastyle:ignore
       case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
     }
@@ -79,8 +76,6 @@ trait JsonWrites extends DefaultWrites {
           stringAnyMapToJsObject(newMap)
         })
         JsArray(newList)
-      } else if (head.isInstanceOf[ReifiedField]) {
-        traversableWrites[ReifiedField].writes(list.asInstanceOf[List[ReifiedField]])
       } else {
         throw new JsonWriteException(s"Can't write JSON for list with value '$head")
       }
@@ -122,27 +117,39 @@ trait JsonWrites extends DefaultWrites {
     }
   }
 
-  implicit val reifiedFieldWrites: Writes[ReifiedField] = new Writes[ReifiedField] {
-    override def writes(field: ReifiedField): JsValue = {
-      field match {
-        case r: ReferenceReifiedField => {
-          val jsValue = Json.obj(
-            "ref" -> r.castVal
-          )
-          r.refBean.fold(jsValue) { refBean =>
-            jsValue +("expand", copybeanWrites.writes(refBean))
-          }
+  def reifiedFieldWritesMap(fields: ListMap[String, ReifiedField], bean: Copybean): JsArray = {
+
+    val jsValues = fields.values.map(field => {
+      reifiedFieldWrites(field, bean)
+    })
+
+    JsArray(jsValues.toSeq)
+  }
+
+  def reifiedFieldWrites(field: ReifiedField, bean: Copybean): JsValue = {
+    field match {
+      case r: ReferenceReifiedField => {
+        val jsValue = Json.obj(
+          "ref" -> r.castVal
+        )
+        r.refBean.fold(jsValue) { refBean =>
+          jsValue +("expand", copybeanWrites.writes(refBean))
         }
-        case list: ListReifiedField => {
-          val listJsVals = list.castVal.map(listField => {
-            writes(listField)
-          })
-          JsArray(listJsVals)
-        }
-        case f: ReifiedField => convertAny(f.value)
       }
+      case f: FileOrImageReifiedField => {
+        convertAny(f.value).as[JsObject] +
+         ("url", JsString(s"copybeans/${bean.id}/${f.fieldDef.id}"))
+      }
+      case list: ListReifiedField => {
+        val listJsVals = list.castVal.map(listField => {
+          reifiedFieldWrites(listField, bean)
+        })
+        JsArray(listJsVals)
+      }
+      case f: ReifiedField => convertAny(f.value)
     }
   }
+
 
   implicit val copybeanWrites: Writes[Copybean] = new Writes[Copybean] {
     override def writes(copybean: Copybean): JsValue = {
@@ -174,12 +181,52 @@ trait JsonWrites extends DefaultWrites {
       Json.obj(
         "id" -> bean.id,
         "enforcedTypeIds" -> bean.enforcedTypeIds,
-        "content" -> bean.fields,
+        "content" -> reifiedFieldWritesMap(bean.fields, bean),
         "names" -> bean.names
       )
     }
   }
 
   implicit val fileMetadataWrites = Json.writes[FileMetadata]
+
+  val unreifiedCopybeanWrites: Writes[ReifiedCopybean] = new Writes[ReifiedCopybean] {
+    def writes(bean: ReifiedCopybean): JsValue = {
+      Json.obj(
+        "id" -> bean.id,
+        "enforcedTypeIds" -> bean.enforcedTypeIds,
+        "content" -> unreifiedFieldWritesMap.writes(bean.fields)
+      )
+    }
+  }
+
+  val unreifiedFieldWritesMap = new Writes[ListMap[String, ReifiedField]] {
+    override def writes(fields: ListMap[String, ReifiedField]): JsArray = {
+
+      val jsValues = fields.values.map(field => {
+        unreifiedFieldWrites.writes(field)
+      })
+
+      JsArray(jsValues.toSeq)
+    }
+  }
+
+  val unreifiedFieldWrites = new Writes[ReifiedField] {
+    override def writes(field: ReifiedField): JsValue = {
+      field match {
+        case r: ReferenceReifiedField => {
+          Json.obj(
+            "ref" -> r.castVal
+          )
+        }
+        case list: ListReifiedField => {
+          val listJsVals = list.castVal.map(listField => {
+            writes(listField)
+          })
+          JsArray(listJsVals)
+        }
+        case f: ReifiedField => convertAny(f.value)
+      }
+    }
+  }
 
 }

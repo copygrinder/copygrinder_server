@@ -94,7 +94,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
     } ~ BuildRoute(copybeansTypesPath & get).withParams { implicit siloScope => params =>
       typeController.findCopybeanTypes(params)
     } ~ BuildRoute(copybeansIdPath & get) { implicit siloScope => id =>
-      beanController.cachedFetchCopybean(id)
+      beanController.fetchCopybean(id)
     } ~ BuildRoute(copybeansPath & get).withParams { implicit siloScope => params =>
       beanController.find(params)
     } ~ copybeansIdFieldPath.&(get) { (siloId, beanId, fieldId) =>

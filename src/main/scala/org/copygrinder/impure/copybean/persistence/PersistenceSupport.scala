@@ -45,8 +45,6 @@ trait PersistenceSupport extends LazyLogging with JsonReads with JsonWrites {
   protected def fetchCopybeanTypesFromCommit(ids: Seq[String], commitId: String)
    (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[CopybeanType]] = {
 
-    checkSiloExists()
-
     fetchFromCommit(ids, commitId, "type") { case (id, dataOpt) =>
 
       if (dataOpt.isEmpty) {
@@ -57,12 +55,6 @@ trait PersistenceSupport extends LazyLogging with JsonReads with JsonWrites {
       }
     }
 
-  }
-
-  protected def checkSiloExists()(implicit siloScope: SiloScope) = {
-    if (!siloScope.root.exists) {
-      throw new SiloNotInitialized(siloScope.siloId)
-    }
   }
 
 }

@@ -15,30 +15,26 @@ package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.impure.copybean.persistence.CopybeanPersistenceService
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception.{JsonInputException, UnknownQueryParameter}
+import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
 import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
+import org.copygrinder.pure.copybean.persistence.{NewCommit, JsonReads, JsonWrites}
 import play.api.libs.json._
-import scala.concurrent.duration._
 
-import scala.concurrent.Await
+import scala.concurrent.Future
 
 class BeanController(persistenceService: CopybeanPersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
-  def cachedFetchCopybean(id: String)(implicit siloScope: SiloScope): JsValue = {
-    val future = persistenceService.fetchCopybean(id)
+  def fetchCopybean(id: String)(implicit siloScope: SiloScope): JsValue = {
+    val future = persistenceService.fetchCopybeansFromBranchHead(Seq(id), siloScope.defaultBranch)
     Json.toJson(future)
   }
 
-  def store(anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): JsString = {
-    val bean = persistenceService.store(anonCopybean)
-    JsString(bean.id)
-  }
-
-  def store(copybean: Copybean)(implicit siloScope: SiloScope): JsString = {
-    val id = persistenceService.store(copybean)
-    JsString(id)
+  def store(anonCopybean: AnonymousCopybean, branchId: String, parentCommitId: String)
+   (implicit siloScope: SiloScope): JsString = {
+    val commit = new NewCommit(branchId, parentCommitId, "", "")
+    val beanFuture = persistenceService.storeAnonBean(anonCopybean, commit)
+    Json.toJson(beanFuture).as[JsString]
   }
 
   protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content", "type", "names")
@@ -49,7 +45,7 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
     val (expandFields, regularFields) = partitionFields(nonFieldParams, "expand")
 
     val filteredExpandFields = if (includedFields.nonEmpty) {
-      expandFields.map(expandField => {
+      expandFields.flatMap(expandField => {
         if (includedFields.exists(expandField.startsWith(_))) {
           Some(expandField)
         } else if (expandField == "*") {
@@ -57,7 +53,7 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
         } else {
           None
         }
-      }).flatten
+      })
     } else {
       expandFields
     }
@@ -68,59 +64,74 @@ class BeanController(persistenceService: CopybeanPersistenceService) extends Jso
       }
     })
 
-    val future = persistenceService.find(regularFields)
-    val beans = Await.result(future, 5 seconds)
+    val headFuture = persistenceService.getCommitIdOfActiveHeadOfBranch(siloScope.defaultBranch)
 
-    val decoratedBeans = decorateExpandRefs(beans, filteredExpandFields)
+    val decoratedJsonFuture = headFuture.flatMap(head => {
 
-    validateAndFilterFields(includedFields, Json.toJson(decoratedBeans), copybeansReservedWords).as[JsArray]
+      val beansFuture = persistenceService.findByCommit(head, regularFields)
+
+      beansFuture.map(beans => {
+        val decoratedBeans = decorateExpandRefs(beans, filteredExpandFields, head)
+        validateAndFilterFields(includedFields, Json.toJson(decoratedBeans), copybeansReservedWords).as[JsArray]
+      })
+
+    })
+
+    Json.toJson(decoratedJsonFuture)
+
   }
 
-  protected def decorateExpandRefs(beans: Seq[ReifiedCopybean], expandFields: Set[String])
-   (implicit siloScope: SiloScope): Seq[ReifiedCopybean] = {
+  protected def decorateExpandRefs(beans: Seq[ReifiedCopybean], expandFields: Set[String], commitId: String)
+   (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
 
-    val fieldToBeanMap = persistenceService.findExpandableBeans(beans, expandFields)
+    val fieldToBeanMapFuture = persistenceService.findExpandableBeans(beans, expandFields, commitId)
 
-    beans.map(bean => {
-      val newFields = bean.fields.map(field => {
-        val decoratedField = decorateField(field._2, fieldToBeanMap)
-        (field._1, decoratedField)
+    fieldToBeanMapFuture.map(fieldToBeanMap => {
+
+      beans.map(bean => {
+        val newFields = bean.fields.map(field => {
+          val decoratedField = decorateField(field._2, fieldToBeanMap)
+          (field._1, decoratedField)
+        })
+        new ReifiedCopybeanImpl(bean.enforcedTypeIds, bean.content, bean.id, bean.types) {
+          override lazy val fields = newFields
+        }
       })
-      new ReifiedCopybeanImpl(bean.enforcedTypeIds, bean.content, bean.id, bean.names, bean.types) {
-        override lazy val fields = newFields
-      }
+
     })
+
   }
 
   protected def decorateField(field: ReifiedField, fieldToBeanMap: Map[String, ReifiedCopybean]): ReifiedField = {
     field match {
-      case r: ReifiedField with ReferenceReifiedField => {
+      case r: ReifiedField with ReferenceReifiedField =>
         fieldToBeanMap.get(r.fieldDef.id).fold(r) { mapRefBean =>
           new ReifiedField(r.fieldDef, r.value, r.parent) with ReferenceReifiedField {
             override val refBean = Some(mapRefBean)
           }
         }
-      }
-      case list: ReifiedField with ListReifiedField => {
+      case list: ReifiedField with ListReifiedField =>
         val newSeq = list.castVal.map(seqField => {
           decorateField(seqField, fieldToBeanMap)
         })
         new ReifiedField(list.fieldDef, list.value, list.parent) with ListReifiedField {
           override lazy val castVal = newSeq
         }
-      }
       case r: ReifiedField => r
     }
   }
 
-  def update(id: String, anonCopybean: AnonymousCopybean)(implicit siloScope: SiloScope): JsValue = {
-    persistenceService.update(id, anonCopybean)
-    JsNull
+  def update(id: String, anonCopybean: AnonymousCopybean, branchId: String, parentCommitId: String)
+   (implicit siloScope: SiloScope): JsValue = {
+    val commit = new NewCommit(branchId, parentCommitId, "", "")
+    val newCommitId = persistenceService.update(id, anonCopybean, commit)
+    Json.toJson(newCommitId)
   }
 
-  def delete(id: String)(implicit siloScope: SiloScope): JsValue = {
-    persistenceService.delete(id)
-    JsNull
+  def delete(id: String)(implicit siloScope: SiloScope, branchId: String, parentCommitId: String): JsValue = {
+    val commit = new NewCommit(branchId, parentCommitId, "", "")
+    val newCommitId = persistenceService.delete(id, commit)
+    Json.toJson(newCommitId)
   }
 
   def createSilo()(implicit siloScope: SiloScope): JsValue = {

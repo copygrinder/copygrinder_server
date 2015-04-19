@@ -13,7 +13,6 @@
  */
 package org.copygrinder.pure.copybean.persistence
 
-import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.exception.TypeValidationException
 import org.copygrinder.pure.copybean.model.ReifiedField.{ReifiedFieldSupport, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model._
@@ -21,12 +20,13 @@ import org.copygrinder.pure.copybean.validator.FieldValidator
 
 class CopybeanTypeEnforcer() {
 
-  protected val reifier = new CopybeanReifier()
 
-  def enforceTypes(copybeanTypes: Set[CopybeanType], copybean: Copybean, validatorBeans: Map[String, Copybean],
+  def enforceTypes(copybean: ReifiedCopybean, validatorBeans: Map[String, Copybean],
    validatorClassInstances: Map[String, FieldValidator]): Map[String, CopybeanFieldDef] = {
 
-    val reifiedFields = reifier.reify(copybean, copybeanTypes).fields.map(_._2)
+    val copybeanTypes = copybean.types
+    
+    val reifiedFields = copybean.fields.map(_._2)
     checkFields(reifiedFields)
 
     copybeanTypes.foreach(copybeanType => {

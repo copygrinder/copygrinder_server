@@ -19,7 +19,6 @@ import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
 import org.copygrinder.impure.copybean.controller.{BeanController, FileController, SecurityController, TypeController}
 import org.copygrinder.impure.copybean.persistence._
-import org.copygrinder.pure.copybean.CopybeanReifier
 import org.copygrinder.pure.copybean.persistence._
 import spray.caching.{Cache, LruCache}
 
@@ -85,8 +84,6 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val copybeanTypeEnforcer = new CopybeanTypeEnforcer()
 
-  lazy val copybeanReifier = new CopybeanReifier()
-
   lazy val predefinedCopybeanTypes = new PredefinedCopybeanTypes()
 
   lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes)
@@ -94,10 +91,8 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
   lazy val predefinedCopybeans = new PredefinedCopybeans()
 
   lazy val copybeanPersistenceService = new CopybeanPersistenceService(
-    hashedFileResolver,
     copybeanTypeEnforcer,
     idEncoderDecoder,
-    copybeanReifier,
     predefinedCopybeanTypes,
     predefinedCopybeans
   )
@@ -123,7 +118,9 @@ class SiloScope(
 
   lazy val fileDir = new File(root, "files/")
 
-  lazy val persistor: VersionedDataPersistor = null;
+  lazy val persistor: VersionedDataPersistor = null
+
+  lazy val defaultBranch = "master"
 
 }
 

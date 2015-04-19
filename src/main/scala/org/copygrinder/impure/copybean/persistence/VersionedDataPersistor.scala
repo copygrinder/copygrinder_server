@@ -13,11 +13,16 @@
  */
 package org.copygrinder.impure.copybean.persistence
 
-import org.copygrinder.pure.copybean.model.{Commit, NewCommit, Query}
+import org.copygrinder.pure.copybean.model.Commit
+import org.copygrinder.pure.copybean.persistence.{IndexData, NewCommit, Query}
 
 import scala.concurrent.Future
 
 trait VersionedDataPersistor {
+
+  def initSilo(): Future[Unit]
+
+  def addToIndex(index: IndexData): Future[Unit]
 
   def getByIdsAndCommit(namespace: String, ids: Seq[String], commitId: String): Future[Seq[Option[String]]]
 
@@ -27,7 +32,7 @@ trait VersionedDataPersistor {
 
   def getCommitsByBranch(branchId: String, limit: Int): Future[Seq[Commit]]
 
-  def commit(commit: NewCommit, data: Map[(String, String), String]): Future[String]
+  def commit(commit: NewCommit, data: Map[(String, String), Option[String]], index: IndexData): Future[String]
 
   def findAll(commitId: String, limit: Int, namespace: String): Future[Seq[String]]
 

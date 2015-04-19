@@ -54,9 +54,11 @@ case class CopybeanImpl(id: String, enforcedTypeIds: Set[String], content: ListM
 }
 
 case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[String, Any], id: String,
- names: Map[String, String], types: Set[CopybeanType]) extends ReifiedCopybean {
+ types: Set[CopybeanType]) extends ReifiedCopybean {
 
   lazy val fields: ListMap[String, ReifiedField] = calcFields
+
+  lazy val names: ListMap[String, String] = resolveNames
 
   protected def calcFields() = {
     content.foldLeft(ListMap[String, ReifiedField]())((result, idAndValue) => {
@@ -69,6 +71,45 @@ case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[St
       }
       result + (id -> ReifiedField.cast(fieldDef, value, s"bean $id"))
     })
+  }
+
+  protected def resolveNames(): ListMap[String, String] = {
+    val results = types.flatMap(cbType => {
+      resolveName(cbType).map(name => {
+        (cbType.id, name)
+      })
+    })
+
+    ListMap.empty ++ results
+  }
+
+  protected def resolveName(cbType: CopybeanType): Option[String] = {
+
+    cbType.instanceNameFormat.map(format => {
+
+      val variables = """\$(.+?)\$""".r.findAllMatchIn(format)
+
+      variables.foldLeft(format)((result, variable) => {
+        val variableString = variable.toString()
+        val strippedVariable = variableString.substring(1, variableString.length - 1)
+
+        val newVal = if (strippedVariable.startsWith("content.")) {
+          val valueOpt = content.find(field => field._1 == strippedVariable.replace("content.", ""))
+          valueOpt match {
+            case Some(value) => value._2.toString
+            case _ => "''"
+          }
+        } else if (strippedVariable == "displayName") {
+          cbType.displayName.get
+        } else {
+          "''"
+        }
+
+        result.replace(variableString, newVal)
+
+      })
+    })
+
   }
 
   override def copyAnonymousCopybean(enforcedTypeIds: Set[String] = enforcedTypeIds, content: ListMap[String, Any] = content): AnonymousCopybean = {

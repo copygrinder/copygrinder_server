@@ -11,8 +11,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.model
+package org.copygrinder.pure.copybean.persistence
 
-case class Query(fieldsAndValues: Seq[(String, String)]) {
+import org.copygrinder.pure.copybean.model.{CopybeanType, AnonymousCopybean}
+
+class Indexer {
+
+  def indexCopybeans(copybean: Iterable[AnonymousCopybean]): IndexData = {
+    //TODO: IMPLEMENT
+    null
+  }
+
+  def indexCopybeanTypes(types: Iterable[CopybeanType]): IndexData = {
+    //TODO: IMPLEMENT
+    null
+  }
 
 }
