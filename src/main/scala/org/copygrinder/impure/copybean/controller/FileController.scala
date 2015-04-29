@@ -13,12 +13,12 @@
  */
 package org.copygrinder.impure.copybean.controller
 
-import monocle.macros.Lenser
-import org.copygrinder.impure.copybean.persistence.{CopybeanPersistenceService, FilePersistenceService}
+import org.copygrinder.impure.copybean.persistence.CopybeanPersistenceService
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.JsonInputException
 import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ListReifiedField}
 import org.copygrinder.pure.copybean.model._
+import org.copygrinder.pure.copybean.persistence.model.{Namespaces, NewCommit, Trees}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json.{JsValue, Json}
 import spray.http.MultipartContent
@@ -27,41 +27,58 @@ import scala.collection.immutable.ListMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class FileController(
- filePersistenceService: FilePersistenceService, copybeanPersistenceService: CopybeanPersistenceService
- ) extends JsonReads with JsonWrites with ControllerSupport {
+class FileController(copybeanPersistenceService: CopybeanPersistenceService)
+ extends JsonReads with JsonWrites with ControllerSupport {
 
-  def getFile(id: String, field: String)
+  def getFile(id: String, field: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ec: ExecutionContext): (String, Array[Byte], String, String) = {
-    val beanFuture = copybeanPersistenceService.cachedFetchCopybean(id)
-    val bean = Await.result(beanFuture, 5 seconds)
 
-    val reifiedBean = bean.asInstanceOf[ReifiedCopybeanImpl]
+    val branchId = getBranchId(params)
 
-    val reifiedField = getValue(field, reifiedBean).asInstanceOf[FileOrImageReifiedField]
+    val headFuture = copybeanPersistenceService.getCommitIdOfActiveHeadOfBranch(branchId)
 
-    val hash = reifiedField.hash
-    val filename = reifiedField.filename
-    val array = filePersistenceService.getFile(hash)
+    val resultFuture = headFuture.flatMap(head => {
 
-    val metaDataFuture = copybeanPersistenceService.find(
-      Seq(("enforcedTypeIds", "fileMetadata"), ("content.hash", hash))
-    )
-    val existingMetaData = Await.result(metaDataFuture, 5 seconds).headOption.getOrElse(
-      throw new JsonInputException(s"Metadata for hash not found: $hash")
-    )
-    val contentType = existingMetaData.content.get("contentType").get.asInstanceOf[String]
+      val beanFuture = copybeanPersistenceService.fetchCopybeansFromCommit(Seq(id), head)
 
-    val disposition = if (reifiedField.fieldDef.`type` == FieldType.Image) {
-      "inline"
-    } else {
-      "attachment"
-    }
+      beanFuture.flatMap(reifiedBeans => {
 
-    (filename, array, contentType, disposition)
+        val reifiedBean = reifiedBeans.head
+
+        val reifiedField = getValue(field, reifiedBean).asInstanceOf[FileOrImageReifiedField]
+
+        val metaDataId = reifiedField.metaData
+
+        val metaDataFuture = siloScope.persistor.getByIdsAndCommit(
+          Trees.userdata, Seq((Namespaces.file, metaDataId)), head
+        )
+
+        metaDataFuture.flatMap { case (existingMetaDataOpt) =>
+
+          val metaDataBean = existingMetaDataOpt.head.get.bean
+          val hash = metaDataBean.content.get("hash").asInstanceOf[String]
+          val filename = metaDataBean.content.get("filename").asInstanceOf[String]
+          val contentType = metaDataBean.content.get("filename").asInstanceOf[String]
+
+          val disposition = if (reifiedField.fieldDef.`type` == FieldType.Image) {
+            "inline"
+          } else {
+            "attachment"
+          }
+
+          val arrayFuture = siloScope.blobPersistor.getBlob(hash)
+
+          arrayFuture.map(array => {
+            (filename, array, contentType, disposition)
+          })
+        }
+      })
+    })
+
+    Await.result(resultFuture, 5 seconds)
   }
 
-  protected def getValue(field: String, bean: ReifiedCopybeanImpl): ReifiedField = {
+  protected def getValue(field: String, bean: ReifiedCopybean): ReifiedField = {
     val result = parseField(field) { fieldId =>
       bean.fields.get(field)
     } { (fieldId, index) =>
@@ -75,7 +92,12 @@ class FileController(
     )
   }
 
-  def storeFile(data: MultipartContent)(implicit siloScope: SiloScope): JsValue = {
+  def storeFile(data: MultipartContent, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
+
+    val branchId = getBranchId(params)
+    val parentCommitId = getParentCommitId(params)
+
     val fileMetadataBeans = data.parts.seq.map(part => {
       if (part.filename.isEmpty) {
         throw new JsonInputException("Filename is required.")
@@ -86,43 +108,30 @@ class FileController(
       val contentType = part.entity.toOption.get.contentType.value
       val stream = part.entity.data.toChunkStream(128 * 1024)
       val filename = part.filename.get
-      val (hash, length) = filePersistenceService.storeFile(filename, contentType, stream)
-
-      handleMetaData(filename, hash, length, contentType)
+      val storeFuture = siloScope.blobPersistor.storeBlob(stream)
+      storeFuture.flatMap { case (hash, length) =>
+        createMetaData(filename, hash, length, contentType, branchId, parentCommitId)
+      }
     })
 
-    Json.toJson(fileMetadataBeans)
+    val resultFuture = Future.sequence(fileMetadataBeans)
+    Json.toJson(resultFuture)
   }
 
-  protected def handleMetaData(filename: String, hash: String, length: Long, contentType: String)
-   (implicit siloScope: SiloScope): Copybean = {
-    val metaDataFuture = copybeanPersistenceService.find(
-      Seq(("enforcedTypeIds", "fileMetadata"), ("content.hash", hash))
-    )
-    val existingMetaData = Await.result(metaDataFuture, 5 seconds).headOption
+  protected def createMetaData(filename: String, hash: String, length: Long, contentType: String, branchId: String,
+   parentCommitId: String)
+   (implicit siloScope: SiloScope, ec: ExecutionContext): Future[ReifiedCopybean] = {
 
-    val metaData = if (existingMetaData.isDefined) {
-      val metaData = existingMetaData.get
-      val filenames = metaData.content.get("filenames").get.asInstanceOf[Seq[String]]
-      if (!filenames.contains(filename)) {
-        val newMetaData = Lenser[ReifiedCopybeanImpl](_.content).modify(oldContent => {
-          oldContent.updated("filenames", filenames + filename)
-        })(metaData.asInstanceOf[ReifiedCopybeanImpl])
-        copybeanPersistenceService.update(newMetaData.id, newMetaData)
-        newMetaData
-      } else {
-        metaData
-      }
-    } else {
-      val metaData = new AnonymousCopybeanImpl(Set("fileMetadata"), ListMap(
-        "filenames" -> Seq(filename),
-        "hash" -> hash,
-        "sizeInBytes" -> length,
-        "contentType" -> contentType
-      ))
-      copybeanPersistenceService.store(metaData)
-    }
+    val metaData = new AnonymousCopybeanImpl(Set("fileMetadata"), ListMap(
+      "filename" -> filename,
+      "hash" -> hash,
+      "sizeInBytes" -> length,
+      "contentType" -> contentType
+    ))
 
-    metaData
+
+    val commit = new NewCommit(Trees.userdata, branchId, parentCommitId, "", "")
+    copybeanPersistenceService.storeAnonBean(metaData, commit).map(_._2)
   }
+
 }

@@ -13,100 +13,64 @@
  */
 package org.copygrinder.impure.copybean.persistence
 
-import java.io.File
-
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence._
-import play.api.libs.json._
+import org.copygrinder.pure.copybean.persistence.model.{Namespaces, NewCommit, Query, Trees}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 
 class TypePersistenceService(
- _predefinedCopybeanTypes: PredefinedCopybeanTypes
+ _predefinedCopybeanTypes: PredefinedCopybeanTypes,
+ indexer: Indexer
  ) extends PersistenceSupport {
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
 
-  def fetchAllCopybeanTypes()(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    checkSiloExists()
-    logger.debug("Finding all copybean types")
-    val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds()
-    fetchCopybeanTypes(copybeanTypeIds)
-  }
-
-  protected def fetchCopybeanTypes(copybeanTypeIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    val futures = copybeanTypeIds.map(id => {
-      cachedFetchCopybeanType(id)
-    })
-    Future.sequence(futures)
-  }
-
-  def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    if (params.nonEmpty) {
-      checkSiloExists()
-      val copybeanTypeIds = siloScope.indexer.findCopybeanTypeIds(params)
-      fetchCopybeanTypes(copybeanTypeIds)
-    } else {
-      fetchAllCopybeanTypes()
-    }
-  }
-
-  def update(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
-
-    checkSiloExists()
-
-    val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
-    val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
-    if (!file.exists()) {
-      throw new CopybeanTypeNotFound(copybeanType.id)
-    }
-    siloScope.typeGitRepo.update(file, json)
-    invalidateOnTypeChange(copybeanType)
-    siloScope.typeCache.remove(copybeanType.id)
-
-    siloScope.indexer.updateCopybeanType(copybeanType)
-  }
-
-  protected def invalidateOnTypeChange(newType: CopybeanType)(implicit siloScope: SiloScope) = {
-    siloScope.typeCache.get(newType.id).map(future => {
-      val resultFutureOpt = future.map(oldType => {
-        if (oldType.instanceNameFormat != newType.instanceNameFormat) {
-          siloScope.beanCache.invalidateBeansOfType(newType.id)
-        }
-      })
-      Await.result(resultFutureOpt, 5 seconds)
+  def findCopybeanTypes(commitId: String, params: Map[String, Seq[String]])
+   (implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
+    val query = new Query(params.map(v => (Namespaces.cbtype, v._1) -> v._2))
+    siloScope.persistor.query(Trees.userdata, commitId, 100, query).map(objs => {
+      objs.map(_.cbType)
     })
   }
 
-  def store(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
+  def update(copybeanType: CopybeanType, commit: NewCommit)(implicit siloScope: SiloScope): Future[Commit] = {
+    val existingTypeFuture = getExistingType(copybeanType.id, commit.parentCommitId)
 
-    checkSiloExists()
-
-    val file = new File(siloScope.typesDir, "/" + copybeanType.id + ".json")
-    val json = Json.stringify(implicitly[Writes[CopybeanType]].writes(copybeanType))
-    siloScope.typeGitRepo.add(file, json)
-    siloScope.indexer.addCopybeanType(copybeanType)
+    existingTypeFuture.flatMap(oldType => {
+      val data = indexer.indexUpdateType(oldType, copybeanType)
+      siloScope.persistor.commit(commit, Seq(data))
+    })
   }
 
-  def delete(id: String)(implicit siloScope: SiloScope): Unit = {
+  protected def getExistingType(id: String, commit: String)(implicit siloScope: SiloScope) = {
+    val existingTypeFuture = siloScope.persistor.getByIdsAndCommit(
+      Trees.userdata, Seq((Namespaces.cbtype, id)), commit
+    )
 
-    checkSiloExists()
-
-    val file = new File(siloScope.typesDir, "/" + id + ".json")
-    siloScope.typeGitRepo.delete(file)
-    siloScope.indexer.deleteCopybean(id)
-    siloScope.typeCache.remove(id)
+    existingTypeFuture.map(seqOpt => {
+      if (seqOpt.isEmpty || seqOpt.head.isEmpty) {
+        throw new CopybeanTypeNotFound(id)
+      } else {
+        seqOpt.head.get.cbType
+      }
+    })
   }
 
-  def createSilo()(implicit siloScope: SiloScope): Unit = {
-    if (siloScope.indexDir.exists) {
-      throw new SiloAlreadyInitialized(siloScope.siloId)
-    }
+  def store(copybeanType: CopybeanType, commit: NewCommit)(implicit siloScope: SiloScope): Future[Commit] = {
+    val data = indexer.indexAddType(copybeanType)
+    siloScope.persistor.commit(commit, Seq(data))
+  }
+
+  def delete(id: String, commit: NewCommit)(implicit siloScope: SiloScope): Future[Commit] = {
+    getExistingType(id, commit.parentCommitId).flatMap(copybeanType => {
+      val data = indexer.indexDeleteType(copybeanType)
+      siloScope.persistor.commit(commit, Seq(data))
+    })
   }
 
 }

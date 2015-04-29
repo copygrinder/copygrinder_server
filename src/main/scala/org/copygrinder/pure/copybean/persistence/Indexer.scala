@@ -13,18 +13,45 @@
  */
 package org.copygrinder.pure.copybean.persistence
 
-import org.copygrinder.pure.copybean.model.{CopybeanType, AnonymousCopybean}
+import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType}
+import org.copygrinder.pure.copybean.persistence.model.{PersistableObject, CommitData}
 
 class Indexer {
 
-  def indexCopybeans(copybean: Iterable[AnonymousCopybean]): IndexData = {
+  def indexAddCopybean(bean: Copybean): CommitData = {
     //TODO: IMPLEMENT
     null
   }
 
-  def indexCopybeanTypes(types: Iterable[CopybeanType]): IndexData = {
+  def indexUpdateCopybean(oldBean: Copybean, newBean: Copybean): CommitData = {
     //TODO: IMPLEMENT
     null
   }
+
+  def indexDeleteCopybean(oldBean: Copybean): CommitData = {
+    //TODO: IMPLEMENT
+    null
+  }
+
+  def indexAddType(cbType: CopybeanType): CommitData = {
+    //TODO: IMPLEMENT
+    null
+  }
+
+  def indexUpdateType(oldType: CopybeanType, newType: CopybeanType): CommitData = {
+    //TODO: IMPLEMENT
+    null
+  }
+
+  def indexDeleteType(cbType: CopybeanType): CommitData = {
+    //TODO: IMPLEMENT
+    null
+  }
+
+  def indexOnly(objs: Iterable[PersistableObject]): Seq[CommitData] = {
+    //TODO: IMPLEMENT
+    null
+  }
+
 
 }

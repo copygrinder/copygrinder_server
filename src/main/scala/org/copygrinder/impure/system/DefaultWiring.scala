@@ -19,10 +19,13 @@ import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
 import org.copygrinder.impure.copybean.controller.{BeanController, FileController, SecurityController, TypeController}
 import org.copygrinder.impure.copybean.persistence._
+import org.copygrinder.impure.copybean.persistence.backend.{VersionedDataPersistor, BlobPersistor}
+import org.copygrinder.impure.copybean.persistence.backend.impl.{MapDbPersistor, FileBlobPersistor}
 import org.copygrinder.pure.copybean.persistence._
-import spray.caching.{Cache, LruCache}
-
+import org.copygrinder.pure.copybean.persistence.model.Branches
+import spray.caching.{LruCache, Cache}
 import scala.concurrent.duration._
+
 import scala.concurrent.{Await, ExecutionContext}
 
 class DefaultWiring {
@@ -57,8 +60,7 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
 
   lazy val beanController = new BeanController(persistenceServiceModule.copybeanPersistenceService)
 
-  lazy val fileController = new FileController(persistenceServiceModule.filePersistenceService,
-    persistenceServiceModule.copybeanPersistenceService)
+  lazy val fileController = new FileController(persistenceServiceModule.copybeanPersistenceService)
 
   lazy val securityController = new SecurityController(globalModule.configuration)
 
@@ -86,41 +88,19 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val predefinedCopybeanTypes = new PredefinedCopybeanTypes()
 
-  lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes)
-
   lazy val predefinedCopybeans = new PredefinedCopybeans()
+
+  lazy val indexer = new Indexer()
+
+  lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes, indexer)
 
   lazy val copybeanPersistenceService = new CopybeanPersistenceService(
     copybeanTypeEnforcer,
     idEncoderDecoder,
     predefinedCopybeanTypes,
-    predefinedCopybeans
+    predefinedCopybeans,
+    indexer
   )
-
-  lazy val filePersistenceService = new FilePersistenceService(
-    hashedFileResolver
-  )
-
-}
-
-class SiloScope(
- _siloId: String,
- config: Configuration,
- predefinedCopybeans: PredefinedCopybeans,
- predefinedCopybeanTypes: PredefinedCopybeanTypes
- ) {
-
-  val siloId = _siloId
-
-  lazy val root = new File(new File(config.copybeanDataRoot), siloId)
-
-  lazy val tempDir = new File(root, "temp/")
-
-  lazy val fileDir = new File(root, "files/")
-
-  lazy val persistor: VersionedDataPersistor = null
-
-  lazy val defaultBranch = "master"
 
 }
 
@@ -131,10 +111,23 @@ class SiloScopeFactory(
   lazy val siloScopeCache: Cache[SiloScope] = LruCache()
 
   def build(siloId: String)(implicit ex: ExecutionContext): SiloScope = {
+
     val future = siloScopeCache(siloId) {
-      new SiloScope(siloId, config, persistenceServiceModule.predefinedCopybeans,
-        persistenceServiceModule.predefinedCopybeanTypes)
+
+      lazy val root = new File(new File(config.copybeanDataRoot), siloId)
+
+      lazy val tempDir = new File(root, "temp/")
+
+      lazy val fileDir = new File(root, "files/")
+
+      lazy val persistor: VersionedDataPersistor = new MapDbPersistor()
+
+      lazy val blobPersistor: BlobPersistor = new FileBlobPersistor(persistenceServiceModule.hashedFileResolver,
+        fileDir, tempDir, siloId)
+
+      new SiloScope(siloId, persistor, blobPersistor, Branches.master)
     }
+
     Await.result(future, 5 seconds)
   }
 

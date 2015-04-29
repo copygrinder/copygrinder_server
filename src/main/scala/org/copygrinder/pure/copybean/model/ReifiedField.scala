@@ -82,12 +82,11 @@ object ReifiedField {
 
   trait FileOrImageReifiedField extends ReifiedFieldSupport {
     lazy val map = caster.anyToMap(value, parent, target)
-    lazy val filename = caster.mapGetToString(map, "filename", parent, target)
-    lazy val hash = caster.mapGetToString(map, "hash", parent, target)
+    lazy val metaData = caster.mapGetToString(map, "metaData", parent, target)
 
-    case class FileDef(filename: String, hash: String)
+    case class FileDef(metaData: String)
 
-    lazy val castVal = FileDef(filename, hash)
+    lazy val castVal = FileDef(metaData)
   }
 
   trait ListReifiedField extends ReifiedFieldSupport {

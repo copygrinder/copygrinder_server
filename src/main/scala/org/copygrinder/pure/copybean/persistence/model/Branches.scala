@@ -11,8 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.persistence
+package org.copygrinder.pure.copybean.persistence.model
 
-case class IndexData(idToFields: Map[(String, String), Map[String, Seq[String]]]) {
+object Branches {
+
+  val master = "master"
 
 }

@@ -13,10 +13,9 @@
  */
 package org.copygrinder.impure.api
 
-import java.io.{File, IOException, PrintWriter, StringWriter}
+import java.io.{PrintWriter, StringWriter}
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.persistence.JsonWrites
@@ -40,7 +39,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
 
   protected def readExceptionHandler() =
     ExceptionHandler {
-      case ex: Exception => {
+      case ex: Exception =>
         val sw = new StringWriter()
         ex.printStackTrace(new PrintWriter(sw))
         logger.debug(sw.toString)
@@ -71,10 +70,9 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
               complete(InternalServerError, "Error occurred")
             }
         }
-      }
     }
 
-  protected val rootRoute = siloPath { silo =>
+  protected val rootRoute = siloPath { (silo, params) =>
     get {
       complete {
         "Copygrinder is running.  Check out the apis under /copybeans"
@@ -89,19 +87,19 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
   }
 
   protected val copybeanReadRoute = {
-    BuildRoute(copybeansTypeIdPath & get) { implicit siloScope => id =>
-      typeController.fetchCopybeanType(id)
-    } ~ BuildRoute(copybeansTypesPath & get).withParams { implicit siloScope => params =>
+    BuildRoute(copybeansTypeIdPath & get) { implicit siloScope => (id, params) =>
+      typeController.fetchCopybeanType(id, params)
+    } ~ BuildRoute(copybeansTypesPath & get) { implicit siloScope => params =>
       typeController.findCopybeanTypes(params)
-    } ~ BuildRoute(copybeansIdPath & get) { implicit siloScope => id =>
-      beanController.fetchCopybean(id)
-    } ~ BuildRoute(copybeansPath & get).withParams { implicit siloScope => params =>
+    } ~ BuildRoute(copybeansIdPath & get) { implicit siloScope => (id, params) =>
+      beanController.fetchCopybean(id, params)
+    } ~ BuildRoute(copybeansPath & get) { implicit siloScope => params =>
       beanController.find(params)
-    } ~ copybeansIdFieldPath.&(get) { (siloId, beanId, fieldId) =>
+    } ~ copybeansIdFieldPath.&(get) { (siloId, beanId, fieldId, params) =>
       implicit lazy val siloScope = siloScopeFactory.build(siloId)
       onSuccess(
         Future {
-          fileController.getFile(beanId, fieldId)
+          fileController.getFile(beanId, fieldId, params)
         }
       ) { fileData =>
         respondWithHeaders(`Content-Disposition`(fileData._4, Map("filename" -> fileData._1))) {
@@ -116,7 +114,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
   }
 
   protected val adminReadRoute = {
-    adminPath { siloId =>
+    adminPath { (siloId, params) =>
       authenticate(BasicAuth(authenticator(_), "Secured")) { username =>
         adminIndex(siloId)
       }

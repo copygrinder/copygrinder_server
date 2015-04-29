@@ -15,43 +15,70 @@ package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.impure.copybean.persistence.TypePersistenceService
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception.JsonInputException
-import org.copygrinder.pure.copybean.model.CopybeanType
+import org.copygrinder.pure.copybean.model.{Commit, CopybeanType}
+import org.copygrinder.pure.copybean.persistence.model.{NewCommit, Trees}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
-import scala.collection.Seq
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 
 class TypeController(persistenceService: TypePersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
-  def findCopybeanTypes(params: Seq[(String, String)])(implicit siloScope: SiloScope): JsValue = {
-    val (fields, nonFieldParams) = partitionIncludedFields(params)
-    val futures = persistenceService.findCopybeanTypes(nonFieldParams)
-    validateAndFilterFields(fields, Json.toJson(futures), copybeanTypeReservedWords)
-  }
+  def fetchCopybeanType(id: String, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
 
-  def update(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
-    persistenceService.update(copybeanType)
-  }
+    val branchId = getBranchId(params)
 
-  def store(copybeanType: CopybeanType)(implicit siloScope: SiloScope): Unit = {
-    persistenceService.store(copybeanType)
-  }
-
-  def fetchCopybeanType(id: String)(implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
-    val future = persistenceService.cachedFetchCopybeanType(id)
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(branchId).flatMap(head => {
+      persistenceService.fetchCopybeanTypesFromCommit(Seq(id), head)
+    })
     Json.toJson(future)
   }
 
-  def delete(id: String)(implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
-    persistenceService.delete(id)
-    JsNull
+  def findCopybeanTypes(params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
+
+    val branchId = getBranchId(params)
+
+    val (fields, nonFieldParams) = partitionIncludedFields(params)
+
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(branchId).flatMap(head => {
+      persistenceService.findCopybeanTypes(head, nonFieldParams)
+    })
+    validateAndFilterFields(fields, Json.toJson(future), copybeanTypeReservedWords)
   }
 
-  def createSilo()(implicit siloScope: SiloScope): JsValue = {
-    persistenceService.createSilo()
-    JsNull
+
+  def update(copybeanType: CopybeanType, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
+    doCommit(params) { commit =>
+      persistenceService.update(copybeanType, commit)
+    }
+  }
+
+  def store(copybeanType: CopybeanType, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
+    doCommit(params) { commit =>
+      persistenceService.store(copybeanType, commit)
+    }
+  }
+
+  def delete(id: String, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
+    doCommit(params) { commit =>
+      persistenceService.delete(id, commit)
+    }
+  }
+
+  protected def doCommit(params: Map[String, List[String]])(func: (NewCommit) => Future[Commit])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
+    val branchId = getBranchId(params)
+    val parentCommitId = getParentCommitId(params)
+
+    val commit = new NewCommit(Trees.userdata, branchId, parentCommitId, "", "")
+    val future = func(commit).map(_.id)
+
+    Json.toJson(future)
   }
 
   protected val copybeanTypeReservedWords = Set("id", "displayName", "instanceNameFormat", "instanceNameFormat", "fields", "validators", "cardinality")

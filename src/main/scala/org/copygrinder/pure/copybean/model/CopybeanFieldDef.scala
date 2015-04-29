@@ -30,7 +30,8 @@ object CopybeanFieldDef {
 
   import FieldType._
 
-  def cast(id: String,
+  def cast(
+   id: String,
    `type`: FieldType.FieldType,
    displayName: Option[String] = None,
    attributes: Option[ListMap[String, Any]] = None,

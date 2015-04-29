@@ -13,28 +13,29 @@
  */
 package org.copygrinder.impure.copybean.controller
 
-import org.copygrinder.pure.copybean.exception.JsonInputException
-import org.copygrinder.pure.copybean.model.ReifiedField.ListReifiedField
-import org.copygrinder.pure.copybean.model.{ReifiedField, ReifiedCopybeanImpl}
+import org.copygrinder.impure.system.SiloScope
+import org.copygrinder.pure.copybean.exception.{MissingParameter, JsonInputException}
 import play.api.libs.json.{JsArray, JsObject, JsUndefined, JsValue}
 
-import scala.collection.Seq
 import scala.collection.immutable.ListMap
 
 
 trait ControllerSupport {
 
-  protected def partitionFields(params: Seq[(String, String)], key: String) = {
-    val (matchingParams, nonMatchingParams) = params.partition(_._1 == key)
-    val flatFields = matchingParams.flatMap(_._2.split(',')).toSet
-    (flatFields, nonMatchingParams)
+  protected def partitionFields(params: Map[String, List[String]], key: String) = {
+
+    val matchingParams = params.getOrElse(key, List()).flatMap(param => {
+      param.split(',')
+    })
+    val nonMatchingParams = params - key
+    (matchingParams, nonMatchingParams)
   }
 
-  protected def partitionIncludedFields(params: Seq[(String, String)]) = {
+  protected def partitionIncludedFields(params: Map[String, List[String]]) = {
     partitionFields(params, "fields")
   }
 
-  protected def validateAndFilterFields(keepFields: Set[String], jsValue: JsValue, allowedWords: Set[String]) = {
+  protected def validateAndFilterFields(keepFields: List[String], jsValue: JsValue, allowedWords: Set[String]) = {
     if (keepFields.nonEmpty) {
       val (validFields, invalidFields) = keepFields.partition(field => {
         allowedWords.exists(word => {
@@ -52,7 +53,7 @@ trait ControllerSupport {
     }
   }
 
-  protected def filterFields(keepFields: Set[String], jsValue: JsValue): JsValue = {
+  protected def filterFields(keepFields: List[String], jsValue: JsValue): JsValue = {
     jsValue match {
       case obj: JsObject =>
         filterObject(keepFields, obj)
@@ -62,12 +63,12 @@ trait ControllerSupport {
     }
   }
 
-  def filterObject(keepFields: Set[String], obj: JsObject): JsObject = {
+  def filterObject(keepFields: List[String], obj: JsObject): JsObject = {
     val fields = keepFields.foldLeft(ListMap[String, JsValue]())((result, field) => {
       val (fieldId, value) = if (field.contains('.')) {
         val (prefix, suffixDot) = field.span(_ != '.')
         val suffix = suffixDot.drop(1)
-        val nestedJsValue = filterFields(Set(suffix), obj.\(prefix))
+        val nestedJsValue = filterFields(List(suffix), obj.\(prefix))
         (prefix, nestedJsValue)
       } else {
         (field, obj.\(field))
@@ -76,15 +77,14 @@ trait ControllerSupport {
         case _: JsUndefined => result
         case a: JsArray if (a.value.isEmpty) => result
         case obj: JsObject if (obj.fields.isEmpty) => result
-        case _ => {
+        case _ =>
           result.updated(fieldId, value)
-        }
       }
     })
     JsObject(fields.toSeq)
   }
 
-  def filterArray(keepFields: Set[String], array: JsArray): JsArray = {
+  def filterArray(keepFields: List[String], array: JsArray): JsArray = {
     val filteredFields = array.value.map(a => filterFields(keepFields, a))
     val emptiesRemoved = filteredFields.filter(field => {
       val obj = field.asOpt[JsObject]
@@ -107,5 +107,24 @@ trait ControllerSupport {
       singleFunc(field)
     }
   }
+
+  protected def getBranchId(params: Map[String, List[String]])(implicit siloScope: SiloScope) = {
+    val branchOpt = params.get("branch")
+    if (branchOpt.isDefined && branchOpt.get.nonEmpty) {
+      branchOpt.get.head
+    } else {
+      siloScope.defaultBranch
+    }
+  }
+
+  protected def getParentCommitId(params: Map[String, List[String]])(implicit siloScope: SiloScope) = {
+    val parentOpt = params.get("parent")
+    if (parentOpt.isDefined && parentOpt.get.nonEmpty) {
+      parentOpt.get.head
+    } else {
+      throw new MissingParameter("parent")
+    }
+  }
+
 
 }

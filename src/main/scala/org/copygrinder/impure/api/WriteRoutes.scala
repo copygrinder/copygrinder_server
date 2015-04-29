@@ -13,21 +13,18 @@
  */
 package org.copygrinder.impure.api
 
-import java.io.{IOException, PrintWriter, StringWriter}
+import java.io.{PrintWriter, StringWriter}
 
-import akka.actor.{ActorRefFactory, ActorContext}
 import com.fasterxml.jackson.core.JsonParseException
 import org.copygrinder.impure.copybean.controller._
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import spray.http.{Uri, FormData, MultipartContent}
 import spray.http.StatusCodes._
+import spray.http.{FormData, MultipartContent, Uri}
 import spray.routing._
-import spray.routing.authentication.{UserPass, BasicAuth}
-
-import scala.concurrent.Future
+import spray.routing.authentication.BasicAuth
 
 trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
@@ -37,81 +34,78 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
   val fileController: FileController
 
-  protected def writeExceptionHandler() =
-    ExceptionHandler {
-      case ex: Exception => {
-        val sw = new StringWriter()
-        ex.printStackTrace(new PrintWriter(sw))
-        logger.debug(sw.toString)
-        ex match {
-          case e: CopybeanNotFound =>
-            val id = e.id
-            logger.debug(s"Copybean with id=$id was not found")
-            complete(NotFound, s"Copybean with id '$id' was not found.")
-          case e: CopybeanTypeNotFound =>
-            val id = e.id
-            logger.debug(s"Copybean Type with id=$id was not found")
-            complete(NotFound, s"Copybean Type with id '$id' was not found.")
-          case e: SiloNotInitialized =>
-            val siloId = e.siloId
-            logger.debug(s"Silo with id=$siloId does not exist.")
-            complete(NotFound, s"Silo with id=$siloId does not exist.")
-          case e: SiloAlreadyInitialized =>
-            val siloId = e.siloId
-            complete(BadRequest, s"Silo with id '$siloId' already exists.")
-          case e: TypeValidationException =>
-            complete(BadRequest, e.getMessage)
-          case e: JsonInputException =>
-            complete(BadRequest, e.getMessage)
-          case e: JsonParseException =>
-            complete(BadRequest, e.getMessage)
-          case e =>
-            requestUri { uri =>
-              logger.error(s"Error occurred while processing request to $uri", e)
-              complete(InternalServerError, "Error occurred")
-            }
-        }
+  protected def writeExceptionHandler() = ExceptionHandler {
+    case ex: Exception =>
+      val sw = new StringWriter()
+      ex.printStackTrace(new PrintWriter(sw))
+      logger.debug(sw.toString)
+      ex match {
+        case e: CopybeanNotFound =>
+          val id = e.id
+          logger.debug(s"Copybean with id=$id was not found")
+          complete(NotFound, s"Copybean with id '$id' was not found.")
+        case e: CopybeanTypeNotFound =>
+          val id = e.id
+          logger.debug(s"Copybean Type with id=$id was not found")
+          complete(NotFound, s"Copybean Type with id '$id' was not found.")
+        case e: SiloNotInitialized =>
+          val siloId = e.siloId
+          logger.debug(s"Silo with id=$siloId does not exist.")
+          complete(NotFound, s"Silo with id=$siloId does not exist.")
+        case e: SiloAlreadyInitialized =>
+          val siloId = e.siloId
+          complete(BadRequest, s"Silo with id '$siloId' already exists.")
+        case e: TypeValidationException =>
+          complete(BadRequest, e.getMessage)
+        case e: JsonInputException =>
+          complete(BadRequest, e.getMessage)
+        case e: JsonParseException =>
+          complete(BadRequest, e.getMessage)
+        case e =>
+          requestUri { uri =>
+            logger.error(s"Error occurred while processing request to $uri", e)
+            complete(InternalServerError, "Error occurred")
+          }
       }
-    }
+  }
 
   protected def postRoutes = {
     BuildRoute(copybeansTypesPath & post & entity(as[Seq[CopybeanType]])) {
-      implicit siloScope: SiloScope => a: Seq[CopybeanType] => a.map { copybeanType =>
-        typeController.store(copybeanType)
-        ""
-      }
+      implicit siloScope => (params, typeSeq) =>
+        typeSeq.map { copybeanType =>
+          typeController.store(copybeanType, params)
+          ""
+        }
     } ~ BuildRoute(copybeansTypesPath & post & entity(as[CopybeanType])) {
-      implicit siloScope => (copybeanType) =>
-        typeController.store(copybeanType)
+      implicit siloScope => (params, copybeanType) =>
+        typeController.store(copybeanType, params)
         ""
     } ~ BuildRoute(copybeansPath & post & entity(as[Seq[AnonymousCopybean]])) {
-      implicit siloScope: SiloScope => a: Seq[AnonymousCopybean] => a.map { anonBean =>
-        beanController.store(anonBean)
-      }
+      implicit siloScope => (params, anonBeans) =>
+        anonBeans.map { anonBean =>
+          beanController.store(anonBean, params)
+        }
     } ~ BuildRoute(copybeansPath & post & entity(as[AnonymousCopybean])) {
-      implicit siloScope => (anonBean) =>
-        beanController.store(anonBean)
-    } ~ BuildRoute(siloPath & post)(implicit siloScope => {
-      typeController.createSilo()
+      implicit siloScope => (params, anonBean) =>
+        beanController.store(anonBean, params)
+    } ~ BuildRoute(siloPath & post)(implicit siloScope => params => {
       beanController.createSilo()
-    }) ~ BuildRoute(filePath & post & entity(as[MultipartContent])) { implicit siloScope =>
-      (data) => {
-        fileController.storeFile(data)
-      }
+    }) ~ BuildRoute(filePath & post & entity(as[MultipartContent])) { implicit siloScope => (params, data) =>
+      fileController.storeFile(data, params)
     }
   }
 
   protected val putRoutes = {
     BuildRoute(copybeansTypeIdPath & put & entity(as[CopybeanType])) {
-      implicit siloScope: SiloScope => (id, copybeanType) =>
-        typeController.update(copybeanType)
+      implicit siloScope: SiloScope => (id, params, copybeanType) =>
+        typeController.update(copybeanType, params)
         ""
     } ~ BuildRoute(copybeansIdPath & put & entity(as[AnonymousCopybean])) {
-      implicit siloScope: SiloScope => (id, copybean) =>
-        beanController.update(id, copybean)
-        ""
+      implicit siloScope: SiloScope => (id, params, copybean) => {
+        beanController.update(id, copybean, params)
+      }
     } ~ BuildRoute(passwordPath & put & entity(as[FormData])) {
-      implicit siloScope: SiloScope => (form) =>
+      implicit siloScope: SiloScope => (params, form) =>
         val password = form.fields.find(_._1 == "password").get._2
         securityController.updatePassword(password)
         ""
@@ -120,11 +114,11 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
   protected val deleteRoutes = {
     BuildRoute(copybeansTypeIdPath & delete) {
-      implicit siloScope: SiloScope => (id) =>
-        typeController.delete(id)
+      implicit siloScope: SiloScope => (id, params) =>
+        typeController.delete(id, params)
     } ~ BuildRoute(copybeansIdPath & delete) {
-      implicit siloScope: SiloScope => (id) =>
-        beanController.delete(id)
+      implicit siloScope: SiloScope => (id, params) =>
+        beanController.delete(id, params)
     }
   }
 

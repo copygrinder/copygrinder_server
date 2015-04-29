@@ -63,32 +63,33 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
     )
   }
 
+  protected val end = parameterMultiMap & pathEndOrSingleSlash
+
   protected val siloPathPartial = pathPrefix(Segment)
 
-  protected val siloPath = siloPathPartial & pathEndOrSingleSlash
+  protected val siloPath = siloPathPartial & end
 
   protected val copybeansPathPartial = siloPathPartial & pathPrefix("copybeans")
 
-  protected val copybeansPath = copybeansPathPartial & pathEndOrSingleSlash
+  protected val copybeansPath = copybeansPathPartial & end
 
-  protected val copybeansIdPath = copybeansPathPartial & pathPrefix(Segment) & pathEndOrSingleSlash
+  protected val copybeansIdPath = copybeansPathPartial & pathPrefix(Segment) & end
 
   protected val copybeansTypesPathPartial = siloPathPartial & pathPrefix("types")
 
-  protected val copybeansTypesPath = copybeansTypesPathPartial & pathEndOrSingleSlash
+  protected val copybeansTypesPath = copybeansTypesPathPartial & end
 
-  protected val copybeansTypeIdPath = copybeansTypesPathPartial & pathPrefix(Segment) & pathEndOrSingleSlash
+  protected val copybeansTypeIdPath = copybeansTypesPathPartial & pathPrefix(Segment) & end
 
-  protected val filePath = siloPathPartial & pathPrefix("files") & pathEndOrSingleSlash
+  protected val filePath = siloPathPartial & pathPrefix("files") & end
 
-  protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & pathPrefix(Segment) &
-   pathEndOrSingleSlash
+  protected val copybeansIdFieldPath = copybeansPathPartial & pathPrefix(Segment) & pathPrefix(Segment) & end
 
-  protected val passwordPath = siloPathPartial & pathPrefix("password") & pathEndOrSingleSlash
+  protected val passwordPath = siloPathPartial & pathPrefix("password") & end
 
   protected val adminPathPartial = siloPathPartial & pathPrefix("admin")
 
-  protected val adminPath = adminPathPartial & pathEndOrSingleSlash
+  protected val adminPath = adminPathPartial & end
 
   protected object BuildRoute {
 
@@ -97,11 +98,15 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
     }
 
     def apply[S](path: Directive[::[String, ::[S, HNil]]]): TwoArgRouteBuilder[S] = {
-      new TwoArgRouteBuilder(path, (s: S) => false)
+      new TwoArgRouteBuilder(path)
     }
 
     def apply[S, Q](path: Directive[::[String, ::[S, ::[Q, HNil]]]]): ThreeArgRouteBuilder[S, Q] = {
-      new ThreeArgRouteBuilder(path, (s: S, q: Q) => false)
+      new ThreeArgRouteBuilder(path)
+    }
+
+    def apply[S, Q, T](path: Directive[::[String, ::[S, ::[Q, ::[T, HNil]]]]]): FourArgRouteBuilder[S, Q, T] = {
+      new FourArgRouteBuilder(path)
     }
   }
 
@@ -114,41 +119,33 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
         }
       }
     }
-
-    protected def paramsShouldReject(params: Seq[(String, String)]) = {
-      false
-    }
-
-    def withParams[R](func: (SiloScope) => (Seq[(String, String)]) => R)(implicit w: Writes[R]): Route = {
-      new TwoArgRouteBuilder(path & parameterSeq, paramsShouldReject).apply(siloScope => params => {
-        func(siloScope)(params.filter(_._1.nonEmpty))
-      })
-    }
   }
 
-  protected class TwoArgRouteBuilder[S](path: Directive[::[String, ::[S, HNil]]], shouldReject: (S) => Boolean) {
+  protected class TwoArgRouteBuilder[S](path: Directive[::[String, ::[S, HNil]]]) {
     def apply[R](func: (SiloScope) => (S) => R)(implicit w: Writes[R]): Route = {
       path { (siloId, secondValue) =>
-        if (shouldReject(secondValue)) {
-          reject
-        } else {
-          scopedComplete(siloId) { siloScope =>
-            func(siloScope)(secondValue)
-          }
+        scopedComplete(siloId) { siloScope =>
+          func(siloScope)(secondValue)
         }
       }
     }
   }
 
-  protected class ThreeArgRouteBuilder[S, Q](path: Directive[::[String, ::[S, ::[Q, HNil]]]], shouldReject: (S, Q) => Boolean) {
+  protected class ThreeArgRouteBuilder[S, Q](path: Directive[::[String, ::[S, ::[Q, HNil]]]]) {
     def apply[R](func: (SiloScope) => (S, Q) => R)(implicit w: Writes[R]): Route = {
       path { (siloId, secondValue, thirdValue) =>
-        if (shouldReject(secondValue, thirdValue)) {
-          reject
-        } else {
-          scopedComplete(siloId) { siloScope =>
-            func(siloScope)(secondValue, thirdValue)
-          }
+        scopedComplete(siloId) { siloScope =>
+          func(siloScope)(secondValue, thirdValue)
+        }
+      }
+    }
+  }
+
+  protected class FourArgRouteBuilder[S, Q, T](path: Directive[::[String, ::[S, ::[Q, ::[T, HNil]]]]]) {
+    def apply[R](func: (SiloScope) => (S, Q, T) => R)(implicit w: Writes[R]): Route = {
+      path { (siloId, secondValue, thirdValue, fourthValue) =>
+        scopedComplete(siloId) { siloScope =>
+          func(siloScope)(secondValue, thirdValue, fourthValue)
         }
       }
     }

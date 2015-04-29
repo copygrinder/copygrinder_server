@@ -13,13 +13,11 @@
  */
 package org.copygrinder.impure.copybean.persistence
 
-import java.io.File
-
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception.{CopybeanTypeNotFound, SiloNotInitialized}
-import org.copygrinder.pure.copybean.model.{CopybeanImpl, ReifiedCopybean, CopybeanType}
+import org.copygrinder.pure.copybean.exception.{BranchNotFound, CopybeanTypeNotFound}
+import org.copygrinder.pure.copybean.model.CopybeanType
+import org.copygrinder.pure.copybean.persistence.model.{PersistableObject, Namespaces, Trees}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites, PredefinedCopybeanTypes}
 import play.api.libs.json.{Json, Reads}
 
@@ -29,32 +27,43 @@ trait PersistenceSupport extends LazyLogging with JsonReads with JsonWrites {
 
   protected var predefinedCopybeanTypes: PredefinedCopybeanTypes
 
-  protected def fetchFromCommit[T](ids: Seq[String], commitId: String, namespace: String)
-   (func: (String, Option[String]) => T)(implicit siloScope: SiloScope): Future[Seq[T]] = {
+  def getCommitIdOfActiveHeadOfBranch(branchId: String)
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[String] = {
+    //TODO: Implement real active branch head calculation
+    val headsFuture = siloScope.persistor.getBranchHeads("content", branchId)
 
-    val dataStringsFuture = siloScope.persistor.getByIdsAndCommit(namespace, ids, commitId)
+    val activeHeadFuture = headsFuture.map(heads => {
+      heads.headOption.getOrElse(throw new BranchNotFound(branchId)).id
+    })
+
+    activeHeadFuture
+  }
+
+  protected def fetchFromCommit[T](ids: Seq[(String, String)], commitId: String)
+   (func: ((String, String), Option[PersistableObject]) => T)
+   (implicit siloScope: SiloScope, ec: ExecutionContext): Future[Seq[T]] = {
+
+    val dataStringsFuture = siloScope.persistor.getByIdsAndCommit(Trees.userdata, ids, commitId)
 
     dataStringsFuture.map(dataStrings => {
-      ids.zipWithIndex.map { case (id, index) =>
-        func(id, dataStrings(index))
+      dataStrings.zipWithIndex.map { case (obj, index) =>
+        func(ids(index), obj)
       }
     })
 
   }
 
-  protected def fetchCopybeanTypesFromCommit(ids: Seq[String], commitId: String)
+  def fetchCopybeanTypesFromCommit(ids: Seq[String], commitId: String)
    (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[CopybeanType]] = {
 
-    fetchFromCommit(ids, commitId, "type") { case (id, dataOpt) =>
+    fetchFromCommit(ids.map(id => (Namespaces.cbtype, id)), commitId) { case ((namespace, id), dataOpt) =>
 
       if (dataOpt.isEmpty) {
         predefinedCopybeanTypes.predefinedTypes.getOrElse(id, throw new CopybeanTypeNotFound(id))
       } else {
-        val json = dataOpt.get
-        implicitly[Reads[CopybeanType]].reads(Json.parse(json)).get
+        dataOpt.get.cbType
       }
     }
-
   }
 
 }

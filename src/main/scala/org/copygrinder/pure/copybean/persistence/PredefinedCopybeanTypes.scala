@@ -22,7 +22,7 @@ class PredefinedCopybeanTypes {
 
   implicit def value2option[T](v: T): Option[T] = Option(v)
 
-  lazy val predefinedTypes = List(copygrinderAdminType, classBackedValidatorType, imageMetadataType)
+  lazy val predefinedTypes = List(copygrinderAdminType, classBackedValidatorType, fileMetadataType)
    .map(beanType => beanType.id -> beanType).toMap
 
   protected def predefinedType = new CopybeanType(id = "", tags = Seq("PREDEFINED"), cardinality = Cardinality.One)
@@ -49,12 +49,12 @@ class PredefinedCopybeanTypes {
     )
   )
 
-  val imageMetadataType = predefinedType.copy(
+  val fileMetadataType = predefinedType.copy(
     id = "fileMetadata",
     displayName = "File Metadata Type",
     instanceNameFormat = "$displayName$",
     fields = Seq(
-      CopybeanFieldDef.cast("filenames", FieldType.List, "File Names", ListMap("listType" -> "String"),
+      CopybeanFieldDef.cast("filename", FieldType.String, "File Name",
         validators = Seq(
           new CopybeanFieldValidatorDef("required")
         )),
@@ -63,7 +63,12 @@ class PredefinedCopybeanTypes {
       )),
       CopybeanFieldDef.cast("sizeInBytes", FieldType.Long, "Size in Bytes", validators = Seq(
         new CopybeanFieldValidatorDef("required")
-      ))
+      )),
+      CopybeanFieldDef.cast("contentType", FieldType.String, "Content Type",
+        validators = Seq(
+          new CopybeanFieldValidatorDef("required")
+        )
+      )
     )
   )
 

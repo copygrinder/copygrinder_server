@@ -11,8 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.persistence
+package org.copygrinder.pure.copybean.persistence.model
 
-case class NewCommit(branchId: String, parentCommitId: String, author: String, comment: String) {
+case class CommitData(obj: Option[PersistableObject], indexAdds: Iterable[IndexData], indexRemoves: Iterable[IndexData])
 
-}
+case class IndexData(indexId: String, fieldValue: String)
