@@ -30,8 +30,7 @@ class CopybeanPersistenceService(
  copybeanTypeEnforcer: CopybeanTypeEnforcer,
  idEncoderDecoder: IdEncoderDecoder,
  _predefinedCopybeanTypes: PredefinedCopybeanTypes,
- predefinedCopybeans: PredefinedCopybeans,
- indexer: Indexer
+ predefinedCopybeans: PredefinedCopybeans
  ) extends PersistenceSupport {
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
@@ -39,19 +38,14 @@ class CopybeanPersistenceService(
   def fetchCopybeansFromCommit(ids: Seq[String], commitId: String)
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
 
-    val beansFuture = fetchFromCommit(ids.map(id => (Namespaces.bean, id)), commitId) {
+    fetchFromCommit(ids.map(id => (Namespaces.bean, id)), commitId) {
       case ((namespace, id), dataOpt) =>
         if (dataOpt.isEmpty) {
-          predefinedCopybeans.predefinedBeans.getOrElse(id, throw new CopybeanNotFound(id))
+          throw new CopybeanNotFound(id)
         } else {
           dataOpt.get.bean
         }
     }
-
-    beansFuture.flatMap(copybeans => {
-      reifyBeans(copybeans, commitId)
-    })
-
   }
 
   protected def reifyBeans(copybeans: Seq[Copybean], commitId: String)
@@ -59,11 +53,10 @@ class CopybeanPersistenceService(
 
     val nestedFutures = copybeans.map(copybean => {
       resolveTypes(copybean, commitId).map(types => {
-        new ReifiedCopybeanImpl(copybean.enforcedTypeIds, copybean.content, copybean.id, types)
+        ReifiedCopybean(copybean, types)
       })
     })
     Future.sequence(nestedFutures)
-
   }
 
   protected def resolveTypes(copybean: AnonymousCopybean, commitId: String)
@@ -111,7 +104,7 @@ class CopybeanPersistenceService(
     }
   }
 
-  def storeAnonBean(anonCopybean: AnonymousCopybean, commit: NewCommit)
+  def storeAnonBean(anonCopybean: AnonymousCopybean, commit: CommitRequest)
    (implicit siloScope: SiloScope): Future[(String, ReifiedCopybean)] = {
 
     val id = idEncoderDecoder.encodeUuid(UUID.randomUUID())
@@ -119,7 +112,7 @@ class CopybeanPersistenceService(
     storeBean(copybean, commit)
   }
 
-  protected def storeBean(rawCopybean: Copybean, commit: NewCommit)
+  protected def storeBean(rawCopybean: Copybean, commit: CommitRequest)
    (implicit siloScope: SiloScope): Future[(String, ReifiedCopybean)] = {
 
     val newCopybeanFuture = reifyBeans(Seq(rawCopybean), commit.parentCommitId)
@@ -127,7 +120,7 @@ class CopybeanPersistenceService(
     newCopybeanFuture.flatMap(copybeans => {
       val newBean = copybeans.head
       enforceTypes(newBean, commit.parentCommitId).flatMap(_ => {
-        val data = indexer.indexAddCopybean(newBean)
+        val data = CommitData((Namespaces.bean, newBean.id), Some(PersistableObject(newBean)))
         siloScope.persistor.commit(commit, Seq(data)).map(commit => (commit.id, newBean))
       })
     })
@@ -136,62 +129,56 @@ class CopybeanPersistenceService(
   def findByCommit(commitId: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     val query = new Query(params.map(v => (Namespaces.bean, v._1) -> v._2))
-    siloScope.persistor.query(Trees.userdata, commitId, 100, query).flatMap(objects => {
-      reifyBeans(objects.map(_.bean), commitId)
+    siloScope.persistor.query(Trees.userdata, commitId, 100, query).map(objects => {
+      objects.map(_.bean)
     })
   }
 
 
-  def update(id: String, anonCopybean: AnonymousCopybean, commit: NewCommit)
+  def update(id: String, anonCopybean: AnonymousCopybean, commit: CommitRequest)
    (implicit siloScope: SiloScope): Future[String] = {
 
-    getExistingBean(id, commit.parentCommitId).flatMap { oldBean =>
+    val rawBean = Seq(new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content))
 
-      val rawBean = Seq(new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content))
+    val copybeanFuture = reifyBeans(rawBean, commit.parentCommitId)
 
-      val copybeanFuture = reifyBeans(rawBean, commit.parentCommitId)
+    copybeanFuture.flatMap(copybeans => {
 
-      copybeanFuture.flatMap(copybeans => {
+      val copybean = copybeans.head
 
-        val copybean = copybeans.head
-
-        enforceTypes(copybean, commit.parentCommitId).flatMap(_ => {
-          val data = indexer.indexUpdateCopybean(oldBean, copybean)
-          siloScope.persistor.commit(commit, Seq(data)).map(_.id)
-        })
-
+      enforceTypes(copybean, commit.parentCommitId).flatMap(_ => {
+        val data = CommitData((Namespaces.bean, copybean.id), Some(PersistableObject(copybean)))
+        siloScope.persistor.commit(commit, Seq(data)).map(_.id)
       })
-    }
-  }
 
-  protected def getExistingBean(id: String, commit: String)(implicit siloScope: SiloScope) = {
-    val existingBeanFuture = siloScope.persistor.getByIdsAndCommit(
-      Trees.userdata, Seq((Namespaces.bean, id)), commit
-    )
-
-    existingBeanFuture.map(seqOpt => {
-      if (seqOpt.isEmpty || seqOpt.head.isEmpty) {
-        throw new CopybeanNotFound(id)
-      } else {
-        seqOpt.head.get.bean
-      }
     })
   }
 
-  def delete(id: String, commit: NewCommit)(implicit siloScope: SiloScope): Future[String] = {
-    getExistingBean(id, commit.parentCommitId).flatMap(oldBean => {
-      val data = indexer.indexDeleteCopybean(oldBean)
-      siloScope.persistor.commit(commit, Seq(data)).map(_.id)
-    })
+  def delete(id: String, commit: CommitRequest)(implicit siloScope: SiloScope): Future[String] = {
+    val data = CommitData((Namespaces.bean, id), None)
+    siloScope.persistor.commit(commit, Seq(data)).map(_.id)
   }
 
   def createSilo()(implicit siloScope: SiloScope): Future[Commit] = {
     siloScope.persistor.initSilo().flatMap(_ => {
-      val beans = predefinedCopybeans.predefinedBeans.values.map(PersistableObject(_))
-      val types = predefinedCopybeanTypes.predefinedTypes.values.map(PersistableObject(_))
-      val data = indexer.indexOnly(beans ++ types)
-      val commit = new NewCommit(Trees.internal, Branches.master, "", "", "")
-      siloScope.persistor.commit(commit, data)
+
+      val beans = predefinedCopybeans.predefinedBeans.values
+
+      val reifiedBeans = beans.map(bean => {
+        val types = bean.enforcedTypeIds.flatMap(cbType => predefinedCopybeanTypes.predefinedTypes.get(cbType))
+        ReifiedCopybean(bean, types)
+      })
+
+      val beanObjs = reifiedBeans.map { bean =>
+        new CommitData((Namespaces.bean, bean.id), Some(PersistableObject(bean)))
+      }.toSeq
+
+      val types = predefinedCopybeanTypes.predefinedTypes.values.map { cbType =>
+        new CommitData((Namespaces.cbtype, cbType.id), Some(PersistableObject(cbType)))
+      }
+
+      val commit = new CommitRequest(Trees.internal, Branches.master, "", "", "")
+      siloScope.persistor.commit(commit, beanObjs ++ types)
     })
   }
 

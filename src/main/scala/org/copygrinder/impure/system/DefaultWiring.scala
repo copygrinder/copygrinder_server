@@ -20,7 +20,7 @@ import org.copygrinder.impure.api.CopygrinderApi
 import org.copygrinder.impure.copybean.controller.{BeanController, FileController, SecurityController, TypeController}
 import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.persistence.backend.{VersionedDataPersistor, BlobPersistor}
-import org.copygrinder.impure.copybean.persistence.backend.impl.{MapDbPersistor, FileBlobPersistor}
+import org.copygrinder.impure.copybean.persistence.backend.impl.{JsonSerializer, MapDbPersistor, FileBlobPersistor}
 import org.copygrinder.pure.copybean.persistence._
 import org.copygrinder.pure.copybean.persistence.model.Branches
 import spray.caching.{LruCache, Cache}
@@ -90,16 +90,13 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val predefinedCopybeans = new PredefinedCopybeans()
 
-  lazy val indexer = new Indexer()
-
-  lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes, indexer)
+  lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes)
 
   lazy val copybeanPersistenceService = new CopybeanPersistenceService(
     copybeanTypeEnforcer,
     idEncoderDecoder,
     predefinedCopybeanTypes,
-    predefinedCopybeans,
-    indexer
+    predefinedCopybeans
   )
 
 }
@@ -120,7 +117,9 @@ class SiloScopeFactory(
 
       lazy val fileDir = new File(root, "files/")
 
-      lazy val persistor: VersionedDataPersistor = new MapDbPersistor()
+      lazy val serializer = new JsonSerializer()
+
+      lazy val persistor: VersionedDataPersistor = new MapDbPersistor(siloId, root, serializer)
 
       lazy val blobPersistor: BlobPersistor = new FileBlobPersistor(persistenceServiceModule.hashedFileResolver,
         fileDir, tempDir, siloId)

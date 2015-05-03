@@ -11,8 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.persistence.model
+package org.copygrinder.pure.copybean.exception
 
-case class NewCommit(treeId: String, branchId: String, parentCommitId: String, author: String, comment: String) {
+class CopygrinderRuntimeException(message: String) extends RuntimeException {
 
 }

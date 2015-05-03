@@ -11,12 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.persistence.model
+package org.copygrinder.pure.copybean.exception
 
-object Namespaces {
-
-  val bean = "beam"
-
-  val cbtype = "type"
+class BadParent(message: String) extends CopygrinderRuntimeException(message) {
 
 }

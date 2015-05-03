@@ -11,30 +11,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.persistence.model
+package org.copygrinder.impure.copybean.persistence.backend
 
-import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType, ReifiedCopybean}
+import org.copygrinder.pure.copybean.model.{CopybeanType, Copybean, ReifiedCopybean}
+import org.copygrinder.pure.copybean.persistence.model.PersistableObject
 
-case class PersistableObject protected(beanOrType: Either[ReifiedCopybean, CopybeanType]) {
+import scala.concurrent.{ExecutionContext, Future}
 
-  def bean = {
-    beanOrType.left.get
-  }
+trait PersistentObjectSerializer[T] {
 
-  def cbType = {
-    beanOrType.right.get
-  }
+  type FetchTypes = Set[String] => Future[Set[CopybeanType]]
 
-}
+  def serialize(persistableObject: PersistableObject): T
 
-object PersistableObject {
-
-  def apply(copybean: ReifiedCopybean): PersistableObject = {
-    new PersistableObject(Left(copybean))
-  }
-
-  def apply(cbType: CopybeanType): PersistableObject = {
-    new PersistableObject(Right(cbType))
-  }
+  def deserialize(namespace: String, fetchTypes: FetchTypes, data: Array[Byte])
+   (implicit ec: ExecutionContext): Future[PersistableObject]
 
 }

@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
 import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.model.{Trees, NewCommit}
+import org.copygrinder.pure.copybean.persistence.model.{Trees, CommitRequest}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
@@ -41,7 +41,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
    (implicit siloScope: SiloScope, ec: ExecutionContext): JsString = {
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
-    val commit = new NewCommit(Trees.userdata, branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
     val beanFuture = persistenceService.storeAnonBean(anonCopybean, commit).map(_._2.id)
     Json.toJson(beanFuture).as[JsString]
   }
@@ -135,7 +135,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
    (implicit siloScope: SiloScope): JsValue = {
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
-    val commit = new NewCommit(Trees.userdata, branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
     val newCommitId = persistenceService.update(id, anonCopybean, commit)
     Json.toJson(newCommitId)
   }
@@ -144,7 +144,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
    (implicit siloScope: SiloScope): JsValue = {
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
-    val commit = new NewCommit(Trees.userdata, branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
     val newCommitId = persistenceService.delete(id, commit)
     Json.toJson(newCommitId)
   }

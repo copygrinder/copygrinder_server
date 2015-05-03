@@ -16,7 +16,7 @@ package org.copygrinder.impure.copybean.controller
 import org.copygrinder.impure.copybean.persistence.TypePersistenceService
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.model.{Commit, CopybeanType}
-import org.copygrinder.pure.copybean.persistence.model.{NewCommit, Trees}
+import org.copygrinder.pure.copybean.persistence.model.{CommitRequest, Trees}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
@@ -70,12 +70,12 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
     }
   }
 
-  protected def doCommit(params: Map[String, List[String]])(func: (NewCommit) => Future[Commit])
+  protected def doCommit(params: Map[String, List[String]])(func: (CommitRequest) => Future[Commit])
    (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
 
-    val commit = new NewCommit(Trees.userdata, branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
     val future = func(commit).map(_.id)
 
     Json.toJson(future)

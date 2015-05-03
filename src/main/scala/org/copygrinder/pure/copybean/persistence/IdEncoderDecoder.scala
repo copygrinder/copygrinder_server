@@ -56,4 +56,16 @@ class IdEncoderDecoder {
     new UUID(most, least)
   }
 
+  def encodeLong(long: Long): String = {
+
+    val bos = new ByteArrayOutputStream
+    val out = new DataOutputStream(bos)
+    out.writeLong(long)
+    out.close()
+
+    val mappedByteArray = bos.toByteArray
+
+    new CrockfordBase32().encodeToString(mappedByteArray.toArray)
+  }
+
 }

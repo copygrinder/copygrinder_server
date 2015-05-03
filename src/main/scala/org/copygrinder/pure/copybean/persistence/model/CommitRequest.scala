@@ -13,10 +13,6 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-object Namespaces {
-
-  val bean = "beam"
-
-  val cbtype = "type"
+case class CommitRequest(treeId: String, branchId: String, parentCommitId: String, author: String, comment: String) {
 
 }

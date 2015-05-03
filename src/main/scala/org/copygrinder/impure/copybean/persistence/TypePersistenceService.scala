@@ -14,18 +14,16 @@
 package org.copygrinder.impure.copybean.persistence
 
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence._
-import org.copygrinder.pure.copybean.persistence.model.{Namespaces, NewCommit, Query, Trees}
+import org.copygrinder.pure.copybean.persistence.model._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 
 class TypePersistenceService(
- _predefinedCopybeanTypes: PredefinedCopybeanTypes,
- indexer: Indexer
+ _predefinedCopybeanTypes: PredefinedCopybeanTypes
  ) extends PersistenceSupport {
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
@@ -38,39 +36,20 @@ class TypePersistenceService(
     })
   }
 
-  def update(copybeanType: CopybeanType, commit: NewCommit)(implicit siloScope: SiloScope): Future[Commit] = {
-    val existingTypeFuture = getExistingType(copybeanType.id, commit.parentCommitId)
+  def update(copybeanType: CopybeanType, commit: CommitRequest)(implicit siloScope: SiloScope): Future[Commit] = {
 
-    existingTypeFuture.flatMap(oldType => {
-      val data = indexer.indexUpdateType(oldType, copybeanType)
-      siloScope.persistor.commit(commit, Seq(data))
-    })
-  }
-
-  protected def getExistingType(id: String, commit: String)(implicit siloScope: SiloScope) = {
-    val existingTypeFuture = siloScope.persistor.getByIdsAndCommit(
-      Trees.userdata, Seq((Namespaces.cbtype, id)), commit
-    )
-
-    existingTypeFuture.map(seqOpt => {
-      if (seqOpt.isEmpty || seqOpt.head.isEmpty) {
-        throw new CopybeanTypeNotFound(id)
-      } else {
-        seqOpt.head.get.cbType
-      }
-    })
-  }
-
-  def store(copybeanType: CopybeanType, commit: NewCommit)(implicit siloScope: SiloScope): Future[Commit] = {
-    val data = indexer.indexAddType(copybeanType)
+    val data = CommitData((Namespaces.cbtype, copybeanType.id), Some(PersistableObject(copybeanType)))
     siloScope.persistor.commit(commit, Seq(data))
   }
 
-  def delete(id: String, commit: NewCommit)(implicit siloScope: SiloScope): Future[Commit] = {
-    getExistingType(id, commit.parentCommitId).flatMap(copybeanType => {
-      val data = indexer.indexDeleteType(copybeanType)
-      siloScope.persistor.commit(commit, Seq(data))
-    })
+  def store(copybeanType: CopybeanType, commit: CommitRequest)(implicit siloScope: SiloScope): Future[Commit] = {
+    val data = CommitData((Namespaces.cbtype, copybeanType.id), Some(PersistableObject(copybeanType)))
+    siloScope.persistor.commit(commit, Seq(data))
+  }
+
+  def delete(id: String, commit: CommitRequest)(implicit siloScope: SiloScope): Future[Commit] = {
+    val data = CommitData((Namespaces.cbtype, id), None)
+    siloScope.persistor.commit(commit, Seq(data))
   }
 
 }

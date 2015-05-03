@@ -13,6 +13,4 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-case class CommitData(obj: Option[PersistableObject], indexAdds: Iterable[IndexData], indexRemoves: Iterable[IndexData])
-
-case class IndexData(indexId: String, fieldValue: String)
+case class CommitData(id: (String, String), obj: Option[PersistableObject])

@@ -23,7 +23,7 @@ import play.api.libs.json.{Json, Reads}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait PersistenceSupport extends LazyLogging with JsonReads with JsonWrites {
+trait PersistenceSupport extends LazyLogging {
 
   protected var predefinedCopybeanTypes: PredefinedCopybeanTypes
 
@@ -43,10 +43,10 @@ trait PersistenceSupport extends LazyLogging with JsonReads with JsonWrites {
    (func: ((String, String), Option[PersistableObject]) => T)
    (implicit siloScope: SiloScope, ec: ExecutionContext): Future[Seq[T]] = {
 
-    val dataStringsFuture = siloScope.persistor.getByIdsAndCommit(Trees.userdata, ids, commitId)
+    val persistableObjsFuture = siloScope.persistor.getByIdsAndCommit(Trees.userdata, ids, commitId)
 
-    dataStringsFuture.map(dataStrings => {
-      dataStrings.zipWithIndex.map { case (obj, index) =>
+    persistableObjsFuture.map(objs => {
+      objs.zipWithIndex.map { case (obj, index) =>
         func(ids(index), obj)
       }
     })

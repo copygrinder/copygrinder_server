@@ -44,7 +44,8 @@ object CopygrinderBuild extends Build {
        "ch.qos.logback" % "logback-classic" % "1.1.2",
        "com.lambdaworks" % "scrypt" % "1.4.0",
        "org.apache.camel" % "camel-core" % "2.14.1",
-       "org.mapdb" % "mapdb" % "1.0.7"
+       "org.mapdb" % "mapdb" % "1.0.7",
+       "net.jpountz.lz4" % "lz4" % "1.3"
      ),
 
      /* TEST LIBS */

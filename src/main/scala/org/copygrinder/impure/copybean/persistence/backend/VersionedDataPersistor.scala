@@ -14,25 +14,30 @@
 package org.copygrinder.impure.copybean.persistence.backend
 
 import org.copygrinder.pure.copybean.model.Commit
-import org.copygrinder.pure.copybean.persistence.model.{PersistableObject, Query, NewCommit, CommitData}
+import org.copygrinder.pure.copybean.persistence.model.{CommitData, CommitRequest, PersistableObject, Query}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait VersionedDataPersistor {
 
-  def initSilo(): Future[Unit]
+  def initSilo()(implicit ec: ExecutionContext): Future[Unit]
 
-  def getByIdsAndCommit(treeId: String, ids: Seq[(String, String)], commitId: String):
-  Future[Seq[Option[PersistableObject]]]
+  def getByIdsAndCommit(treeId: String, ids: Seq[(String, String)], commitId: String)
+   (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]]
 
-  def getHistoryByIdAndCommit(treeId: String, id: (String, String), commitId: String, limit: Int): Future[Seq[Commit]]
+  def getHistoryByIdAndCommit(treeId: String, id: (String, String), commitId: String, limit: Int)
+   (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
-  def getBranchHeads(treeId: String, branchId: String): Future[Seq[Commit]]
+  def getBranchHeads(treeId: String, branchId: String)
+   (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
-  def getCommitsByBranch(treeId: String, branchId: String, limit: Int): Future[Seq[Commit]]
+  def getCommitsByBranch(treeId: String, branchId: String, limit: Int)
+   (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
-  def commit(commit: NewCommit, data: Seq[CommitData]): Future[Commit]
+  def commit(commit: CommitRequest, datas: Seq[CommitData])
+   (implicit ec: ExecutionContext): Future[Commit]
 
-  def query(treeId: String, commitId: String, limit: Int, query: Query): Future[Seq[PersistableObject]]
+  def query(treeId: String, commitId: String, limit: Int, query: Query)
+   (implicit ec: ExecutionContext): Future[Seq[PersistableObject]]
 
 }

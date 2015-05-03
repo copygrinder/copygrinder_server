@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.JsonInputException
 import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ListReifiedField}
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.model.{Namespaces, NewCommit, Trees}
+import org.copygrinder.pure.copybean.persistence.model.{Namespaces, CommitRequest, Trees}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json.{JsValue, Json}
 import spray.http.MultipartContent
@@ -50,7 +50,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
         val metaDataId = reifiedField.metaData
 
         val metaDataFuture = siloScope.persistor.getByIdsAndCommit(
-          Trees.userdata, Seq((Namespaces.file, metaDataId)), head
+          Trees.userdata, Seq((Namespaces.bean, metaDataId)), head
         )
 
         metaDataFuture.flatMap { case (existingMetaDataOpt) =>
@@ -130,7 +130,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
     ))
 
 
-    val commit = new NewCommit(Trees.userdata, branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
     copybeanPersistenceService.storeAnonBean(metaData, commit).map(_._2)
   }
 
