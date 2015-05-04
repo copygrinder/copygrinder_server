@@ -131,7 +131,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
 
 
     val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
-    copybeanPersistenceService.storeAnonBean(metaData, commit).map(_._2)
+    copybeanPersistenceService.storeAnonBean(Seq(metaData), commit).map(_._2.head)
   }
 
 }

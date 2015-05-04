@@ -104,24 +104,31 @@ class CopybeanPersistenceService(
     }
   }
 
-  def storeAnonBean(anonCopybean: AnonymousCopybean, commit: CommitRequest)
-   (implicit siloScope: SiloScope): Future[(String, ReifiedCopybean)] = {
+  def storeAnonBean(anonCopybeans: Seq[AnonymousCopybean], commit: CommitRequest)
+   (implicit siloScope: SiloScope): Future[(String, Seq[ReifiedCopybean])] = {
 
-    val id = idEncoderDecoder.encodeUuid(UUID.randomUUID())
-    val copybean = new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
-    storeBean(copybean, commit)
+    val copybeans = anonCopybeans.map(anonCopybean => {
+      val id = idEncoderDecoder.encodeUuid(UUID.randomUUID())
+      new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content)
+    })
+
+    storeBean(copybeans, commit)
   }
 
-  protected def storeBean(rawCopybean: Copybean, commit: CommitRequest)
-   (implicit siloScope: SiloScope): Future[(String, ReifiedCopybean)] = {
+  protected def storeBean(rawCopybeans: Seq[Copybean], commit: CommitRequest)
+   (implicit siloScope: SiloScope): Future[(String, Seq[ReifiedCopybean])] = {
 
-    val newCopybeanFuture = reifyBeans(Seq(rawCopybean), commit.parentCommitId)
+    val newCopybeanFuture = reifyBeans(rawCopybeans, commit.parentCommitId)
 
     newCopybeanFuture.flatMap(copybeans => {
-      val newBean = copybeans.head
-      enforceTypes(newBean, commit.parentCommitId).flatMap(_ => {
-        val data = CommitData((Namespaces.bean, newBean.id), Some(PersistableObject(newBean)))
-        siloScope.persistor.commit(commit, Seq(data)).map(commit => (commit.id, newBean))
+      val beanAndDataFutures = copybeans.map(newBean => {
+        enforceTypes(newBean, commit.parentCommitId).map(_ => {
+          (newBean, CommitData((Namespaces.bean, newBean.id), Some(PersistableObject(newBean))))
+        })
+      })
+      Future.sequence(beanAndDataFutures).flatMap(beanAndDataSeq => {
+        val commitFuture = siloScope.persistor.commit(commit, beanAndDataSeq.map(_._2))
+        commitFuture.map(commit => (commit.id, beanAndDataSeq.map(_._1)))
       })
     })
   }

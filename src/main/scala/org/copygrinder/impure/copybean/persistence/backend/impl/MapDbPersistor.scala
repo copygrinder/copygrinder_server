@@ -19,8 +19,8 @@ import java.util.concurrent.atomic.AtomicReference
 import net.jpountz.xxhash.XXHashFactory
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.persistence.backend.{PersistentObjectSerializer, VersionedDataPersistor}
-import org.copygrinder.pure.copybean.exception.{CommitNotFound, BadParent, SiloAlreadyInitialized, SiloNotInitialized}
-import org.copygrinder.pure.copybean.model.{CopybeanType, Commit}
+import org.copygrinder.pure.copybean.exception._
+import org.copygrinder.pure.copybean.model.{ReifiedCopybean, CopybeanType, Commit}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.copygrinder.pure.copybean.persistence.model._
 import org.mapdb.{DB, DBMaker}
@@ -148,7 +148,46 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
       allIds
     }
 
-    getByIdsAndCommit(treeId, ids.toSeq, commitNode.id).map(_.flatten)
+    getByIdsAndCommit(treeId, ids.toSeq, commitNode.id).map(_.flatten).map(objSeq => {
+      objSeq.filter(obj => {
+        query.fieldsAndValues.forall { case ((namespace, fieldId), values) =>
+          namespace match {
+            case Namespaces.bean =>
+              if (obj.beanOrType.isLeft) {
+                queryBean(fieldId, values, obj.bean)
+              } else {
+                true
+              }
+            case Namespaces.cbtype =>
+              if (obj.beanOrType.isRight) {
+                queryType(fieldId, values, obj.cbType)
+              } else {
+                true
+              }
+            case other => throw new CopygrinderRuntimeException("Unknown namespace: " + other)
+          }
+        }
+      }).take(limit)
+    })
+  }
+
+  protected def queryBean(fieldId: String, values: Seq[String], reifiedCopybean: ReifiedCopybean): Boolean = {
+
+    val contentField = fieldId.split('.')(1)
+    values.exists(value => {
+      val contentOpt = reifiedCopybean.content.get(contentField)
+      if (contentOpt.isDefined) {
+        val hit = contentOpt.get.toString == value
+        hit
+      } else {
+        false
+      }
+    })
+
+  }
+
+  protected def queryType(fieldId: String, values: Seq[String], copybeanType: CopybeanType): Boolean = {
+    true
   }
 
   def commit(request: CommitRequest, datas: Seq[CommitData])
@@ -197,7 +236,7 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     val headsMap = getDb().createHashMap("$$heads").makeOrGet[String, Set[Commit]]
     val existingHeads = Option(headsMap.get(treeId)).getOrElse(Set())
 
-    val newHeads = existingHeads.filter(_.id == newCommit.parentCommitId) + newCommit
+    val newHeads = existingHeads.filter(_.id != newCommit.parentCommitId) + newCommit
     blocking {
       headsMap.put(treeId, newHeads)
       headsMap.getEngine.commit()

@@ -80,12 +80,10 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
         typeController.store(Seq(copybeanType), params)
     } ~ BuildRoute(copybeansPath & post & entity(as[Seq[AnonymousCopybean]])) {
       implicit siloScope => (params, anonBeans) =>
-        anonBeans.map { anonBean =>
-          beanController.store(anonBean, params)
-        }
+          beanController.store(anonBeans, params)
     } ~ BuildRoute(copybeansPath & post & entity(as[AnonymousCopybean])) {
       implicit siloScope => (params, anonBean) =>
-        beanController.store(anonBean, params)
+        beanController.store(Seq(anonBean), params)
     } ~ BuildRoute(siloPath & post)(implicit siloScope => params => {
       beanController.createSilo()
     }) ~ BuildRoute(filePath & post & entity(as[MultipartContent])) { implicit siloScope => (params, data) =>

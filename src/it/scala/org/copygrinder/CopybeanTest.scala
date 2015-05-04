@@ -167,7 +167,9 @@ class CopybeanTest extends IntegrationTestSupport {
         |  }
         |}""".stripMargin
 
-    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8")
+     .addQueryParameter("parent", getBranchHead())
+     .setBody(json)
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response, 400)
@@ -187,7 +189,9 @@ class CopybeanTest extends IntegrationTestSupport {
         |  "bogus": "noWay"
         |}""".stripMargin
 
-    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8")
+     .addQueryParameter("parent", getBranchHead())
+     .setBody(json)
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response, 400)
@@ -210,7 +214,9 @@ class CopybeanTest extends IntegrationTestSupport {
         |  }
         |}""".stripMargin
 
-    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeansUrl.POST.setContentType("application/json", "UTF8")
+     .addQueryParameter("parent", getBranchHead())
+     .setBody(json)
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)
@@ -266,7 +272,10 @@ class CopybeanTest extends IntegrationTestSupport {
         |  }
         |}""".stripMargin
 
-    val req2 = copybeanIdUrl(id).PUT.setContentType("application/json", "UTF8").setBody(json)
+    val req2 = copybeanIdUrl(id).PUT
+     .setContentType("application/json", "UTF8")
+     .addQueryParameter("parent", getBranchHead())
+     .setBody(json)
 
     val responseFuture2 = Http(req2).map { response =>
       checkStatus(req2, response)
@@ -293,7 +302,10 @@ class CopybeanTest extends IntegrationTestSupport {
         |  "instanceNameFormat": "$displayName$"
         |}""".stripMargin
 
-    val req = copybeanTypeIdUrl("testtype2").PUT.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeanTypeIdUrl("testtype2").PUT
+     .setContentType("application/json", "UTF8")
+     .addQueryParameter("parent", getBranchHead())
+     .setBody(json)
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)
@@ -465,7 +477,10 @@ class CopybeanTest extends IntegrationTestSupport {
         |  "cardinality": "Many"
         |}""".stripMargin
 
-    val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeansTypesUrl.POST
+     .setContentType("application/json", "UTF8")
+     .addQueryParameter("parent", getBranchHead())
+     .setBody(json)
 
     doReq(req)
 

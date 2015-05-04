@@ -47,13 +47,13 @@ class BeanController(persistenceService: CopybeanPersistenceService)
     Json.toJson(future)
   }
 
-  def store(anonCopybean: AnonymousCopybean, params: Map[String, List[String]])
-   (implicit siloScope: SiloScope, ec: ExecutionContext): JsString = {
+  def store(anonCopybeans: Seq[AnonymousCopybean], params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
     val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
-    val beanFuture = persistenceService.storeAnonBean(anonCopybean, commit).map(_._2.id)
-    Json.toJson(beanFuture).as[JsString]
+    val beanFuture = persistenceService.storeAnonBean(anonCopybeans, commit).map(_._2.map(_.id))
+    Json.toJson(beanFuture).as[JsArray]
   }
 
   protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content", "type", "names")
