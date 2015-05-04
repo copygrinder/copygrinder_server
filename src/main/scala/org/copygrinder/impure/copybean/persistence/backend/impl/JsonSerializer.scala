@@ -19,7 +19,7 @@ import org.copygrinder.impure.copybean.persistence.backend.PersistentObjectSeria
 import org.copygrinder.pure.copybean.model._
 import org.copygrinder.pure.copybean.persistence.model.{Namespaces, PersistableObject}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
-import play.api.libs.json.{JsString, Reads, Writes}
+import play.api.libs.json.{Json, Reads, Writes}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -28,9 +28,8 @@ class JsonSerializer extends PersistentObjectSerializer[Array[Byte]] with JsonRe
 
   def serialize(persistableObject: PersistableObject): Array[Byte] = {
     if (persistableObject.beanOrType.isLeft) {
-      unreifiedCopybeanWrites
-       .writes(persistableObject.bean).toString()
-       .getBytes(Charset.forName("UTF-8"))
+      val json = unreifiedCopybeanWrites.writes(persistableObject.bean)
+      json.toString().getBytes(Charset.forName("UTF-8"))
     } else {
       implicitly[Writes[CopybeanType]]
        .writes(persistableObject.cbType).toString()
@@ -44,14 +43,16 @@ class JsonSerializer extends PersistentObjectSerializer[Array[Byte]] with JsonRe
 
     namespace match {
       case Namespaces.bean =>
-        val bean = implicitly[Reads[CopybeanImpl]].reads(JsString(json)).get
-        reifyBean(bean, fetchTypes).map(reifiedBean => {
+        val jsonParsed = Json.parse(json)
+        val beanResult = implicitly[Reads[CopybeanImpl]].reads(jsonParsed)
+        reifyBean(beanResult.get, fetchTypes).map(reifiedBean => {
           PersistableObject(reifiedBean)
         })
-      case Namespaces.bean =>
+      case Namespaces.cbtype =>
         Future {
-          val cbType = implicitly[Reads[CopybeanType]].reads(JsString(json)).get
-          PersistableObject(cbType)
+          val jsonParsed = Json.parse(json)
+          val cbType = implicitly[Reads[CopybeanType]].reads(jsonParsed)
+          PersistableObject(cbType.get)
         }
       case other => throw new RuntimeException("Unknown Namespace " + other)
     }

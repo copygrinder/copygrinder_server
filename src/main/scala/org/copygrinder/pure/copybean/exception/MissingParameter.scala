@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-case class MissingParameter(param: String) extends Exception {
+case class MissingParameter(param: String) extends CopygrinderInputException("Missing required parameter: " + param) {
 
 }

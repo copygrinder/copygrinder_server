@@ -35,7 +35,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
 
     val branchId = getBranchId(params)
 
-    val headFuture = copybeanPersistenceService.getCommitIdOfActiveHeadOfBranch(branchId)
+    val headFuture = copybeanPersistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId)
 
     val resultFuture = headFuture.flatMap(head => {
 

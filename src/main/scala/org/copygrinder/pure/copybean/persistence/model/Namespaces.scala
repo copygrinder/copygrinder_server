@@ -15,7 +15,7 @@ package org.copygrinder.pure.copybean.persistence.model
 
 object Namespaces {
 
-  val bean = "beam"
+  val bean = "bean"
 
   val cbtype = "type"
 

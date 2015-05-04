@@ -61,6 +61,8 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
           complete(BadRequest, e.getMessage)
         case e: JsonParseException =>
           complete(BadRequest, e.getMessage)
+        case e: CopygrinderInputException => complete(BadRequest, e.getMessage)
+        case e: CopygrinderRuntimeException => complete(InternalServerError, e.getMessage)
         case e =>
           requestUri { uri =>
             logger.error(s"Error occurred while processing request to $uri", e)
@@ -72,14 +74,10 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
   protected def postRoutes = {
     BuildRoute(copybeansTypesPath & post & entity(as[Seq[CopybeanType]])) {
       implicit siloScope => (params, typeSeq) =>
-        typeSeq.map { copybeanType =>
-          typeController.store(copybeanType, params)
-          ""
-        }
+        typeController.store(typeSeq, params)
     } ~ BuildRoute(copybeansTypesPath & post & entity(as[CopybeanType])) {
       implicit siloScope => (params, copybeanType) =>
-        typeController.store(copybeanType, params)
-        ""
+        typeController.store(Seq(copybeanType), params)
     } ~ BuildRoute(copybeansPath & post & entity(as[Seq[AnonymousCopybean]])) {
       implicit siloScope => (params, anonBeans) =>
         anonBeans.map { anonBean =>

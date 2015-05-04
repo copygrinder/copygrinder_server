@@ -29,7 +29,7 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
 
     val branchId = getBranchId(params)
 
-    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(branchId).flatMap(head => {
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId).flatMap(head => {
       persistenceService.fetchCopybeanTypesFromCommit(Seq(id), head)
     })
     Json.toJson(future)
@@ -42,7 +42,7 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
 
     val (fields, nonFieldParams) = partitionIncludedFields(params)
 
-    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(branchId).flatMap(head => {
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId).flatMap(head => {
       persistenceService.findCopybeanTypes(head, nonFieldParams)
     })
     validateAndFilterFields(fields, Json.toJson(future), copybeanTypeReservedWords)
@@ -56,10 +56,10 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
     }
   }
 
-  def store(copybeanType: CopybeanType, params: Map[String, List[String]])
+  def store(copybeanTypes: Seq[CopybeanType], params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
     doCommit(params) { commit =>
-      persistenceService.store(copybeanType, commit)
+      persistenceService.store(copybeanTypes, commit)
     }
   }
 

@@ -64,6 +64,8 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
             complete(BadRequest, e.getMessage)
           case e: UnknownQueryParameter =>
             complete(BadRequest, "Unknown query parameter '" + e.param + "'.  Did you mean 'content." + e.param + "'?")
+          case e: CopygrinderInputException => complete(BadRequest, e.getMessage)
+          case e: CopygrinderRuntimeException => complete(InternalServerError, e.getMessage)
           case e =>
             requestUri { uri =>
               logger.error(s"Error occurred while processing request to $uri", e)
@@ -95,6 +97,10 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
       beanController.fetchCopybean(id, params)
     } ~ BuildRoute(copybeansPath & get) { implicit siloScope => params =>
       beanController.find(params)
+    } ~ BuildRoute(branchHeadPath & get) { implicit siloScope => (branchId, params) =>
+      beanController.getBranchHead(branchId)
+    } ~ BuildRoute(branchHeadsPath & get) { implicit siloScope => (branchId, params) =>
+      beanController.getBranchHeads(branchId)
     } ~ copybeansIdFieldPath.&(get) { (siloId, beanId, fieldId, params) =>
       implicit lazy val siloScope = siloScopeFactory.build(siloId)
       onSuccess(

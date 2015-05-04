@@ -30,7 +30,7 @@ class TypePersistenceService(
 
   def findCopybeanTypes(commitId: String, params: Map[String, Seq[String]])
    (implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
-    val query = new Query(params.map(v => (Namespaces.cbtype, v._1) -> v._2))
+    val query = new Query(params.map(v => (Namespaces.cbtype, v._1) -> v._2), Some(Namespaces.cbtype))
     siloScope.persistor.query(Trees.userdata, commitId, 100, query).map(objs => {
       objs.map(_.cbType)
     })
@@ -42,9 +42,11 @@ class TypePersistenceService(
     siloScope.persistor.commit(commit, Seq(data))
   }
 
-  def store(copybeanType: CopybeanType, commit: CommitRequest)(implicit siloScope: SiloScope): Future[Commit] = {
-    val data = CommitData((Namespaces.cbtype, copybeanType.id), Some(PersistableObject(copybeanType)))
-    siloScope.persistor.commit(commit, Seq(data))
+  def store(copybeanTypes: Seq[CopybeanType], commit: CommitRequest)(implicit siloScope: SiloScope): Future[Commit] = {
+    val data = copybeanTypes.map(copybeanType => {
+      CommitData((Namespaces.cbtype, copybeanType.id), Some(PersistableObject(copybeanType)))
+    })
+    siloScope.persistor.commit(commit, data)
   }
 
   def delete(id: String, commit: CommitRequest)(implicit siloScope: SiloScope): Future[Commit] = {

@@ -91,6 +91,18 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
 
   protected val adminPath = adminPathPartial & end
 
+  protected val branchesPathPartial = siloPathPartial & pathPrefix("branches")
+
+  protected val branchesPath = branchesPathPartial & end
+
+  protected val branchesIdPathPartial = branchesPathPartial & pathPrefix(Segment)
+
+  protected val branchesIdPath = branchesIdPathPartial & end
+
+  protected val branchHeadPath = branchesIdPathPartial & pathPrefix("head") & end
+
+  protected val branchHeadsPath = branchesIdPathPartial & pathPrefix("heads") & end
+
   protected object BuildRoute {
 
     def apply(path: Directive[::[String, HNil]]): OneArgRouteBuilder = {

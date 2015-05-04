@@ -117,13 +117,13 @@ trait JsonWrites extends DefaultWrites {
     }
   }
 
-  def reifiedFieldWritesMap(fields: ListMap[String, ReifiedField], bean: Copybean): JsArray = {
+  protected def reifiedFieldWritesMap(fields: ListMap[String, ReifiedField], bean: Copybean) = {
 
     val jsValues = fields.values.map(field => {
-      reifiedFieldWrites(field, bean)
+      (field.fieldDef.id, reifiedFieldWrites(field, bean))
     })
 
-    JsArray(jsValues.toSeq)
+    JsObject(jsValues.toSeq)
   }
 
   def reifiedFieldWrites(field: ReifiedField, bean: Copybean): JsValue = {
@@ -200,13 +200,13 @@ trait JsonWrites extends DefaultWrites {
   }
 
   val unreifiedFieldWritesMap = new Writes[ListMap[String, ReifiedField]] {
-    override def writes(fields: ListMap[String, ReifiedField]): JsArray = {
+    override def writes(fields: ListMap[String, ReifiedField]) = {
 
       val jsValues = fields.values.map(field => {
-        unreifiedFieldWrites.writes(field)
+        (field.fieldDef.id, unreifiedFieldWrites.writes(field))
       })
 
-      JsArray(jsValues.toSeq)
+      JsObject(jsValues.toSeq)
     }
   }
 

@@ -70,10 +70,25 @@ class CopybeanTest extends IntegrationTestSupport {
         |  "cardinality": "One"
         |}]""".stripMargin
 
-    val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeansTypesUrl.POST
+     .addQueryParameter("parent", "")
+     .setContentType("application/json", "UTF8").setBody(json)
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)
+    }
+
+    Await.result(responseFuture, 2 second)
+  }
+
+  protected def getBranchHead() = {
+
+    val req = branchHead("master").GET
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+      val json = Json.parse(response.getResponseBody).as[JsObject]
+      json.value.get("head").get.as[JsString].value
     }
 
     Await.result(responseFuture, 2 second)
@@ -101,7 +116,10 @@ class CopybeanTest extends IntegrationTestSupport {
         |  }
         |}]""".stripMargin
 
-    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json)
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)

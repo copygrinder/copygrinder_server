@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-case class BranchNotFound(id: String) extends CopygrinderInputException("Branch not found: " + id) {
+class CopygrinderInputException(message: String) extends RuntimeException(message) {
 
 }

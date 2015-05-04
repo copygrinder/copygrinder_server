@@ -128,7 +128,7 @@ class CopybeanPersistenceService(
 
   def findByCommit(commitId: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
-    val query = new Query(params.map(v => (Namespaces.bean, v._1) -> v._2))
+    val query = new Query(params.map(v => (Namespaces.bean, v._1) -> v._2), Some(Namespaces.bean))
     siloScope.persistor.query(Trees.userdata, commitId, 100, query).map(objects => {
       objects.map(_.bean)
     })

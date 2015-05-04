@@ -13,8 +13,6 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-case class Query(fieldsAndValues: Map[(String, String), Seq[String]]) {
-
-  //TODO: Implement a proper query builder.
+case class Query(fieldsAndValues: Map[(String, String), Seq[String]], namespaceRestriction: Option[String]) {
 
 }

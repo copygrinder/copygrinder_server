@@ -16,10 +16,9 @@ package org.copygrinder.impure.copybean.persistence
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.{BranchNotFound, CopybeanTypeNotFound}
-import org.copygrinder.pure.copybean.model.CopybeanType
-import org.copygrinder.pure.copybean.persistence.model.{PersistableObject, Namespaces, Trees}
-import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites, PredefinedCopybeanTypes}
-import play.api.libs.json.{Json, Reads}
+import org.copygrinder.pure.copybean.model.{Commit, CopybeanType}
+import org.copygrinder.pure.copybean.persistence.PredefinedCopybeanTypes
+import org.copygrinder.pure.copybean.persistence.model.{Namespaces, PersistableObject, Trees}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,16 +26,21 @@ trait PersistenceSupport extends LazyLogging {
 
   protected var predefinedCopybeanTypes: PredefinedCopybeanTypes
 
-  def getCommitIdOfActiveHeadOfBranch(branchId: String)
+  def getCommitIdOfActiveHeadOfBranch(treeId: String, branchId: String)
    (implicit siloScope: SiloScope, ex: ExecutionContext): Future[String] = {
     //TODO: Implement real active branch head calculation
-    val headsFuture = siloScope.persistor.getBranchHeads("content", branchId)
+    val headsFuture = siloScope.persistor.getBranchHeads(treeId, branchId)
 
     val activeHeadFuture = headsFuture.map(heads => {
       heads.headOption.getOrElse(throw new BranchNotFound(branchId)).id
     })
 
     activeHeadFuture
+  }
+
+  def getBranchHeads(treeId: String, branchId: String)
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[Commit]] = {
+    siloScope.persistor.getBranchHeads(treeId, branchId)
   }
 
   protected def fetchFromCommit[T](ids: Seq[(String, String)], commitId: String)
@@ -59,7 +63,7 @@ trait PersistenceSupport extends LazyLogging {
     fetchFromCommit(ids.map(id => (Namespaces.cbtype, id)), commitId) { case ((namespace, id), dataOpt) =>
 
       if (dataOpt.isEmpty) {
-        predefinedCopybeanTypes.predefinedTypes.getOrElse(id, throw new CopybeanTypeNotFound(id))
+        throw new CopybeanTypeNotFound(id)
       } else {
         dataOpt.get.cbType
       }

@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.model
 
-case class Commit(id: String, parentCommitId: String, author: String, treeId: String) {
+case class Commit(id: String, branchId: String, parentCommitId: String, author: String) {
 
 }

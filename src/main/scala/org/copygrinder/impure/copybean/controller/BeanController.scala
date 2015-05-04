@@ -27,10 +27,20 @@ import scala.concurrent.{ExecutionContext, Future}
 class BeanController(persistenceService: CopybeanPersistenceService)
  extends JsonReads with JsonWrites with ControllerSupport {
 
+  def getBranchHead(branchId: String)(implicit siloScope: SiloScope, ec: ExecutionContext) = {
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId)
+    Json.toJson(future.map(head => Map("head" -> head)))
+  }
+
+  def getBranchHeads(branchId: String)(implicit siloScope: SiloScope, ec: ExecutionContext) = {
+    val future = persistenceService.getBranchHeads(Trees.userdata, branchId)
+    Json.toJson(future.map(heads => Map("heads" -> heads.map(_.id))))
+  }
+
   def fetchCopybean(id: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
     val branchId = getBranchId(params)
-    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(branchId).flatMap(head => {
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId).flatMap(head => {
       persistenceService.fetchCopybeansFromCommit(Seq(id), head).map(_.head)
     })
 
@@ -74,7 +84,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
     })
 
     val branchId = getBranchId(params)
-    val headFuture = persistenceService.getCommitIdOfActiveHeadOfBranch(branchId)
+    val headFuture = persistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId)
 
     val decoratedJsonFuture = headFuture.flatMap(head => {
 

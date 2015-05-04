@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-class CopygrinderRuntimeException(message: String) extends RuntimeException {
+class CopygrinderRuntimeException(message: String) extends RuntimeException(message) {
 
 }

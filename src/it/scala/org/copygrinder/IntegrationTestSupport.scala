@@ -44,6 +44,8 @@ trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterE
 
   def copybeanTypeIdUrl(id: String) = copybeansTypesUrl / id
 
+  def branchHead(branchId: String) = baseUrl / "branches" / branchId / "head"
+
   val filesUrl = baseUrl / "files"
 
   def copybeanFileUrl(id: String, field: String) = copybeansUrl / id / field
