@@ -137,38 +137,60 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   def query(treeId: String, commitId: String, limit: Int, query: Query)
    (implicit ec: ExecutionContext): Future[Seq[PersistableObject]] = {
 
+    val (commitNode, allIdsFuture) = getCommitAndAllIds(treeId, commitId)
+
+    allIdsFuture.flatMap(allIds => {
+
+      val ids = if (query.namespaceRestriction.isDefined) {
+        allIds.filter(_._1 == query.namespaceRestriction.get)
+      } else {
+        allIds
+      }
+
+      getByIdsAndCommit(treeId, ids.toSeq, commitNode.id).map(_.flatten).map(objSeq => {
+        objSeq.filter(obj => {
+          query.fieldsAndValues.forall { case ((namespace, fieldId), values) =>
+            namespace match {
+              case Namespaces.bean =>
+                if (obj.beanOrType.isLeft) {
+                  queryBean(fieldId, values, obj.bean)
+                } else {
+                  true
+                }
+              case Namespaces.cbtype =>
+                if (obj.beanOrType.isRight) {
+                  queryType(fieldId, values, obj.cbType)
+                } else {
+                  true
+                }
+              case other => throw new CopygrinderRuntimeException("Unknown namespace: " + other)
+            }
+          }
+        }).take(limit)
+      })
+
+    })
+  }
+
+  protected def getCommitAndAllIds(treeId: String, commitId: String)(implicit ec: ExecutionContext) = {
     val root = getDb().createHashMap(treeId).makeOrGet[String, CommitNode]
     val commitNode = Option(root.get(commitId)).getOrElse(throw new CommitNotFound(commitId))
 
-    val allIds = commitNode.byteStore.keys.map(splitId(_))
+    val treeIds = commitNode.byteStore.keys.map(splitId(_))
 
-    val ids = if (query.namespaceRestriction.isDefined) {
-      allIds.filter(_._1 == query.namespaceRestriction.get)
+    val ids = if (treeId != Trees.internal) {
+      getBranchHeads(Trees.internal, Branches.master).map(heads => {
+        val internalRoot = getDb().createHashMap(Trees.internal).makeOrGet[String, CommitNode]
+        val internalCommit = internalRoot.get(heads.head.id)
+        treeIds ++ internalCommit.byteStore.keys.map(splitId(_))
+      })
     } else {
-      allIds
+      Future {
+        treeIds
+      }
     }
 
-    getByIdsAndCommit(treeId, ids.toSeq, commitNode.id).map(_.flatten).map(objSeq => {
-      objSeq.filter(obj => {
-        query.fieldsAndValues.forall { case ((namespace, fieldId), values) =>
-          namespace match {
-            case Namespaces.bean =>
-              if (obj.beanOrType.isLeft) {
-                queryBean(fieldId, values, obj.bean)
-              } else {
-                true
-              }
-            case Namespaces.cbtype =>
-              if (obj.beanOrType.isRight) {
-                queryType(fieldId, values, obj.cbType)
-              } else {
-                true
-              }
-            case other => throw new CopygrinderRuntimeException("Unknown namespace: " + other)
-          }
-        }
-      }).take(limit)
-    })
+    (commitNode, ids)
   }
 
   protected def queryBean(fieldId: String, values: Seq[String], reifiedCopybean: ReifiedCopybean): Boolean = {
@@ -296,8 +318,8 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   }
 
   protected def splitId(id: String) = {
-    val array = id.split('.')
-    (array(0), array(1))
+    val (left, right) = id.splitAt(id.indexOf('.'))
+    (left, right.drop(1))
   }
 
   protected def handleNewCommit(spaceAndId: (String, String), prevByteStore: Map[String, Array[Byte]],
