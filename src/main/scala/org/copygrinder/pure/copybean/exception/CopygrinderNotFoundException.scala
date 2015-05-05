@@ -11,8 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.model
+package org.copygrinder.pure.copybean.exception
 
-case class FileMetadata(filenames: Set[String], length: Long, contentType: String) {
+class CopygrinderNotFoundException(message: String) extends RuntimeException(message) {
 
 }

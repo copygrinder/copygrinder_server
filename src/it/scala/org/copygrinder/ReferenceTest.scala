@@ -18,7 +18,7 @@ import play.api.libs.json.{JsArray, JsString, Json}
 
 class ReferenceTest extends IntegrationTestSupport {
 
-  def getId(index: Int, typeId: String = "reftype2") = {
+  def getId(index: Int, typeId: String) = {
     val req = copybeansUrl.GET
 
     doReqThen(req) { response =>
@@ -89,7 +89,10 @@ class ReferenceTest extends IntegrationTestSupport {
         |    }]
         |}]""".stripMargin
 
-    val req = copybeansTypesUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeansTypesUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json)
 
     doReq(req)
   }
@@ -107,13 +110,6 @@ class ReferenceTest extends IntegrationTestSupport {
         |  }
         |},{
         |  "enforcedTypeIds": [
-        |    "reftype2"
-        |  ],
-        |  "content": {
-        |    "stringfield": "Other Value"
-        |  }
-        |},{
-        |  "enforcedTypeIds": [
         |    "reftype3"
         |  ],
         |  "content": {
@@ -121,13 +117,15 @@ class ReferenceTest extends IntegrationTestSupport {
         |  }
         |}]""".stripMargin
 
-    val req1 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json1)
+    val req1 = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json1)
 
     doReq(req1)
 
-    val id0 = getId(0)
-    val id1 = getId(1)
-    val id2 = getId(0, "reftype3")
+    val id0 = getId(0, "reftype2")
+    val id1 = getId(0, "reftype3")
 
     val json2 =
       """
@@ -137,11 +135,14 @@ class ReferenceTest extends IntegrationTestSupport {
         |  ],
         |  "content": {
         |    "ref-field": {"ref":"%s"},
-        |    "reflist": [{"ref": "%s"},{"ref": "%s"}]
+        |    "reflist": [{"ref": "%s"}]
         |  }
-        |}""".stripMargin.format(id0, id1, id2)
+        |}""".stripMargin.format(id0, id1)
 
-    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json2)
+    val req2 = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json2)
 
     doReq(req2)
   }
@@ -159,7 +160,10 @@ class ReferenceTest extends IntegrationTestSupport {
         |  }
         |}""".stripMargin
 
-    val req = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json)
 
     doReqThen(req, 400) { response =>
       assert(response.getResponseBody.contains("non-existent bean"))
@@ -178,7 +182,10 @@ class ReferenceTest extends IntegrationTestSupport {
         |  }
         |}""".stripMargin.format(id)
 
-    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json2)
+    val req2 = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json2)
 
     doReqThen(req2, 400) { response =>
       assert(response.getResponseBody.contains("type not contained within refValidationTypes"))
@@ -193,27 +200,25 @@ class ReferenceTest extends IntegrationTestSupport {
 
     doReqThen(req1) { response =>
       assert(response.getResponseBody.contains("Awesome Value") == false)
-      assert(response.getResponseBody.contains("Other Value") == false)
       assert(response.getResponseBody.contains("Third Value") == false)
     }
 
     doReqThen(req2) { response =>
       assert(response.getResponseBody.contains("Awesome Value"))
-      assert(response.getResponseBody.contains("Other Value"))
       assert(response.getResponseBody.contains("Third Value"))
     }
   }
 
   it should "handle field filtering with expanded references" in {
-    val req = copybeansUrl.GET.addQueryParameter("enforcedTypeIds", "reftype1")
-     .addQueryParameter("expand", "*").addQueryParameter("fields", "content.ref-field")
+    val req = copybeansUrl.GET
+     .addQueryParameter("enforcedTypeIds", "reftype1")
+     .addQueryParameter("expand", "*")
+     .addQueryParameter("fields", "content.ref-field")
 
     doReqThen(req) { response =>
       assert(response.getResponseBody.contains("Awesome Value"))
-      assert(response.getResponseBody.contains("Other Value") == false)
       assert(response.getResponseBody.contains("Third Value") == false)
     }
   }
-
 
 }

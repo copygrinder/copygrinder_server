@@ -25,13 +25,13 @@ class CopybeanTypeEnforcer() {
    validatorClassInstances: Map[String, FieldValidator]): Map[String, CopybeanFieldDef] = {
 
     val copybeanTypes = copybean.types
-    
-    val reifiedFields = copybean.fields.map(_._2)
+
+    val reifiedFields = copybean.fields.values
     checkFields(reifiedFields)
 
     copybeanTypes.foreach(copybeanType => {
       if (copybeanType.fields.isDefined) {
-        copybeanType.fields.get.flatMap { fieldDef =>
+        copybeanType.fields.get.foreach { fieldDef =>
           checkValidators(fieldDef, copybean, validatorBeans, validatorClassInstances)
         }
       }
@@ -47,18 +47,15 @@ class CopybeanTypeEnforcer() {
   }
 
   protected def getRefs(fields: Iterable[ReifiedField]) = {
-    fields.flatMap(field => {
-      field match {
-        case r: ReferenceReifiedField => {
-          if (r.castVal.nonEmpty) {
-            Option((r.castVal, r.fieldDef))
-          } else {
-            None
-          }
+    fields.flatMap {
+      case r: ReferenceReifiedField =>
+        if (r.castVal.nonEmpty) {
+          Option((r.castVal, r.fieldDef))
+        } else {
+          None
         }
-        case _ => None
-      }
-    }).toMap
+      case _ => None
+    }.toMap
   }
 
 
@@ -66,7 +63,7 @@ class CopybeanTypeEnforcer() {
    field: CopybeanFieldDef,
    copybean: Copybean, validatorBeans: Map[String, Copybean],
    validatorClassInstances: Map[String, FieldValidator]) = {
-    field.validators.map(_.map({
+    field.validators.foreach(_.foreach({
       validatorDef =>
         val typeId = validatorDef.`type`
         val validator = validatorBeans.getOrElse(s"validator.$typeId",
@@ -95,14 +92,13 @@ class CopybeanTypeEnforcer() {
     )
 
     className match {
-      case classNameString: String => {
+      case classNameString: String =>
         val validator = validatorClassInstances.getOrElse(classNameString,
           throw new TypeValidationException(s"Couldn't find a class for validator '${
             classNameString
           }'")
         )
         validator.validate(copybean, field, validatorDef.args)
-      }
       case x => throw new TypeValidationException(
         s"Validator '${
           validator.id

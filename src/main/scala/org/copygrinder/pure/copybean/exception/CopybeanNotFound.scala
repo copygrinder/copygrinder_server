@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-case class CopybeanNotFound(id: String) extends Exception {
+case class CopybeanNotFound(id: String) extends CopygrinderNotFoundException("Copybean not found: " + id) {
 
 }

@@ -122,7 +122,7 @@ case class ReifiedCopybeanImpl(enforcedTypeIds: Set[String], content: ListMap[St
 }
 
 object ReifiedCopybean {
-  def apply(copybean: Copybean, types: Set[CopybeanType]) = {
+  def apply(copybean: Copybean, types: Set[CopybeanType]): ReifiedCopybeanImpl = {
     new ReifiedCopybeanImpl(copybean.enforcedTypeIds, copybean.content, copybean.id, types)
   }
 }

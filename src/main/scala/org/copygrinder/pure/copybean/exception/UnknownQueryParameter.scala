@@ -13,6 +13,7 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-case class UnknownQueryParameter(param: String) extends Exception {
+case class UnknownQueryParameter(param: String) extends CopygrinderInputException(
+  s"Unknown query parameter '$param'.  Did you mean 'content.$param'?") {
 
 }

@@ -27,12 +27,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class BeanController(persistenceService: CopybeanPersistenceService)
  extends JsonReads with JsonWrites with ControllerSupport {
 
-  def getBranchHead(branchId: String)(implicit siloScope: SiloScope, ec: ExecutionContext) = {
+  def getBranchHead(branchId: String)(implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
     val future = persistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId)
     Json.toJson(future.map(head => Map("head" -> head)))
   }
 
-  def getBranchHeads(branchId: String)(implicit siloScope: SiloScope, ec: ExecutionContext) = {
+  def getBranchHeads(branchId: String)(implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
     val future = persistenceService.getBranchHeads(Trees.userdata, branchId)
     Json.toJson(future.map(heads => Map("heads" -> heads.map(_.id))))
   }
@@ -52,8 +52,8 @@ class BeanController(persistenceService: CopybeanPersistenceService)
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
     val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
-    val beanFuture = persistenceService.storeAnonBean(anonCopybeans, commit).map(_._2.map(_.id))
-    Json.toJson(beanFuture).as[JsArray]
+    val beanFuture = persistenceService.storeAnonBean(anonCopybeans, commit)
+    Json.toJson(beanFuture.map(_._2.map(_.id))).as[JsArray]
   }
 
   protected val copybeansReservedWords = Set("enforcedTypeIds", "id", "content", "type", "names")

@@ -124,7 +124,9 @@ class SiloScopeFactory(
       lazy val blobPersistor: BlobPersistor = new FileBlobPersistor(persistenceServiceModule.hashedFileResolver,
         fileDir, tempDir, siloId)
 
-      new SiloScope(siloId, persistor, blobPersistor, Branches.master)
+      lazy val defaultResultLimit = 100
+
+      new SiloScope(siloId, persistor, blobPersistor, Branches.master, defaultResultLimit)
     }
 
     Await.result(future, 5 seconds)

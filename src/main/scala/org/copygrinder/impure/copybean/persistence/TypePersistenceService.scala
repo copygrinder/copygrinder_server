@@ -31,7 +31,7 @@ class TypePersistenceService(
   def findCopybeanTypes(commitId: String, params: Map[String, Seq[String]])
    (implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
     val query = new Query(params.map(v => (Namespaces.cbtype, v._1) -> v._2), Some(Namespaces.cbtype))
-    siloScope.persistor.query(Trees.userdata, commitId, 100, query).map(objs => {
+    siloScope.persistor.query(Trees.userdata, commitId, siloScope.defaultLimit, query).map(objs => {
       objs.map(_.cbType)
     })
   }

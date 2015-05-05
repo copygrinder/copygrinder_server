@@ -17,11 +17,11 @@ import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType, ReifiedCopyb
 
 case class PersistableObject protected(beanOrType: Either[ReifiedCopybean, CopybeanType]) {
 
-  def bean = {
+  def bean: ReifiedCopybean = {
     beanOrType.left.get
   }
 
-  def cbType = {
+  def cbType: CopybeanType = {
     beanOrType.right.get
   }
 

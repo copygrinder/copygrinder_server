@@ -37,43 +37,6 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
 
   val adminForceHttps: Boolean
 
-  protected def readExceptionHandler() =
-    ExceptionHandler {
-      case ex: Exception =>
-        val sw = new StringWriter()
-        ex.printStackTrace(new PrintWriter(sw))
-        logger.debug(sw.toString)
-        ex match {
-          case e: CopybeanNotFound =>
-            val id = e.id
-            logger.debug(s"Copybean with id=$id was not found")
-            complete(NotFound, s"Copybean with id '$id' was not found.")
-          case e: CopybeanTypeNotFound =>
-            val id = e.id
-            logger.debug(s"Copybean Type with id=$id was not found")
-            complete(NotFound, s"Copybean Type with id '$id' was not found.")
-          case e: SiloNotInitialized =>
-            val siloId = e.siloId
-            logger.debug(s"Silo with id=$siloId does not exist")
-            complete(NotFound, s"Silo with id=$siloId does not exist.")
-          case e: TypeValidationException =>
-            complete(BadRequest, e.getMessage)
-          case e: JsonInputException =>
-            complete(BadRequest, e.getMessage)
-          case e: JsonParseException =>
-            complete(BadRequest, e.getMessage)
-          case e: UnknownQueryParameter =>
-            complete(BadRequest, "Unknown query parameter '" + e.param + "'.  Did you mean 'content." + e.param + "'?")
-          case e: CopygrinderInputException => complete(BadRequest, e.getMessage)
-          case e: CopygrinderRuntimeException => complete(InternalServerError, e.getMessage)
-          case e =>
-            requestUri { uri =>
-              logger.error(s"Error occurred while processing request to $uri", e)
-              complete(InternalServerError, "Error occurred")
-            }
-        }
-    }
-
   protected val rootRoute = siloPath { (silo, params) =>
     get {
       complete {

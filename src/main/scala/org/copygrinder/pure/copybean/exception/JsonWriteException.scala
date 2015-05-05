@@ -13,7 +13,7 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-class JsonWriteException(message: String) extends Exception(message) {
+class JsonWriteException(message: String) extends CopygrinderInputException(message) {
 
 
 }

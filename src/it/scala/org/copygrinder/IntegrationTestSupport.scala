@@ -20,7 +20,9 @@ import com.ning.http.client.Response
 import dispatch.Defaults._
 import dispatch._
 import org.apache.commons.io.FileUtils
-import org.scalatest.{TestData, BeforeAndAfterEachTestData, FlatSpec, Matchers}
+import org.scalatest.exceptions.TestFailedException
+import org.scalatest.{BeforeAndAfterEachTestData, FlatSpec, Matchers, TestData}
+import play.api.libs.json.{JsObject, JsString, Json}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -63,7 +65,15 @@ trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterE
   def doReqThen[T](req: Req, status: Int = 200)(func: (Response) => T): T = {
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response, status)
-      func(response)
+      try {
+        func(response)
+      } catch {
+        case e: TestFailedException =>
+          println("REQUEST: " + req.toRequest)
+          println("REQUEST BODY: " + req.toRequest.getStringData)
+          println("RESPONSE: " + response.getResponseBody)
+          throw e
+      }
     }
 
     Await.result(responseFuture, 1 second)
@@ -112,6 +122,19 @@ trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterE
     if (wiring.globalModule.configuration.loggingLevel == "DEBUG") {
       println("----- Starting " + testData.text + " -----")
     }
+  }
+
+  protected def getBranchHead() = {
+
+    val req = branchHead("master").GET
+
+    val responseFuture = Http(req).map { response =>
+      checkStatus(req, response)
+      val json = Json.parse(response.getResponseBody).as[JsObject]
+      json.value.get("head").get.as[JsString].value
+    }
+
+    Await.result(responseFuture, 1 second)
   }
 
   Bootstrap.bootstrap(this)

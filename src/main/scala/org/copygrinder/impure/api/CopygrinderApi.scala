@@ -13,9 +13,14 @@
  */
 package org.copygrinder.impure.api
 
+import java.io.{PrintWriter, StringWriter}
+
 import akka.actor.ActorContext
+import com.fasterxml.jackson.core.JsonParseException
 import org.copygrinder.impure.copybean.controller._
 import org.copygrinder.impure.system.SiloScopeFactory
+import org.copygrinder.pure.copybean.exception.{CopygrinderNotFoundException, CopygrinderRuntimeException, CopygrinderInputException}
+import spray.http.StatusCodes._
 import spray.routing._
 
 class CopygrinderApi(
@@ -44,7 +49,26 @@ class CopygrinderApi(
 
   val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes
 
-  lazy val wrappedAllCopygrinderRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
+  val exceptionHandler = ExceptionHandler {
+    case ex: Exception =>
+      val sw = new StringWriter()
+      ex.printStackTrace(new PrintWriter(sw))
+      logger.debug(sw.toString)
+      ex match {
+        case e: JsonParseException =>
+          complete(BadRequest, e.getMessage)
+        case e: CopygrinderInputException => complete(BadRequest, e.getMessage)
+        case e: CopygrinderRuntimeException => complete(InternalServerError, e.getMessage)
+        case e: CopygrinderNotFoundException => complete(Gone, e.getMessage)
+        case e =>
+          requestUri { uri =>
+            logger.error(s"Error occurred while processing request to $uri", e)
+            complete(InternalServerError, "Error occurred")
+          }
+      }
+  }
+
+  lazy val wrappedAllCopygrinderRoutes: Route = cors(handleExceptions(exceptionHandler) {
     handleRejections(RejectionHandler.Default) {
       innerCors {
         allCopygrinderRoutes
@@ -52,7 +76,7 @@ class CopygrinderApi(
     }
   })
 
-  lazy val wrappedCopygrinderReadRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
+  lazy val wrappedCopygrinderReadRoutes: Route = cors(handleExceptions(exceptionHandler) {
     handleRejections(RejectionHandler.Default) {
       innerCors {
         copygrinderReadRoutes
@@ -60,7 +84,7 @@ class CopygrinderApi(
     }
   })
 
-  lazy val wrappedCopygrinderWriteRoutes: Route = cors(handleExceptions(writeExceptionHandler) {
+  lazy val wrappedCopygrinderWriteRoutes: Route = cors(handleExceptions(exceptionHandler) {
     handleRejections(RejectionHandler.Default) {
       copygrinderWriteRoutes
     }

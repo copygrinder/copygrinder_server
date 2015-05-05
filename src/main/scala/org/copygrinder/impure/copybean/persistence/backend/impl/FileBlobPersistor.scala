@@ -75,10 +75,11 @@ class FileBlobPersistor(hashedFileResolver: HashedFileResolver, fileDir: File, t
   def initSilo()(implicit ec: ExecutionContext): Future[Unit] = {
     Future {
       blocking {
-        if (tempDir.exists()) {
+        if (tempDir.exists() || fileDir.exists()) {
           throw new SiloAlreadyInitialized(siloId)
         }
         FileUtils.forceMkdir(tempDir)
+        FileUtils.forceMkdir(fileDir)
       }
     }
   }

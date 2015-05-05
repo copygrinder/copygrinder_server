@@ -30,39 +30,32 @@ trait JsonReads extends JsonReadUtils with LazyLogging {
   def metaValueToJsValue(value: JsValue): JsResult[Any] = {
     value match {
       case JsBoolean(b) => JsSuccess(b)
-      case JsNumber(n) => {
+      case JsNumber(n) =>
         if (n.isValidInt) {
           JsSuccess(n.toInt)
         } else {
           JsSuccess(n)
         }
-      }
       case JsString(s) => JsSuccess(s)
-      case JsArray(arr) => {
+      case JsArray(arr) =>
         val list = arr.map(metaValueToJsValue)
-        val values = list.map(result => result.get).toSeq
+        val values = list.map(result => result.get)
         JsSuccess(values)
-      }
-      case JsObject(m) => {
-        handleObject(m)
-      }
-      case JsNull => {
-        JsSuccess(null) //scalastyle:ignore
-      }
-      case x => {
+      case JsObject(m) => handleObject(m)
+      case JsNull => JsSuccess(null) //scalastyle:ignore
+      case x =>
         logger.debug("Couldn't unmarshall " + x)
         JsError(x.toString())
-      }
     }
   }
 
   protected def handleObject(m: scala.Seq[(String, JsValue)]): JsSuccess[ListMap[String, Any]] = {
     val list = m.map(f => {
       val value = metaValueToJsValue(f._2)
-      val unwrapedValue = if (value.isInstanceOf[JsSuccess[_]]) {
-        value.asInstanceOf[JsSuccess[_]].value
-      } else {
-        value
+      val unwrapedValue = value match {
+        case v: JsSuccess[_] => v.value
+        case _ =>
+          value
       }
       (f._1, unwrapedValue)
     })
@@ -74,9 +67,8 @@ trait JsonReads extends JsonReadUtils with LazyLogging {
   def listMapReads[V](implicit fmtv: Reads[V]): Reads[ListMap[String, V]] = new Reads[ListMap[String, V]] {
     override def reads(json: JsValue) = {
       json match {
-        case o: JsObjectWrapper => {
+        case o: JsObjectWrapper =>
           o.ignore()
-        }
         case _ =>
       }
       listMapReadsImpl(json, fmtv)
@@ -91,7 +83,7 @@ trait JsonReads extends JsonReadUtils with LazyLogging {
       case JsObject(m) => {
 
         type Errors = Seq[(JsPath, Seq[ValidationError])]
-        def locate(e: Errors, key: String): Errors = e.map { case (p, valerr) => (JsPath \ key) ++ p -> valerr}
+        def locate(e: Errors, key: String): Errors = e.map { case (p, valerr) => (JsPath \ key) ++ p -> valerr }
 
         m.foldLeft(Right(ListMap.empty): Either[Errors, ListMap[String, V]]) {
           case (acc, (key, value)) => (acc, fromJson[V](value)(fmtv)) match {
@@ -135,7 +127,5 @@ trait JsonReads extends JsonReadUtils with LazyLogging {
 
 
   implicit val copybeanReads = readWrapper(Json.reads[CopybeanImpl])
-
-  implicit val fileMetadataReads = readWrapper(Json.reads[FileMetadata])
 
 }

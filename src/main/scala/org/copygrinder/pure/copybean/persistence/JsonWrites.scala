@@ -14,7 +14,7 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.JsonWriteException
-import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField, FileOrImageReifiedField, ReifiedFieldSupport}
+import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ListReifiedField, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model._
 import play.api.libs.json._
 
@@ -41,56 +41,56 @@ trait JsonWrites extends DefaultWrites {
       case long: Long => JsNumber(long)
       case dec: BigDecimal => JsNumber(dec.toLong)
       case s: String => JsString(s)
-      case m: ListMap[_, _] => {
-        convertListMap(m)
-      }
-      case list: List[_] => {
-        convertList(list)
-      }
+      case m: ListMap[_, _] => convertListMap(m)
+      case seq: Seq[_] => convertList(seq)
       case null => JsNull //scalastyle:ignore
       case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
     }
-  } // scalastyle:on cyclomatic.complexity
+  }
 
-  protected def convertList(list: List[Any]): JsArray = {
-    if (!list.isEmpty) {
+  protected def convertList(list: Seq[Any]): JsArray = {
+    if (list.nonEmpty) {
       val head = list.head
-      if (head.isInstanceOf[String]) {
-        traversableWrites[String].writes(list.asInstanceOf[List[String]])
-      } else if (list.forall(_.isInstanceOf[Int])) {
-        traversableWrites[Int].writes(list.asInstanceOf[List[Int]])
-      } else if (list.exists(_.isInstanceOf[BigDecimal])) {
-        traversableWrites[BigDecimal].writes(list.map(value => {
-          value match {
+      head match {
+        case _: String =>
+          traversableWrites[String].writes(list.asInstanceOf[Seq[String]])
+        case _ => if (list.forall(_.isInstanceOf[Int])) {
+          traversableWrites[Int].writes(list.asInstanceOf[Seq[Int]])
+        } else if (list.exists(_.isInstanceOf[BigDecimal])) {
+          traversableWrites[BigDecimal].writes(list.map {
             case int: Int => BigDecimal(int)
             case dec: BigDecimal => dec
-          }
-        }))
-      } else if (list.head.isInstanceOf[Boolean]) {
-        traversableWrites[Boolean].writes(list.asInstanceOf[List[Boolean]])
-      } else if (head.isInstanceOf[Map[_, _]]) {
-        val newList = list.asInstanceOf[List[Map[String, Any]]].map(map => {
-          val newMap = map.map(entry => {
-            (entry._1 -> entry._2)
           })
-          stringAnyMapToJsObject(newMap)
-        })
-        JsArray(newList)
-      } else {
-        throw new JsonWriteException(s"Can't write JSON for list with value '$head")
+        } else if (list.head.isInstanceOf[Boolean]) {
+          traversableWrites[Boolean].writes(list.asInstanceOf[Seq[Boolean]])
+        } else {
+          head match {
+            case _: Map[_, _] =>
+              val newList = list.asInstanceOf[Seq[Map[String, Any]]].map(map => {
+                val newMap = map.map(entry => {
+                  entry._1 -> entry._2
+                })
+                stringAnyMapToJsObject(newMap)
+              })
+              JsArray(newList)
+            case _ =>
+              throw new JsonWriteException(s"Can't write JSON for list with value '$head")
+          }
+        }
       }
     } else {
       JsArray()
     }
-  }
+  } // scalastyle:on cyclomatic.complexity
 
   protected def convertListMap(m: ListMap[_, Any]): JsObject = {
-    if (!m.isEmpty) {
+    if (m.nonEmpty) {
       val head = m.head._1
-      if (head.isInstanceOf[String]) {
-        stringAnyMapToJsObject(m.asInstanceOf[Map[String, Any]])
-      } else {
-        throw new JsonWriteException(s"Can't write JSON for map with value '$head")
+      head match {
+        case _: String =>
+          stringAnyMapToJsObject(m.asInstanceOf[Map[String, Any]])
+        case _ =>
+          throw new JsonWriteException(s"Can't write JSON for map with value '$head")
       }
     } else {
       JsObject(Seq())
@@ -128,24 +128,21 @@ trait JsonWrites extends DefaultWrites {
 
   def reifiedFieldWrites(field: ReifiedField, bean: Copybean): JsValue = {
     field match {
-      case r: ReferenceReifiedField => {
+      case r: ReferenceReifiedField =>
         val jsValue = Json.obj(
           "ref" -> r.castVal
         )
         r.refBean.fold(jsValue) { refBean =>
           jsValue +("expand", copybeanWrites.writes(refBean))
         }
-      }
-      case f: FileOrImageReifiedField => {
+      case f: FileOrImageReifiedField =>
         convertAny(f.value).as[JsObject] +
          ("url", JsString(s"copybeans/${bean.id}/${f.fieldDef.id}"))
-      }
-      case list: ListReifiedField => {
+      case list: ListReifiedField =>
         val listJsVals = list.castVal.map(listField => {
           reifiedFieldWrites(listField, bean)
         })
         JsArray(listJsVals)
-      }
       case f: ReifiedField => convertAny(f.value)
     }
   }
@@ -154,13 +151,11 @@ trait JsonWrites extends DefaultWrites {
   implicit val copybeanWrites: Writes[Copybean] = new Writes[Copybean] {
     override def writes(copybean: Copybean): JsValue = {
       copybean match {
-        case c: CopybeanImpl => {
+        case c: CopybeanImpl =>
           val w = Json.writes[CopybeanImpl]
           w.writes(c)
-        }
-        case rc: ReifiedCopybeanImpl => {
+        case rc: ReifiedCopybeanImpl =>
           reifiedCopybeanWrites.writes(rc)
-        }
         case unknown => throw new RuntimeException("Unhandled copybean type: " + unknown)
       }
     }
@@ -187,8 +182,6 @@ trait JsonWrites extends DefaultWrites {
     }
   }
 
-  implicit val fileMetadataWrites = Json.writes[FileMetadata]
-
   val unreifiedCopybeanWrites: Writes[ReifiedCopybean] = new Writes[ReifiedCopybean] {
     def writes(bean: ReifiedCopybean): JsValue = {
       Json.obj(
@@ -213,17 +206,15 @@ trait JsonWrites extends DefaultWrites {
   val unreifiedFieldWrites = new Writes[ReifiedField] {
     override def writes(field: ReifiedField): JsValue = {
       field match {
-        case r: ReferenceReifiedField => {
+        case r: ReferenceReifiedField =>
           Json.obj(
             "ref" -> r.castVal
           )
-        }
-        case list: ListReifiedField => {
+        case list: ListReifiedField =>
           val listJsVals = list.castVal.map(listField => {
             writes(listField)
           })
           JsArray(listJsVals)
-        }
         case f: ReifiedField => convertAny(f.value)
       }
     }

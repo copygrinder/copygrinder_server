@@ -173,16 +173,25 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
 
   protected def queryBean(fieldId: String, values: Seq[String], reifiedCopybean: ReifiedCopybean): Boolean = {
 
-    val contentField = fieldId.split('.')(1)
-    values.exists(value => {
-      val contentOpt = reifiedCopybean.content.get(contentField)
-      if (contentOpt.isDefined) {
-        val hit = contentOpt.get.toString == value
-        hit
-      } else {
-        false
-      }
-    })
+    val array = fieldId.split('.')
+
+    if (array.length > 1) {
+      values.exists(value => {
+        val contentOpt = reifiedCopybean.content.get(array(1))
+        if (contentOpt.isDefined) {
+          val hit = contentOpt.get.toString == value
+          hit
+        } else {
+          false
+        }
+      })
+    } else if (fieldId == "enforcedTypeIds") {
+      values.exists(value => {
+        reifiedCopybean.enforcedTypeIds.contains(value)
+      })
+    } else {
+      throw new CopygrinderRuntimeException("Unknown query field: " + fieldId)
+    }
 
   }
 
@@ -243,8 +252,10 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     }
   }
 
+  protected val seed = 9283923842393L
+
   protected def buildNewHash(request: CommitRequest, newByteStore: Map[String, Array[Byte]]): String = {
-    val newHashBuilder = hashFactory.newStreamingHash64(9283923842393L)
+    val newHashBuilder = hashFactory.newStreamingHash64(seed)
     newByteStore.values.foreach(byteArray => newHashBuilder.update(byteArray, 0, byteArray.length))
     val parentCommitAsByteArray = request.parentCommitId.getBytes("UTF-8")
     newHashBuilder.update(parentCommitAsByteArray, 0, parentCommitAsByteArray.size)
@@ -297,7 +308,8 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
 
   protected def handleUpdateCommit(spaceAndId: (String, String), prevByteStore: Map[String, Array[Byte]],
    obj: PersistableObject, oldObj: PersistableObject): Map[String, Array[Byte]] = {
-    prevByteStore - resolveId(spaceAndId)
+    val json = serializer.serialize(obj)
+    prevByteStore.updated(resolveId(spaceAndId), json)
   }
 
   protected def handleDeleteCommit(spaceAndId: (String, String), prevByteStore: Map[String, Array[Byte]]
@@ -305,7 +317,8 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     prevByteStore - resolveId(spaceAndId)
   }
 
-
 }
 
-case class CommitNode(id: String, branchId: String, previousCommitId: String, byteStore: Map[String, Array[Byte]])
+protected case class CommitNode(
+ id: String, branchId: String, previousCommitId: String, byteStore: Map[String, Array[Byte]]
+ )

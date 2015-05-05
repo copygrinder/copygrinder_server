@@ -16,4 +16,4 @@ package org.copygrinder.impure.system
 import org.copygrinder.impure.copybean.persistence.backend.{BlobPersistor, VersionedDataPersistor}
 
 case class SiloScope(siloId: String, persistor: VersionedDataPersistor, blobPersistor: BlobPersistor,
- defaultBranch: String)
+ defaultBranch: String, defaultLimit: Int)

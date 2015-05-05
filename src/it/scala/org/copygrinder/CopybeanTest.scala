@@ -19,7 +19,7 @@ import com.ning.http.client.Response
 import com.ning.http.multipart.FilePart
 import dispatch.Defaults._
 import dispatch._
-import play.api.libs.json.{JsArray, JsObject, JsString, Json}
+import play.api.libs.json.{JsArray, JsString, Json}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -76,19 +76,6 @@ class CopybeanTest extends IntegrationTestSupport {
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)
-    }
-
-    Await.result(responseFuture, 2 second)
-  }
-
-  protected def getBranchHead() = {
-
-    val req = branchHead("master").GET
-
-    val responseFuture = Http(req).map { response =>
-      checkStatus(req, response)
-      val json = Json.parse(response.getResponseBody).as[JsObject]
-      json.value.get("head").get.as[JsString].value
     }
 
     Await.result(responseFuture, 2 second)
@@ -330,13 +317,15 @@ class CopybeanTest extends IntegrationTestSupport {
     val req = filesUrl.POST.addBodyPart(
       new FilePart("upload", file, "text/x-markdown", "UTF-8")
     ).setHeader("Transfer-Encoding", "chunked")
+     .addQueryParameter("parent", getBranchHead())
+
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)
-      getHash(response)
+      getMetaDataId(response)
     }
 
-    val hash = Await.result(responseFuture, 1 second)
+    val metaDataId = Await.result(responseFuture, 1 second)
 
     val json =
       """
@@ -347,18 +336,20 @@ class CopybeanTest extends IntegrationTestSupport {
         |  "content": {
         |    "testfield1": "abc",
         |    "testfield4": {
-        |      "filename": "developer.md",
-        |      "hash": "%s"
+        |      "metaData": "%s"
         |    }
         |  }
-        |}""".stripMargin.format(hash)
+        |}""".stripMargin.format(metaDataId)
 
-    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req2 = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json)
 
     val responseFuture2 = Http(req2).map { response =>
       checkStatus(req2, response)
       val body = response.getResponseBody
-      body.substring(1, body.length - 1)
+      body.substring(2, body.length - 2)
     }
 
     val id = Await.result(responseFuture2, 2 second)
@@ -374,9 +365,9 @@ class CopybeanTest extends IntegrationTestSupport {
     Await.result(responseFuture3, 1 second)
   }
 
-  protected def getHash(response: Response) = {
+  protected def getMetaDataId(response: Response) = {
     val json = Json.parse(response.getResponseBody).as[JsArray]
-    json.value.seq(0).\("content").as[JsObject].\("hash").as[JsString].value
+    json.value.seq(0).as[JsString].value
   }
 
   it should "handle Image fields" in {
@@ -386,9 +377,10 @@ class CopybeanTest extends IntegrationTestSupport {
     val req = filesUrl.POST.addBodyPart(
       new FilePart("upload", file, "image/jpeg", null)
     ).setHeader("Transfer-Encoding", "chunked")
+     .addQueryParameter("parent", getBranchHead())
 
     val hash = doReqThen(req) { response =>
-      getHash(response)
+      getMetaDataId(response)
     }
 
     val json =
@@ -400,17 +392,19 @@ class CopybeanTest extends IntegrationTestSupport {
         |  "content": {
         |    "testfield1": "abc",
         |    "testfield5": {
-        |      "filename": "test.jpg",
-        |      "hash": "%s"
+        |      "metaData": "%s"
         |    }
         |  }
         |}""".stripMargin.format(hash)
 
-    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json)
+    val req2 = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json)
 
     val id = doReqThen(req2) { response =>
       val body = response.getResponseBody
-      body.substring(1, body.length - 1)
+      body.substring(2, body.length - 2)
     }
 
     val req3 = copybeanFileUrl(id, "testfield5").GET
@@ -496,17 +490,18 @@ class CopybeanTest extends IntegrationTestSupport {
         |    "longlist": [456, 9223372036854775807],
         |    "booleanlist": [true, false],
         |    "filelist": [{
-        |      "filename": "test2.jpg",
-        |      "hash": "abc"
+        |      "metaData": "abc"
         |    },{
-        |      "filename": "test3.jpg",
-        |      "hash": "abc"
+        |      "metaData": "def"
         |    }],
         |    "htmllist": ["<b>hello</b>", "world"]
         |  }
         |}""".stripMargin
 
-    val req2 = copybeansUrl.POST.setContentType("application/json", "UTF8").setBody(json2)
+    val req2 = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead())
+     .setContentType("application/json", "UTF8")
+     .setBody(json2)
 
     doReq(req2)
   }

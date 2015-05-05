@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-case class SiloAlreadyInitialized(siloId: String) extends Exception {
+case class SiloAlreadyInitialized(siloId: String) extends CopygrinderInputException(s"$siloId is already initialized") {
 
 }

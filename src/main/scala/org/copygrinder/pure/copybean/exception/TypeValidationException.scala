@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-class TypeValidationException(message: String) extends Exception(message) {
+class TypeValidationException(message: String) extends CopygrinderInputException(message) {
 
 }

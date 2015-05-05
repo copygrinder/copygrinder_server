@@ -13,6 +13,4 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-case class SiloNotInitialized(siloId: String) extends Exception {
-
-}
+case class SiloNotInitialized(siloId: String) extends CopygrinderInputException(s"Silo with id=$siloId does not exist.")

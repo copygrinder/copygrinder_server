@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.JsonInputException
 import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ListReifiedField}
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.model.{Namespaces, CommitRequest, Trees}
+import org.copygrinder.pure.copybean.persistence.model.{CommitRequest, Namespaces, Trees}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json.{JsValue, Json}
 import spray.http.MultipartContent
@@ -56,9 +56,9 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
         metaDataFuture.flatMap { case (existingMetaDataOpt) =>
 
           val metaDataBean = existingMetaDataOpt.head.get.bean
-          val hash = metaDataBean.content.get("hash").asInstanceOf[String]
-          val filename = metaDataBean.content.get("filename").asInstanceOf[String]
-          val contentType = metaDataBean.content.get("filename").asInstanceOf[String]
+          val hash = metaDataBean.content.get("hash").get.asInstanceOf[String]
+          val filename = metaDataBean.content.get("filename").get.asInstanceOf[String]
+          val contentType = metaDataBean.content.get("contentType").get.asInstanceOf[String]
 
           val disposition = if (reifiedField.fieldDef.`type` == FieldType.Image) {
             "inline"
@@ -115,7 +115,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
     })
 
     val resultFuture = Future.sequence(fileMetadataBeans)
-    Json.toJson(resultFuture)
+    Json.toJson(resultFuture.map(_.map(_.id)))
   }
 
   protected def createMetaData(filename: String, hash: String, length: Long, contentType: String, branchId: String,
@@ -129,9 +129,12 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
       "contentType" -> contentType
     ))
 
-
     val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
     copybeanPersistenceService.storeAnonBean(Seq(metaData), commit).map(_._2.head)
+  }
+
+  def createSilo()(implicit siloScope: SiloScope, ec: ExecutionContext): Unit = {
+    Await.result(siloScope.blobPersistor.initSilo(), 5 seconds)
   }
 
 }

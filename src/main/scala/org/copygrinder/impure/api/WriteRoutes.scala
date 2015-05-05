@@ -34,43 +34,6 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
   val fileController: FileController
 
-  protected def writeExceptionHandler() = ExceptionHandler {
-    case ex: Exception =>
-      val sw = new StringWriter()
-      ex.printStackTrace(new PrintWriter(sw))
-      logger.debug(sw.toString)
-      ex match {
-        case e: CopybeanNotFound =>
-          val id = e.id
-          logger.debug(s"Copybean with id=$id was not found")
-          complete(NotFound, s"Copybean with id '$id' was not found.")
-        case e: CopybeanTypeNotFound =>
-          val id = e.id
-          logger.debug(s"Copybean Type with id=$id was not found")
-          complete(NotFound, s"Copybean Type with id '$id' was not found.")
-        case e: SiloNotInitialized =>
-          val siloId = e.siloId
-          logger.debug(s"Silo with id=$siloId does not exist.")
-          complete(NotFound, s"Silo with id=$siloId does not exist.")
-        case e: SiloAlreadyInitialized =>
-          val siloId = e.siloId
-          complete(BadRequest, s"Silo with id '$siloId' already exists.")
-        case e: TypeValidationException =>
-          complete(BadRequest, e.getMessage)
-        case e: JsonInputException =>
-          complete(BadRequest, e.getMessage)
-        case e: JsonParseException =>
-          complete(BadRequest, e.getMessage)
-        case e: CopygrinderInputException => complete(BadRequest, e.getMessage)
-        case e: CopygrinderRuntimeException => complete(InternalServerError, e.getMessage)
-        case e =>
-          requestUri { uri =>
-            logger.error(s"Error occurred while processing request to $uri", e)
-            complete(InternalServerError, "Error occurred")
-          }
-      }
-  }
-
   protected def postRoutes = {
     BuildRoute(copybeansTypesPath & post & entity(as[Seq[CopybeanType]])) {
       implicit siloScope => (params, typeSeq) =>
@@ -80,12 +43,14 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
         typeController.store(Seq(copybeanType), params)
     } ~ BuildRoute(copybeansPath & post & entity(as[Seq[AnonymousCopybean]])) {
       implicit siloScope => (params, anonBeans) =>
-          beanController.store(anonBeans, params)
+        beanController.store(anonBeans, params)
     } ~ BuildRoute(copybeansPath & post & entity(as[AnonymousCopybean])) {
       implicit siloScope => (params, anonBean) =>
         beanController.store(Seq(anonBean), params)
     } ~ BuildRoute(siloPath & post)(implicit siloScope => params => {
-      beanController.createSilo()
+      val result = beanController.createSilo()
+      fileController.createSilo()
+      result
     }) ~ BuildRoute(filePath & post & entity(as[MultipartContent])) { implicit siloScope => (params, data) =>
       fileController.storeFile(data, params)
     }

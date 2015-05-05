@@ -15,7 +15,6 @@ package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.model._
 
-import scala.collection.immutable.ListMap
 import scala.language.implicitConversions
 
 class PredefinedCopybeanTypes {
