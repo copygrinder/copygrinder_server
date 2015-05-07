@@ -20,7 +20,7 @@ import net.jpountz.xxhash.XXHashFactory
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.persistence.backend.{PersistentObjectSerializer, VersionedDataPersistor}
 import org.copygrinder.pure.copybean.exception._
-import org.copygrinder.pure.copybean.model.{ReifiedCopybean, CopybeanType, Commit}
+import org.copygrinder.pure.copybean.model.{Commit, CopybeanType, ReifiedCopybean}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.copygrinder.pure.copybean.persistence.model._
 import org.mapdb.{DB, DBMaker}
@@ -74,132 +74,132 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     }
   }
 
-  protected def fetchTypes(treeId: String, commitId: String)(typeIds: Set[String])
+  /*  protected def fetchTypes(commitIds: Seq[CommitId])(typeIds: Set[String])
+     (implicit ec: ExecutionContext): Future[Set[CopybeanType]] = {
+      val typesFuture = getByIdsAndCommits(typeIds.toSeq.map(typeId => (Namespaces.cbtype, typeId)), commitIds)
+      typesFuture.map(obj => {
+        obj.flatten.map(_.cbType).toSet
+      })
+    }*/
+
+  protected def fetchTypesFromCommitNodes(commitNodes: Seq[CommitNode])(typeIds: Set[String])
    (implicit ec: ExecutionContext): Future[Set[CopybeanType]] = {
-    val typesFuture = getByIdsAndCommit(treeId, typeIds.toSeq.map(typeId => (Namespaces.cbtype, typeId)), commitId)
+    val typesFuture = getByIdsAndCommitNodes(typeIds.toSeq.map(typeId => (Namespaces.cbtype, typeId)), commitNodes)
     typesFuture.map(obj => {
       obj.flatten.map(_.cbType).toSet
     })
   }
 
-  def getByIdsAndCommit(treeId: String, ids: Seq[(String, String)], commitId: String)
-   (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
+  protected def getCommits(commitIds: Seq[CommitId]) = {
     blocking {
-      val root = getDb().createHashMap(treeId).makeOrGet[String, CommitNode]
-      val commitNode = Option(root.get(commitId)).getOrElse(throw new CommitNotFound(commitId))
-
-      val futures = ids.map { namespaceAndId =>
-        searchByteArrays(treeId, resolveId(namespaceAndId), commitNode).flatMap(byteArrayOpt => {
-          if (byteArrayOpt.isEmpty) {
-            Future {
-              Option.empty[PersistableObject]
-            }
+      commitIds.map { commitId =>
+        val root = getDb().createHashMap(commitId.treeId).makeOrGet[String, CommitNode]
+        Option(root.get(commitId.id)).getOrElse {
+          if (commitId.id.isEmpty) {
+            CommitNode("", "", "", Map())
           } else {
-            serializer.deserialize(namespaceAndId._1, fetchTypes(treeId, commitId), byteArrayOpt.get).map(Option(_))
+            throw new CommitNotFound(commitId)
           }
-        })
-      }
-      Future.sequence(futures)
-    }
-  }
-
-  protected def searchByteArrays(treeId: String, key: String, commitNode: CommitNode)
-   (implicit ec: ExecutionContext): Future[Option[Array[Byte]]] = {
-
-    val byteArrayOpt = commitNode.byteStore.get(key)
-    if (byteArrayOpt.isEmpty && treeId != Trees.internal) {
-      getBranchHeads(Trees.internal, Branches.master).map(heads => {
-        val internalRoot = getDb().createHashMap(Trees.internal).makeOrGet[String, CommitNode]
-        val internalCommit = internalRoot.get(heads.head.id)
-        internalCommit.byteStore.get(key)
-      })
-    } else {
-      Future {
-        byteArrayOpt
+        }
       }
     }
   }
 
-  def getHistoryByIdAndCommit(treeId: String, id: (String, String), commitId: String, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = ???
+  def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[CommitId])
+   (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
+    val commits = getCommits(commitIds)
+    getByIdsAndCommitNodes(ids, commits)
+  }
 
-  def getBranchHeads(treeId: String, branchId: String)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
+  protected def getByIdsAndCommitNodes(ids: Seq[(String, String)], commits: Seq[CommitNode])
+   (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
+
+    val futures = ids.flatMap { namespaceAndId =>
+
+      val byteArrayOpt = commits.foldLeft(Option.empty[Array[Byte]]) { (result, commit) =>
+        if (result.isEmpty) {
+          blocking {
+            commit.byteStore.get(resolveId(namespaceAndId))
+          }
+        } else {
+          result
+        }
+      }
+
+      byteArrayOpt.map { byteArray =>
+        serializer.deserialize(namespaceAndId._1, fetchTypesFromCommitNodes(commits), byteArray).map(Option(_))
+      }
+    }
+
+    Future.sequence(futures)
+  }
+
+  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[CommitId], limit: Int)
+   (implicit ec: ExecutionContext): Future[Seq[Commit]] = ???
+
+  def getBranchHeads(branchId: BranchId)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
     Future {
       val heads = blocking {
         val headsMap = getDb().createHashMap("$$heads").makeOrGet[String, Set[Commit]]
-        Option(headsMap.get(treeId)).getOrElse(Set())
+        Option(headsMap.get(branchId.treeId)).getOrElse(throw new TreeNotFound(branchId.treeId))
       }
-      heads.filter(_.branchId == branchId).toSeq
+      heads.filter(_.branchId == branchId.id).toSeq
     }
   }
 
-  def getCommitsByBranch(treeId: String, branchId: String, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = ???
+  def getCommitsByBranch(branchId: BranchId, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = ???
 
-  def query(treeId: String, commitId: String, limit: Int, query: Query)
+  def query(commitIds: Seq[CommitId], limit: Int, query: Query)
    (implicit ec: ExecutionContext): Future[Seq[PersistableObject]] = {
 
-    val (commitNode, allIdsFuture) = getCommitAndAllIds(treeId, commitId)
+    val commits = getCommits(commitIds)
 
-    allIdsFuture.flatMap(allIds => {
+    val ids = commits.flatMap { commitNode =>
 
-      val ids = if (query.namespaceRestriction.isDefined) {
+      val allIds = commitNode.byteStore.keys.map(splitId(_))
+
+      if (query.namespaceRestriction.isDefined) {
         allIds.filter(_._1 == query.namespaceRestriction.get)
       } else {
         allIds
       }
-
-      getByIdsAndCommit(treeId, ids.toSeq, commitNode.id).map(_.flatten).map(objSeq => {
-        objSeq.filter(obj => {
-          query.fieldsAndValues.forall { case ((namespace, fieldId), values) =>
-            namespace match {
-              case Namespaces.bean =>
-                if (obj.beanOrType.isLeft) {
-                  queryBean(fieldId, values, obj.bean)
-                } else {
-                  true
-                }
-              case Namespaces.cbtype =>
-                if (obj.beanOrType.isRight) {
-                  queryType(fieldId, values, obj.cbType)
-                } else {
-                  true
-                }
-              case other => throw new CopygrinderRuntimeException("Unknown namespace: " + other)
-            }
-          }
-        }).take(limit)
-      })
-
-    })
-  }
-
-  protected def getCommitAndAllIds(treeId: String, commitId: String)(implicit ec: ExecutionContext) = {
-    val root = getDb().createHashMap(treeId).makeOrGet[String, CommitNode]
-    val commitNode = Option(root.get(commitId)).getOrElse(throw new CommitNotFound(commitId))
-
-    val treeIds = commitNode.byteStore.keys.map(splitId(_))
-
-    val ids = if (treeId != Trees.internal) {
-      getBranchHeads(Trees.internal, Branches.master).map(heads => {
-        val internalRoot = getDb().createHashMap(Trees.internal).makeOrGet[String, CommitNode]
-        val internalCommit = internalRoot.get(heads.head.id)
-        treeIds ++ internalCommit.byteStore.keys.map(splitId(_))
-      })
-    } else {
-      Future {
-        treeIds
-      }
     }
 
-    (commitNode, ids)
+    doQuery(commits, limit, ids, query)
+  }
+
+  protected def doQuery(commits: Seq[CommitNode], limit: Int, ids: Iterable[(String, String)], query: Query)
+   (implicit ec: ExecutionContext) = {
+    getByIdsAndCommitNodes(ids.toSeq, commits).map(_.flatten).map(objSeq => {
+      objSeq.filter(obj => {
+        query.fieldsAndValues.forall { case ((namespace, fieldId), values) =>
+          namespace match {
+            case Namespaces.bean =>
+              if (obj.beanOrType.isLeft) {
+                queryBean(fieldId, values, obj.bean)
+              } else {
+                true
+              }
+            case Namespaces.cbtype =>
+              if (obj.beanOrType.isRight) {
+                queryType(fieldId, values, obj.cbType)
+              } else {
+                true
+              }
+            case other => throw new CopygrinderRuntimeException("Unknown namespace: " + other)
+          }
+        }
+      }).take(limit)
+    })
   }
 
   protected def queryBean(fieldId: String, values: Seq[String], reifiedCopybean: ReifiedCopybean): Boolean = {
 
-    val array = fieldId.split('.')
+    val (left, right) = splitFirstDot(fieldId)
 
-    if (array.length > 1) {
+    if (left == "content" && right.nonEmpty) {
       values.exists(value => {
-        val contentOpt = reifiedCopybean.content.get(array(1))
+        val contentOpt = reifiedCopybean.content.get(right)
         if (contentOpt.isDefined) {
           val hit = contentOpt.get.toString == value
           hit
@@ -221,12 +221,11 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     true
   }
 
-  def commit(request: CommitRequest, datas: Seq[CommitData])
-   (implicit ec: ExecutionContext): Future[Commit] = {
+  def commit(request: CommitRequest, datas: Seq[CommitData])(implicit ec: ExecutionContext): Future[Commit] = {
 
     val previousCommitFuture = Future {
       blocking {
-        val root = getDb().createHashMap(request.treeId).makeOrGet[String, CommitNode]
+        val root = getDb().createHashMap(request.branchId.treeId).makeOrGet[String, CommitNode]
 
         val previousCommitOpt = Option(root.get(request.parentCommitId))
         val previousCommit = if (previousCommitOpt.isEmpty) {
@@ -243,22 +242,23 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
       }
     }
 
-    previousCommitFuture.flatMap { case (root, previousCommit) =>
+    previousCommitFuture.flatMap {
+      case (root, previousCommit) =>
 
-      createNewByteStore(datas, previousCommit, request.treeId).map(newByteStore => {
-        val newHash: String = buildNewHash(request, newByteStore)
+        createNewByteStore(datas, previousCommit, request.branchId.treeId).map(newByteStore => {
+          val newHash: String = buildNewHash(request, newByteStore)
 
-        val newCommitNode = new CommitNode(newHash, request.branchId, request.parentCommitId, newByteStore)
-        blocking {
-          root.put(newHash, newCommitNode)
-          root.getEngine.commit()
-        }
+          val newCommitNode = new CommitNode(newHash, request.branchId.id, request.parentCommitId, newByteStore)
+          blocking {
+            root.put(newHash, newCommitNode)
+            root.getEngine.commit()
+          }
 
-        val newCommit = new Commit(newHash, request.branchId, request.parentCommitId, "")
-        updateHeads(request.treeId, newCommit)
+          val newCommit = new Commit(newHash, request.branchId.id, request.parentCommitId, "")
+          updateHeads(request.branchId.treeId, newCommit)
 
-        newCommit
-      })
+          newCommit
+        })
     }
   }
 
@@ -290,22 +290,20 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
 
     datas.foldLeft(Future(previousCommit.byteStore)) { case (result, data) =>
 
-      result.flatMap(prevByteStore => {
+      result.flatMap(resultByteStore => {
 
         if (data.obj.nonEmpty) {
           val existingBytesOpt = previousCommit.byteStore.get(resolveId(data.id))
           if (existingBytesOpt.nonEmpty) {
-            serializer.deserialize(data.id._1, fetchTypes(treeId, previousCommit.id), existingBytesOpt.get).map(
-              existingObj => handleUpdateCommit(data.id, prevByteStore, data.obj.get, existingObj)
-            )
+            handleUpdateCommit(data, resultByteStore, previousCommit, existingBytesOpt.get)
           } else {
             Future {
-              handleNewCommit(data.id, prevByteStore, data.obj.get)
+              handleNewCommit(data.id, resultByteStore, data.obj.get)
             }
           }
         } else {
           Future {
-            handleDeleteCommit(data.id, prevByteStore)
+            handleDeleteCommit(data.id, resultByteStore)
           }
         }
 
@@ -318,6 +316,10 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   }
 
   protected def splitId(id: String) = {
+    splitFirstDot(id)
+  }
+
+  protected def splitFirstDot(id: String) = {
     val (left, right) = id.splitAt(id.indexOf('.'))
     (left, right.drop(1))
   }
@@ -328,10 +330,17 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     prevByteStore + (resolveId(spaceAndId) -> json)
   }
 
-  protected def handleUpdateCommit(spaceAndId: (String, String), prevByteStore: Map[String, Array[Byte]],
-   obj: PersistableObject, oldObj: PersistableObject): Map[String, Array[Byte]] = {
+  protected def handleUpdateCommit(
+   data: CommitData, resultByteStore: Map[String, Array[Byte]], previousCommit: CommitNode, existingBytes: Array[Byte])
+   (implicit ec: ExecutionContext): Future[Map[String, Array[Byte]]] = {
+
+    val spaceAndId = data.id
+    val obj = data.obj.get
+
     val json = serializer.serialize(obj)
-    prevByteStore.updated(resolveId(spaceAndId), json)
+    Future {
+      resultByteStore.updated(resolveId(spaceAndId), json)
+    }
   }
 
   protected def handleDeleteCommit(spaceAndId: (String, String), prevByteStore: Map[String, Array[Byte]]

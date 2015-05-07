@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.JsonInputException
 import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ListReifiedField}
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.model.{CommitRequest, Namespaces, Trees}
+import org.copygrinder.pure.copybean.persistence.model.{BranchId, CommitRequest, Namespaces}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json.{JsValue, Json}
 import spray.http.MultipartContent
@@ -33,13 +33,13 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
   def getFile(id: String, field: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ec: ExecutionContext): (String, Array[Byte], String, String) = {
 
-    val branchId = getBranchId(params)
+    val branchIds = getBranchIds(params)
 
-    val headFuture = copybeanPersistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId)
+    val headFuture = copybeanPersistenceService.getCommitIdOfActiveHeadOfBranches(branchIds)
 
-    val resultFuture = headFuture.flatMap(head => {
+    val resultFuture = headFuture.flatMap(heads => {
 
-      val beanFuture = copybeanPersistenceService.fetchCopybeansFromCommit(Seq(id), head)
+      val beanFuture = copybeanPersistenceService.fetchCopybeansFromCommits(Seq(id), heads)
 
       beanFuture.flatMap(reifiedBeans => {
 
@@ -49,9 +49,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
 
         val metaDataId = reifiedField.metaData
 
-        val metaDataFuture = siloScope.persistor.getByIdsAndCommit(
-          Trees.userdata, Seq((Namespaces.bean, metaDataId)), head
-        )
+        val metaDataFuture = siloScope.persistor.getByIdsAndCommits(Seq((Namespaces.bean, metaDataId)), heads)
 
         metaDataFuture.flatMap { case (existingMetaDataOpt) =>
 
@@ -118,7 +116,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
     Json.toJson(resultFuture.map(_.map(_.id)))
   }
 
-  protected def createMetaData(filename: String, hash: String, length: Long, contentType: String, branchId: String,
+  protected def createMetaData(filename: String, hash: String, length: Long, contentType: String, branchId: BranchId,
    parentCommitId: String)
    (implicit siloScope: SiloScope, ec: ExecutionContext): Future[ReifiedCopybean] = {
 
@@ -129,7 +127,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
       "contentType" -> contentType
     ))
 
-    val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(branchId, parentCommitId, "", "")
     copybeanPersistenceService.storeAnonBean(Seq(metaData), commit).map(_._2.head)
   }
 

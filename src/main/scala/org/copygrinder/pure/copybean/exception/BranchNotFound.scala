@@ -13,6 +13,8 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-case class BranchNotFound(id: String) extends CopygrinderInputException("Branch not found: " + id) {
+import org.copygrinder.pure.copybean.persistence.model.BranchId
+
+case class BranchNotFound(id: BranchId) extends CopygrinderInputException("Branch not found: " + id) {
 
 }

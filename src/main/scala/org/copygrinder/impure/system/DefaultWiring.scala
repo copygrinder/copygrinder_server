@@ -126,7 +126,7 @@ class SiloScopeFactory(
 
       lazy val defaultResultLimit = 100
 
-      new SiloScope(siloId, persistor, blobPersistor, Branches.master, defaultResultLimit)
+      new SiloScope(siloId, persistor, blobPersistor, Map(), defaultResultLimit)
     }
 
     Await.result(future, 5 seconds)

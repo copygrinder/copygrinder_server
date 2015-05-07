@@ -13,12 +13,4 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-object Trees {
-
-  val userdata = "userdata"
-
-  val internal = "internal"
-
-  val config = "config"
-
-}
+case class CommitId(id: String, treeId: String)

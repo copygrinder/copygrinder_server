@@ -16,21 +16,21 @@ package org.copygrinder.impure.copybean.controller
 import org.copygrinder.impure.copybean.persistence.TypePersistenceService
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.model.{Commit, CopybeanType}
-import org.copygrinder.pure.copybean.persistence.model.{CommitRequest, Trees}
+import org.copygrinder.pure.copybean.persistence.model.CommitRequest
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
 class TypeController(persistenceService: TypePersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
 
   def fetchCopybeanType(id: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
 
-    val branchId = getBranchId(params)
+    val branchIds = getBranchIds(params)
 
-    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId).flatMap(head => {
-      persistenceService.fetchCopybeanTypesFromCommit(Seq(id), head)
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).flatMap(heads => {
+      persistenceService.fetchCopybeanTypesFromCommits(Seq(id), heads)
     })
     Json.toJson(future)
   }
@@ -38,12 +38,13 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
   def findCopybeanTypes(params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
 
-    val branchId = getBranchId(params)
+    val branchIds = getBranchIds(params)
 
-    val (fields, nonFieldParams) = partitionIncludedFields(params)
+    val fields = getParams(params, "fields")
 
-    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(Trees.userdata, branchId).flatMap(head => {
-      persistenceService.findCopybeanTypes(head, nonFieldParams)
+
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).flatMap(heads => {
+      persistenceService.findCopybeanTypes(heads, params)
     })
     validateAndFilterFields(fields, Json.toJson(future), copybeanTypeReservedWords)
   }
@@ -75,7 +76,7 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
 
-    val commit = new CommitRequest(Trees.userdata, branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(branchId, parentCommitId, "", "")
     val future = func(commit).map(_.id)
 
     Json.toJson(future)

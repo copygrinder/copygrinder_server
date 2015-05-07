@@ -13,6 +13,6 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-case class CommitRequest(treeId: String, branchId: String, parentCommitId: String, author: String, comment: String) {
+case class CommitRequest(branchId: BranchId, parentCommitId: String, author: String, comment: String) {
 
 }

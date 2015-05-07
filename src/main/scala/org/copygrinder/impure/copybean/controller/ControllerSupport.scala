@@ -14,28 +14,25 @@
 package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception.{MissingParameter, JsonInputException}
+import org.copygrinder.pure.copybean.exception.{JsonInputException, MissingParameter}
+import org.copygrinder.pure.copybean.persistence.model.{Branches, BranchId, Trees}
 import play.api.libs.json.{JsArray, JsObject, JsUndefined, JsValue}
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{Seq, ListMap}
 
 
 trait ControllerSupport {
 
-  protected def partitionFields(params: Map[String, List[String]], key: String) = {
+  protected def getParams(params: Map[String, Seq[String]], key: String) = {
 
     val matchingParams = params.getOrElse(key, List()).flatMap(param => {
       param.split(',')
     })
-    val nonMatchingParams = params - key
-    (matchingParams, nonMatchingParams)
+
+    matchingParams
   }
 
-  protected def partitionIncludedFields(params: Map[String, List[String]]) = {
-    partitionFields(params, "fields")
-  }
-
-  protected def validateAndFilterFields(keepFields: List[String], jsValue: JsValue, allowedWords: Set[String]) = {
+  protected def validateAndFilterFields(keepFields: Seq[String], jsValue: JsValue, allowedWords: Set[String]) = {
     if (keepFields.nonEmpty) {
       val (validFields, invalidFields) = keepFields.partition(field => {
         allowedWords.exists(word => {
@@ -53,7 +50,7 @@ trait ControllerSupport {
     }
   }
 
-  protected def filterFields(keepFields: List[String], jsValue: JsValue): JsValue = {
+  protected def filterFields(keepFields: Seq[String], jsValue: JsValue): JsValue = {
     jsValue match {
       case obj: JsObject =>
         filterObject(keepFields, obj)
@@ -63,7 +60,7 @@ trait ControllerSupport {
     }
   }
 
-  def filterObject(keepFields: List[String], obj: JsObject): JsObject = {
+  def filterObject(keepFields: Seq[String], obj: JsObject): JsObject = {
     val fields = keepFields.foldLeft(ListMap[String, JsValue]())((result, field) => {
       val (fieldId, value) = if (field.contains('.')) {
         val (prefix, suffixDot) = field.span(_ != '.')
@@ -75,8 +72,8 @@ trait ControllerSupport {
       }
       value match {
         case _: JsUndefined => result
-        case a: JsArray if (a.value.isEmpty) => result
-        case obj: JsObject if (obj.fields.isEmpty) => result
+        case a: JsArray if a.value.isEmpty => result
+        case obj: JsObject if obj.fields.isEmpty => result
         case _ =>
           result.updated(fieldId, value)
       }
@@ -84,7 +81,7 @@ trait ControllerSupport {
     JsObject(fields.toSeq)
   }
 
-  def filterArray(keepFields: List[String], array: JsArray): JsArray = {
+  def filterArray(keepFields: Seq[String], array: JsArray): JsArray = {
     val filteredFields = array.value.map(a => filterFields(keepFields, a))
     val emptiesRemoved = filteredFields.filter(field => {
       val obj = field.asOpt[JsObject]
@@ -108,22 +105,46 @@ trait ControllerSupport {
     }
   }
 
-  protected def getBranchId(params: Map[String, List[String]])(implicit siloScope: SiloScope) = {
-    val branchOpt = params.get("branch")
-    if (branchOpt.isDefined && branchOpt.get.nonEmpty) {
-      branchOpt.get.head
-    } else {
-      siloScope.defaultBranch
-    }
-  }
-
-  protected def getParentCommitId(params: Map[String, List[String]])(implicit siloScope: SiloScope) = {
+  protected def getParentCommitId(params: Map[String, List[String]]) = {
     val parentOpt = params.get("parent")
     if (parentOpt.isDefined && parentOpt.get.nonEmpty) {
       parentOpt.get.head
     } else {
       throw new MissingParameter("parent")
     }
+  }
+
+  protected def getRawTreeIds(params: Map[String, List[String]]): Seq[String] = {
+    val treeOpt = params.get("tree")
+    if (treeOpt.isDefined && treeOpt.get.nonEmpty) {
+      treeOpt.get.head.split(',').to[Seq]
+    } else {
+      Seq(Trees.userdata, Trees.internal)
+    }
+  }
+
+  protected def getBranchIds(params: Map[String, List[String]])
+   (implicit siloScope: SiloScope): Seq[BranchId] = {
+
+    val branchOpt = params.get("branch")
+
+    val branches = if (branchOpt.isDefined && branchOpt.get.nonEmpty) {
+      branchOpt.get.head.split(',').toSeq.distinct
+    } else {
+      Seq()
+    }
+
+    getRawTreeIds(params).zipWithIndex.map { case (treeId, index) =>
+      val branchId = branches.lift(index).getOrElse {
+        siloScope.treeToDefaultBranchMap.getOrElse(treeId, Branches.master)
+      }
+      BranchId(branchId, treeId)
+    }
+  }
+
+  protected def getBranchId(params: Map[String, List[String]])(implicit siloScope: SiloScope): BranchId = {
+    val branchIds = getBranchIds(params)
+    branchIds.head
   }
 
 

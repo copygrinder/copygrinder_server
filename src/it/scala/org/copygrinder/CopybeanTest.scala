@@ -202,7 +202,8 @@ class CopybeanTest extends IntegrationTestSupport {
         |}""".stripMargin
 
     val req = copybeansUrl.POST.setContentType("application/json", "UTF8")
-     .addQueryParameter("parent", getBranchHead())
+     .addQueryParameter("parent", "")
+     .addQueryParameter("tree", "config")
      .setBody(json)
 
     val responseFuture = Http(req).map { response =>

@@ -11,14 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.persistence.model
+package org.copygrinder.pure.copybean.exception
 
-object Trees {
-
-  val userdata = "userdata"
-
-  val internal = "internal"
-
-  val config = "config"
+case class TreeNotFound(id: String) extends CopygrinderInputException("Tree not found: " + id) {
 
 }

@@ -13,6 +13,12 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-case class Query(fieldsAndValues: Map[(String, String), Seq[String]], namespaceRestriction: Option[String]) {
+case class Query(params: Map[(String, String), Seq[String]], namespaceRestriction: Option[String]) {
+
+  val hints = Set("noInternalTree", "tree", "branch", "expand", "fields")
+
+  lazy val fieldsAndValues = params.filterNot(param => hints.contains(param._1._2))
+
+  lazy val noInternalTree = params.find(_._1._2 == "noInternalTree").isDefined
 
 }
