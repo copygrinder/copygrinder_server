@@ -32,7 +32,7 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
     val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).flatMap(heads => {
       persistenceService.fetchCopybeanTypesFromCommits(Seq(id), heads)
     })
-    Json.toJson(future)
+    Json.toJson(future.map(_.head))
   }
 
   def findCopybeanTypes(params: Map[String, List[String]])

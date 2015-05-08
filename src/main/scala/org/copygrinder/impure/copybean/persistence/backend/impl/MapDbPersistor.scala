@@ -24,6 +24,7 @@ import org.copygrinder.pure.copybean.model.{Commit, CopybeanType, ReifiedCopybea
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.copygrinder.pure.copybean.persistence.model._
 import org.mapdb.{DB, DBMaker}
+import scala.collection.JavaConversions._
 
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
@@ -74,14 +75,6 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     }
   }
 
-  /*  protected def fetchTypes(commitIds: Seq[CommitId])(typeIds: Set[String])
-     (implicit ec: ExecutionContext): Future[Set[CopybeanType]] = {
-      val typesFuture = getByIdsAndCommits(typeIds.toSeq.map(typeId => (Namespaces.cbtype, typeId)), commitIds)
-      typesFuture.map(obj => {
-        obj.flatten.map(_.cbType).toSet
-      })
-    }*/
-
   protected def fetchTypesFromCommitNodes(commitNodes: Seq[CommitNode])(typeIds: Set[String])
    (implicit ec: ExecutionContext): Future[Set[CopybeanType]] = {
     val typesFuture = getByIdsAndCommitNodes(typeIds.toSeq.map(typeId => (Namespaces.cbtype, typeId)), commitNodes)
@@ -114,7 +107,7 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   protected def getByIdsAndCommitNodes(ids: Seq[(String, String)], commits: Seq[CommitNode])
    (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
 
-    val futures = ids.flatMap { namespaceAndId =>
+    val futures = ids.map { namespaceAndId =>
 
       val byteArrayOpt = commits.foldLeft(Option.empty[Array[Byte]]) { (result, commit) =>
         if (result.isEmpty) {
@@ -126,8 +119,10 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
         }
       }
 
-      byteArrayOpt.map { byteArray =>
-        serializer.deserialize(namespaceAndId._1, fetchTypesFromCommitNodes(commits), byteArray).map(Option(_))
+      if (byteArrayOpt.nonEmpty) {
+        serializer.deserialize(namespaceAndId._1, fetchTypesFromCommitNodes(commits), byteArrayOpt.get).map(Option(_))
+      } else {
+        Future(Option.empty[PersistableObject])
       }
     }
 
@@ -218,7 +213,13 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   }
 
   protected def queryType(fieldId: String, values: Seq[String], copybeanType: CopybeanType): Boolean = {
-    true
+
+    if (fieldId == "id") {
+      values.contains(copybeanType.id)
+    } else {
+      true
+    }
+
   }
 
   def commit(request: CommitRequest, datas: Seq[CommitData])(implicit ec: ExecutionContext): Future[Commit] = {
@@ -348,6 +349,21 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     prevByteStore - resolveId(spaceAndId)
   }
 
+  override def getBranches()(implicit ec: ExecutionContext): Future[Seq[BranchId]] = {
+    Future {
+      blocking {
+
+        val headsMap = getDb().createHashMap("$$heads").makeOrGet[String, Set[Commit]]
+
+        headsMap.entrySet().flatMap { entry =>
+          val treeId = entry.getKey
+          entry.getValue.map { commit =>
+            BranchId(commit.branchId, treeId)
+          }
+        }.toSeq
+      }
+    }
+  }
 }
 
 protected case class CommitNode(

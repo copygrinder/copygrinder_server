@@ -28,6 +28,8 @@ trait VersionedDataPersistor {
   def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[CommitId], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
+  def getBranches()(implicit ec: ExecutionContext): Future[Seq[BranchId]]
+
   def getBranchHeads(branchId: BranchId)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]
 

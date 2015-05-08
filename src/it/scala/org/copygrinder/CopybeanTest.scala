@@ -216,6 +216,7 @@ class CopybeanTest extends IntegrationTestSupport {
   it should "search for predefined types" in {
 
     val req = copybeanTypeIdUrl("classBackedFieldValidator").GET
+     .addQueryParameter("tree", "internal")
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)

@@ -119,7 +119,7 @@ trait ControllerSupport {
     if (treeOpt.isDefined && treeOpt.get.nonEmpty) {
       treeOpt.get.head.split(',').to[Seq]
     } else {
-      Seq(Trees.userdata, Trees.internal)
+      Seq(Trees.userdata)
     }
   }
 

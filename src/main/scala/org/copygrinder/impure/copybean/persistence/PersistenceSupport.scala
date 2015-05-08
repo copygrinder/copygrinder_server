@@ -60,12 +60,12 @@ trait PersistenceSupport extends LazyLogging {
 
     val persistableObjsFuture = siloScope.persistor.getByIdsAndCommits(ids, commitIds)
 
-    persistableObjsFuture.map(objs => {
-      objs.zipWithIndex.map { case (obj, index) =>
-        func(ids(index), obj)
-      }
-    })
+    persistableObjsFuture.map { objs =>
 
+      ids.zipWithIndex.map { case (id, index) =>
+        func(id, objs(index))
+      }
+    }
   }
 
   def fetchCopybeanTypesFromCommits(ids: Seq[String], commitIds: Seq[CommitId])

@@ -60,6 +60,8 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
       beanController.fetchCopybean(id, params)
     } ~ BuildRoute(copybeansPath & get) { implicit siloScope => params =>
       beanController.find(params)
+    } ~ BuildRoute(branchesPath & get) { implicit siloScope => (params) =>
+      beanController.getBranches(params)
     } ~ BuildRoute(branchHeadPath & get) { implicit siloScope => (branchId, params) =>
       beanController.getBranchHead(branchId, params)
     } ~ BuildRoute(branchHeadsPath & get) { implicit siloScope => (branchId, params) =>

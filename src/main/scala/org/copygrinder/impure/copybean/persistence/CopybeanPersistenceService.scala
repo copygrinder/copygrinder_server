@@ -206,6 +206,10 @@ class CopybeanPersistenceService(
     })
   }
 
+  def getBranches()(implicit siloScope: SiloScope): Future[Seq[BranchId]] = {
+    siloScope.persistor.getBranches()
+  }
+
   protected def enforceTypes(copybean: ReifiedCopybean, commitIds: Seq[CommitId])
    (implicit siloScope: SiloScope): Future[Unit] = {
 

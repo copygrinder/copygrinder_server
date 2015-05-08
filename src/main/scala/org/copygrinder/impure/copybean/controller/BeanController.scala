@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
 import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, ReifiedCopybean, ReifiedCopybeanImpl, ReifiedField}
-import org.copygrinder.pure.copybean.persistence.model.{CommitId, CommitRequest}
+import org.copygrinder.pure.copybean.persistence.model.{BranchId, CommitId, CommitRequest}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
@@ -43,7 +43,9 @@ class BeanController(persistenceService: CopybeanPersistenceService)
    (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
     val branchIds = getBranchIds(params)
     val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).flatMap(commitIds => {
-      persistenceService.fetchCopybeansFromCommits(Seq(id), commitIds).map(_.head)
+      persistenceService.fetchCopybeansFromCommits(Seq(id), commitIds).map { bean =>
+        bean.head
+      }
     })
 
     Json.toJson(future)
@@ -59,7 +61,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
   }
 
   protected val copybeansReservedWords = Set(
-    "enforcedTypeIds", "id", "content", "type", "names", "tree", "fields", "expand", "noInternalTree")
+    "enforcedTypeIds", "id", "content", "type", "names", "tree", "fields", "expand")
 
   def find(params: Map[String, List[String]])(implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
 
@@ -165,6 +167,21 @@ class BeanController(persistenceService: CopybeanPersistenceService)
 
   def createSilo()(implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
     Json.toJson(persistenceService.createSilo().map(_.id))
+  }
+
+  def getBranches(params: Map[String, List[String]])(implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
+
+    val treeIds = getRawTreeIds(params)
+
+    val future = persistenceService.getBranches().map { branches =>
+      branches.filter { branchId =>
+        treeIds.contains(branchId.treeId)
+      }.map { branchId =>
+        branchId.id
+      }
+    }
+
+    Json.toJson(future)
   }
 
 }
