@@ -24,7 +24,7 @@ import org.copygrinder.pure.copybean.persistence.model._
 import org.copygrinder.pure.copybean.validator.FieldValidator
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class CopybeanPersistenceService(
  copybeanTypeEnforcer: CopybeanTypeEnforcer,
@@ -208,6 +208,10 @@ class CopybeanPersistenceService(
 
   def getBranches()(implicit siloScope: SiloScope): Future[Seq[BranchId]] = {
     siloScope.persistor.getBranches()
+  }
+
+  def getCommitsByBranch(branchId: BranchId)(implicit siloScope: SiloScope): Future[Seq[Commit]] = {
+    siloScope.persistor.getCommitsByBranch(branchId, siloScope.defaultLimit)
   }
 
   protected def enforceTypes(copybean: ReifiedCopybean, commitIds: Seq[CommitId])

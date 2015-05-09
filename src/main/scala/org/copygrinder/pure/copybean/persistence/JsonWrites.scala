@@ -171,6 +171,9 @@ trait JsonWrites extends DefaultWrites {
 
   implicit val copybeanTypeWrites = Json.writes[CopybeanType]
 
+  implicit val commitWrites = Json.writes[Commit]
+
+
   implicit val reifiedCopybeanWrites: Writes[ReifiedCopybeanImpl] = new Writes[ReifiedCopybeanImpl] {
     def writes(bean: ReifiedCopybeanImpl): JsValue = {
       Json.obj(

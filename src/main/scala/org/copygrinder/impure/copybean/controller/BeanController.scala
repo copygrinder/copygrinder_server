@@ -184,4 +184,11 @@ class BeanController(persistenceService: CopybeanPersistenceService)
     Json.toJson(future)
   }
 
+  def getCommitsByBranch(params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
+    val branchId = getBranchId(params)
+    val future = persistenceService.getCommitsByBranch(branchId)
+    Json.toJson(future)
+  }
+
 }

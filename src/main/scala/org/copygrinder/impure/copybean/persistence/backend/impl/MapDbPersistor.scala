@@ -19,13 +19,15 @@ import java.util.concurrent.atomic.AtomicReference
 import net.jpountz.xxhash.XXHashFactory
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.persistence.backend.{PersistentObjectSerializer, VersionedDataPersistor}
+import org.copygrinder.pure.collections.IndexedHashMap
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{Commit, CopybeanType, ReifiedCopybean}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.copygrinder.pure.copybean.persistence.model._
 import org.mapdb.{DB, DBMaker}
-import scala.collection.JavaConversions._
 
+import scala.annotation.tailrec
+import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
 //TODO: IMPLEMENT
@@ -83,20 +85,22 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     })
   }
 
-  protected def getCommits(commitIds: Seq[CommitId]) = {
+  protected def getCommits(commitIds: Seq[CommitId]): Seq[CommitNode] = {
     blocking {
-      commitIds.map { commitId =>
+      commitIds.flatMap { commitId =>
         val root = getDb().createHashMap(commitId.treeId).makeOrGet[String, CommitNode]
-        Option(root.get(commitId.id)).getOrElse {
-          if (commitId.id.isEmpty) {
-            CommitNode("", "", "", Map())
-          } else {
-            throw new CommitNotFound(commitId)
-          }
+        val commitNodeOpt = Option(root.get(commitId.id))
+        if (commitNodeOpt.isDefined) {
+          commitNodeOpt
+        } else if (commitId.id.isEmpty) {
+          None
+        } else {
+          throw new CommitNotFound(commitId)
         }
       }
     }
   }
+
 
   def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[CommitId])
    (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
@@ -107,23 +111,25 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   protected def getByIdsAndCommitNodes(ids: Seq[(String, String)], commits: Seq[CommitNode])
    (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
 
-    val futures = ids.map { namespaceAndId =>
+    val futures = ids.map {
+      namespaceAndId =>
 
-      val byteArrayOpt = commits.foldLeft(Option.empty[Array[Byte]]) { (result, commit) =>
-        if (result.isEmpty) {
-          blocking {
-            commit.byteStore.get(resolveId(namespaceAndId))
-          }
-        } else {
-          result
+        val byteArrayOpt = commits.foldLeft(Option.empty[Array[Byte]]) {
+          (result, commit) =>
+            if (result.isEmpty) {
+              blocking {
+                commit.byteStore.get(resolveId(namespaceAndId))
+              }
+            } else {
+              result
+            }
         }
-      }
 
-      if (byteArrayOpt.nonEmpty) {
-        serializer.deserialize(namespaceAndId._1, fetchTypesFromCommitNodes(commits), byteArrayOpt.get).map(Option(_))
-      } else {
-        Future(Option.empty[PersistableObject])
-      }
+        if (byteArrayOpt.nonEmpty) {
+          serializer.deserialize(namespaceAndId._1, fetchTypesFromCommitNodes(commits), byteArrayOpt.get).map(Option(_))
+        } else {
+          Future(Option.empty[PersistableObject])
+        }
     }
 
     Future.sequence(futures)
@@ -142,22 +148,54 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     }
   }
 
-  def getCommitsByBranch(branchId: BranchId, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = ???
+  def getCommitsByBranch(branchId: BranchId, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
+    getBranchHeads(branchId).map {
+      commits =>
+        val commitIds = commits.map(c => CommitId(c.id, branchId.treeId))
+        getPreviousCommits(IndexedHashMap[String, Commit](), commitIds, branchId, limit)
+    }
+  }
+
+  @tailrec
+  protected final def getPreviousCommits(
+   results: IndexedHashMap[String, Commit], commits: Seq[CommitId], branchId: BranchId, limit: Int
+   ): Seq[Commit] = {
+
+    val commitNodes = getCommits(commits)
+    val castCommits = commitNodes.map(commitNodeToCommit)
+    val newResults = results ++ castCommits.map(c => c.id -> c)
+
+    val previousCommitIds = commitNodes
+     .filterNot(c => newResults.contains(c.previousCommitId))
+     .map(c => CommitId(c.previousCommitId, branchId.treeId))
+     .distinct
+
+    if (newResults.size >= limit || previousCommitIds.isEmpty) {
+      newResults.values.take(limit).toSeq
+    } else {
+      getPreviousCommits(newResults, previousCommitIds, branchId, limit)
+    }
+  }
+
+  protected def commitNodeToCommit(node: CommitNode): Commit = {
+    Commit(node.id, node.branchId, node.previousCommitId, "")
+  }
 
   def query(commitIds: Seq[CommitId], limit: Int, query: Query)
    (implicit ec: ExecutionContext): Future[Seq[PersistableObject]] = {
 
     val commits = getCommits(commitIds)
 
-    val ids = commits.flatMap { commitNode =>
+    val ids = commits.flatMap {
+      commitNode =>
 
-      val allIds = commitNode.byteStore.keys.map(splitId(_))
+        val allIds = commitNode.byteStore.keys.map(splitId(_))
 
-      if (query.namespaceRestriction.isDefined) {
-        allIds.filter(_._1 == query.namespaceRestriction.get)
-      } else {
-        allIds
-      }
+        if (query.namespaceRestriction.isDefined) {
+          allIds.filter(_._1 == query.namespaceRestriction.get)
+        } else {
+          allIds
+        }
     }
 
     doQuery(commits, limit, ids, query)
@@ -167,22 +205,23 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
    (implicit ec: ExecutionContext) = {
     getByIdsAndCommitNodes(ids.toSeq, commits).map(_.flatten).map(objSeq => {
       objSeq.filter(obj => {
-        query.fieldsAndValues.forall { case ((namespace, fieldId), values) =>
-          namespace match {
-            case Namespaces.bean =>
-              if (obj.beanOrType.isLeft) {
-                queryBean(fieldId, values, obj.bean)
-              } else {
-                true
-              }
-            case Namespaces.cbtype =>
-              if (obj.beanOrType.isRight) {
-                queryType(fieldId, values, obj.cbType)
-              } else {
-                true
-              }
-            case other => throw new CopygrinderRuntimeException("Unknown namespace: " + other)
-          }
+        query.fieldsAndValues.forall {
+          case ((namespace, fieldId), values) =>
+            namespace match {
+              case Namespaces.bean =>
+                if (obj.beanOrType.isLeft) {
+                  queryBean(fieldId, values, obj.bean)
+                } else {
+                  true
+                }
+              case Namespaces.cbtype =>
+                if (obj.beanOrType.isRight) {
+                  queryType(fieldId, values, obj.cbType)
+                } else {
+                  true
+                }
+              case other => throw new CopygrinderRuntimeException("Unknown namespace: " + other)
+            }
         }
       }).take(limit)
     })
@@ -289,26 +328,27 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   protected def createNewByteStore(datas: Seq[CommitData], previousCommit: CommitNode, treeId: String)
    (implicit ec: ExecutionContext) = {
 
-    datas.foldLeft(Future(previousCommit.byteStore)) { case (result, data) =>
+    datas.foldLeft(Future(previousCommit.byteStore)) {
+      case (result, data) =>
 
-      result.flatMap(resultByteStore => {
+        result.flatMap(resultByteStore => {
 
-        if (data.obj.nonEmpty) {
-          val existingBytesOpt = previousCommit.byteStore.get(resolveId(data.id))
-          if (existingBytesOpt.nonEmpty) {
-            handleUpdateCommit(data, resultByteStore, previousCommit, existingBytesOpt.get)
+          if (data.obj.nonEmpty) {
+            val existingBytesOpt = previousCommit.byteStore.get(resolveId(data.id))
+            if (existingBytesOpt.nonEmpty) {
+              handleUpdateCommit(data, resultByteStore, previousCommit, existingBytesOpt.get)
+            } else {
+              Future {
+                handleNewCommit(data.id, resultByteStore, data.obj.get)
+              }
+            }
           } else {
             Future {
-              handleNewCommit(data.id, resultByteStore, data.obj.get)
+              handleDeleteCommit(data.id, resultByteStore)
             }
           }
-        } else {
-          Future {
-            handleDeleteCommit(data.id, resultByteStore)
-          }
-        }
 
-      })
+        })
     }
   }
 
@@ -355,11 +395,13 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
 
         val headsMap = getDb().createHashMap("$$heads").makeOrGet[String, Set[Commit]]
 
-        headsMap.entrySet().flatMap { entry =>
-          val treeId = entry.getKey
-          entry.getValue.map { commit =>
-            BranchId(commit.branchId, treeId)
-          }
+        headsMap.entrySet().flatMap {
+          entry =>
+            val treeId = entry.getKey
+            entry.getValue.map {
+              commit =>
+                BranchId(commit.branchId, treeId)
+            }
         }.toSeq
       }
     }
