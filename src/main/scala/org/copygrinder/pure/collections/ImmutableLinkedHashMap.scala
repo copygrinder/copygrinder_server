@@ -178,10 +178,6 @@ class ImmutableLinkedHashMap[K, +V]
     }
   }
 
-  override def toString(): String = {
-    hashMap.toString()
-  }
-
 }
 
 protected case class ImmutableLinkedHashMapNode[K, +V](key: K, value: V, previousKey: Option[K], nextKey: Option[K])

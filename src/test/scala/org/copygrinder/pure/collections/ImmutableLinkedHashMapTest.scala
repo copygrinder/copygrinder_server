@@ -93,10 +93,4 @@ class ImmutableLinkedHashMapTest extends UnitTest {
     map2.isInstanceOf[ImmutableLinkedHashMap[_, _]] should be(true)
   }
 
-  it should "have a readable toString" in {
-
-    val map1 = ImmutableLinkedHashMap("hello" -> 1, "world" -> 2, "other" -> 3)
-    map1.toString() should startWith("Map(")
-  }
-
 }
