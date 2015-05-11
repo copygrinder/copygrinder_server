@@ -9,7 +9,7 @@ addSbtPlugin("org.jetbrains" % "sbt-ide-settings" % "0.1.0")
 
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.1.8")
 
-addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.0.4")
+addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.1.0")
 
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.7.0")
 

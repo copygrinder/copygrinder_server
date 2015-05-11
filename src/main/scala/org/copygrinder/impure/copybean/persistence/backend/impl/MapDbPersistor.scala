@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicReference
 import net.jpountz.xxhash.XXHashFactory
 import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.persistence.backend.{PersistentObjectSerializer, VersionedDataPersistor}
-import org.copygrinder.pure.collections.IndexedHashMap
+import org.copygrinder.pure.collections.ImmutableLinkedHashMap
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{Commit, CopybeanType, ReifiedCopybean}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
@@ -152,13 +152,13 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     getBranchHeads(branchId).map {
       commits =>
         val commitIds = commits.map(c => CommitId(c.id, branchId.treeId))
-        getPreviousCommits(IndexedHashMap[String, Commit](), commitIds, branchId, limit)
+        getPreviousCommits(ImmutableLinkedHashMap[String, Commit](), commitIds, branchId, limit)
     }
   }
 
   @tailrec
   protected final def getPreviousCommits(
-   results: IndexedHashMap[String, Commit], commits: Seq[CommitId], branchId: BranchId, limit: Int
+   results: ImmutableLinkedHashMap[String, Commit], commits: Seq[CommitId], branchId: BranchId, limit: Int
    ): Seq[Commit] = {
 
     val commitNodes = getCommits(commits)
