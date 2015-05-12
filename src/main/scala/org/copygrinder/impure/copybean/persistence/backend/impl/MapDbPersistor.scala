@@ -142,8 +142,8 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     Future {
       val heads = blocking {
         val headsMap = getDb().createHashMap("$$heads").makeOrGet[String, Set[Commit]]
-        Option(headsMap.get(branchId.treeId)).getOrElse(throw new TreeNotFound(branchId.treeId))
-      }
+        Option(headsMap.get(branchId.treeId))
+      }.getOrElse(Set())
       heads.filter(_.branchId == branchId.id).toSeq
     }
   }

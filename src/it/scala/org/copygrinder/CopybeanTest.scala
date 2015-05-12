@@ -19,6 +19,7 @@ import com.ning.http.client.Response
 import com.ning.http.multipart.FilePart
 import dispatch.Defaults._
 import dispatch._
+import org.copygrinder.framework.IntegrationTestSupport
 import play.api.libs.json.{JsArray, JsString, Json}
 
 import scala.concurrent.Await

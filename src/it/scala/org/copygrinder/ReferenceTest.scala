@@ -13,6 +13,7 @@
  */
 package org.copygrinder
 
+import org.copygrinder.framework.IntegrationTestSupport
 import play.api.libs.json.{JsArray, JsString, Json}
 
 

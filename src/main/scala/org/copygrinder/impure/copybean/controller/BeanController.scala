@@ -29,13 +29,13 @@ class BeanController(persistenceService: CopybeanPersistenceService)
 
   def getBranchHead(branchId: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
-    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(getBranchId(params))
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranch(getBranchId(branchId, params))
     Json.toJson(future.map(head => Map("head" -> head.id)))
   }
 
   def getBranchHeads(branchId: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
-    val future = persistenceService.getBranchHeads(getBranchId(params))
+    val future = persistenceService.getBranchHeads(getBranchId(branchId, params))
     Json.toJson(future.map(heads => Map("heads" -> heads.map(_.id))))
   }
 
@@ -184,9 +184,9 @@ class BeanController(persistenceService: CopybeanPersistenceService)
     Json.toJson(future)
   }
 
-  def getCommitsByBranch(params: Map[String, List[String]])
+  def getCommitsByBranch(branchOnly: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
-    val branchId = getBranchId(params)
+    val branchId = getBranchId(branchOnly, params)
     val future = persistenceService.getCommitsByBranch(branchId)
     Json.toJson(future)
   }

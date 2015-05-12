@@ -147,5 +147,9 @@ trait ControllerSupport {
     branchIds.head
   }
 
+  protected def getBranchId(branchOnly: String, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope): BranchId = {
+    getBranchId(params.updated("branch", List(branchOnly)))
+  }
 
 }

@@ -13,8 +13,7 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-class CopygrinderRuntimeException(message: String) extends RuntimeException(message) {
+class FutureException(stacktrace: String, throwable: Throwable)
+ extends CopygrinderThrowableException("Future failed with exception:\n" + stacktrace, throwable) {
 
 }
-
-class CopygrinderThrowableException(message: String, throwable: Throwable) extends RuntimeException(message, throwable)

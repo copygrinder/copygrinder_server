@@ -19,7 +19,7 @@ import akka.actor.ActorContext
 import com.fasterxml.jackson.core.JsonParseException
 import org.copygrinder.impure.copybean.controller._
 import org.copygrinder.impure.system.SiloScopeFactory
-import org.copygrinder.pure.copybean.exception.{CopygrinderNotFoundException, CopygrinderRuntimeException, CopygrinderInputException}
+import org.copygrinder.pure.copybean.exception.{CopygrinderThrowableException, CopygrinderNotFoundException, CopygrinderRuntimeException, CopygrinderInputException}
 import spray.http.StatusCodes._
 import spray.routing._
 
@@ -59,6 +59,7 @@ class CopygrinderApi(
           complete(BadRequest, e.getMessage)
         case e: CopygrinderInputException => complete(BadRequest, e.getMessage)
         case e: CopygrinderRuntimeException => complete(InternalServerError, e.getMessage)
+        case e: CopygrinderThrowableException => complete(InternalServerError, e.getMessage)
         case e: CopygrinderNotFoundException => complete(Gone, e.getMessage)
         case e =>
           requestUri { uri =>

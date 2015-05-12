@@ -15,6 +15,7 @@ package org.copygrinder
 
 import dispatch.Defaults._
 import dispatch._
+import org.copygrinder.framework.IntegrationTestSupport
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.concurrent.Await

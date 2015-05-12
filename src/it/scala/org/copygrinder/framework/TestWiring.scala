@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder
+package org.copygrinder.framework
 
 import akka.actor.ActorContext
 import dispatch._

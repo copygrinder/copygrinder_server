@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder
+package org.copygrinder.framework
 
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,13 +20,13 @@ import com.ning.http.client.Response
 import dispatch.Defaults._
 import dispatch._
 import org.apache.commons.io.FileUtils
+import org.copygrinder.impure.concurrency.FutureWrapper
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{BeforeAndAfterEachTestData, FlatSpec, Matchers, TestData}
 import play.api.libs.json.{JsObject, JsString, Json}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-
 
 trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterEachTestData {
 
@@ -41,6 +41,8 @@ trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterE
   val copybeansUrl = baseUrl / "copybeans"
 
   val copybeansTypesUrl = baseUrl / "types"
+
+  val branchesUrl = baseUrl / "branches"
 
   def copybeanIdUrl(id: String) = copybeansUrl / id
 
@@ -72,11 +74,13 @@ trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterE
           println("REQUEST: " + req.toRequest)
           println("REQUEST BODY: " + req.toRequest.getStringData)
           println("RESPONSE: " + response.getResponseBody)
+          println("e: " + e)
+
           throw e
       }
     }
 
-    Await.result(responseFuture, 1 second)
+    Await.result(FutureWrapper(responseFuture), 1 second)
   }
 
   def doReq(req: Req): Response = {
@@ -124,9 +128,9 @@ trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterE
     }
   }
 
-  protected def getBranchHead() = {
+  protected def getBranchHead(branchId: String = "master") = {
 
-    val req = branchHead("master").GET
+    val req = branchHead(branchId).GET
 
     val responseFuture = Http(req).map { response =>
       checkStatus(req, response)

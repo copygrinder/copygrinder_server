@@ -33,7 +33,13 @@ trait PersistenceSupport extends LazyLogging {
 
     val activeHeadFuture = headsFuture.map(heads => {
       //TODO: Implement real active branch head calculation
-      val id = heads.headOption.getOrElse(throw new BranchNotFound(branchId)).id
+      val headOpt = heads.headOption
+      val id = if (headOpt.isDefined) {
+        headOpt.get.id
+      } else {
+        ""
+      }
+
       CommitId(id, branchId.treeId)
     })
 
