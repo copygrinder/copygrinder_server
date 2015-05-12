@@ -21,7 +21,7 @@ import scala.concurrent.Await
 
 class BranchingTest extends IntegrationTestSupport {
 
-  "Copygrinder" should "POST new branch types" in {
+  "Copygrinder Branch Handling" should "POST new branch types" in {
 
     val json =
       """
@@ -48,30 +48,26 @@ class BranchingTest extends IntegrationTestSupport {
     doReq(req)
   }
 
-  it should "POST new copybeans" in {
+  it should "get the test branch head" in {
+    getBranchHead("test") should be("2R2W0Q382V94R")
+  }
+
+  it should "POST new branch copybeans" in {
 
     val json =
       """
-        |[{
+        |{
         |  "enforcedTypeIds": [
-        |    "testtype1"
+        |    "branchType1"
         |  ],
         |  "content": {
-        |    "testfield1":"1",
-        |    "testfield2":2
+        |    "string-field":"hello world"
         |  }
-        |},{
-        |  "enforcedTypeIds": [
-        |    "testtype2"
-        |  ],
-        |  "content": {
-        |    "testfield1":"3",
-        |    "testfield2":4
-        |  }
-        |}]""".stripMargin
+        |}""".stripMargin
 
     val req = copybeansUrl.POST
-     .addQueryParameter("parent", getBranchHead())
+     .addQueryParameter("parent", getBranchHead("test"))
+     .addQueryParameter("branch", "test")
      .setContentType("application/json", "UTF8")
      .setBody(json)
 
@@ -85,14 +81,28 @@ class BranchingTest extends IntegrationTestSupport {
     }
   }
 
-  it should "get the test branch head" in {
-    getBranchHead("test") should be("2R2W0Q382V94R")
+  it should "get the bean in the branch" in {
+    val req = copybeansUrl.GET
+     .addQueryParameter("branch", "test")
+
+    doReqThen(req) { response =>
+      val jsonArray = Json.parse(response.getResponseBody).as[JsArray]
+      assert(jsonArray.value.size == 1)
+      assert(jsonArray.value.head.\("content").\("string-field").as[JsString].value == "hello world")
+    }
   }
 
-  it should "get the branch out of the list of branches" in {
-    val req = branchesUrl.GET
+  it should "get the branch commits" in {
+    val req = branchCommitsUrl("test").GET
+
     doReqThen(req) { response =>
-      assert(response.getResponseBody.contains("test"))
+      val jsonArray = Json.parse(response.getResponseBody).as[JsArray]
+      assert(jsonArray.value.size == 2)
+      assert(jsonArray.value.head.\("parentCommitId").as[JsString].value.length > 0)
+      assert(jsonArray.value(1).\("parentCommitId").as[JsString].value.length == 0)
+      jsonArray.value.foreach { v =>
+        assert(v.\("branchId").as[JsString].value == "test")
+      }
     }
   }
 

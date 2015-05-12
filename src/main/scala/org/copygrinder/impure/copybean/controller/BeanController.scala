@@ -61,7 +61,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
   }
 
   protected val copybeansReservedWords = Set(
-    "enforcedTypeIds", "id", "content", "type", "names", "tree", "fields", "expand")
+    "enforcedTypeIds", "id", "content", "type", "names", "tree", "fields", "expand", "branch")
 
   def find(params: Map[String, List[String]])(implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
 
