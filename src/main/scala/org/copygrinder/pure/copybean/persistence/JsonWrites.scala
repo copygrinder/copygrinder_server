@@ -14,7 +14,7 @@
 package org.copygrinder.pure.copybean.persistence
 
 import org.copygrinder.pure.copybean.exception.JsonWriteException
-import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ListReifiedField, ReferenceReifiedField}
+import org.copygrinder.pure.copybean.model.ReifiedField._
 import org.copygrinder.pure.copybean.model._
 import play.api.libs.json._
 

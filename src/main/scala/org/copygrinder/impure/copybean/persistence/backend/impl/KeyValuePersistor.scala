@@ -46,7 +46,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     })
   }
 
-  protected def getCommits(commitIds: Seq[CommitId])(implicit ec: ExecutionContext): Future[Seq[CommitNode]] = {
+  protected def getCommits(commitIds: Seq[TreeCommit])(implicit ec: ExecutionContext): Future[Seq[CommitNode]] = {
 
     val treeIdAndCommits = commitIds.filter(_.id.nonEmpty).groupBy(_.treeId)
 
@@ -57,7 +57,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     Future.sequence(futures).map(_.flatten)
   }
 
-  def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[CommitId])
+  def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[TreeCommit])
    (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
     getCommits(commitIds).flatMap {
       commits =>
@@ -96,7 +96,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     }
   }
 
-  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[CommitId], limit: Int)
+  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]] = {
 
     val prevCommitsFuture = getPreviousCommits(ImmutableLinkedHashMap(), commitIds, commitIds.head.treeId, limit)
@@ -112,28 +112,28 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
   }
 
-  def getBranchHeads(branchId: BranchId)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
+  def getBranchHeads(branchId: TreeBranch)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
     dao.getCompositeOpt[Set[Commit]]("heads", (branchId.treeId, branchId.id)).map { headsOpt =>
       headsOpt.getOrElse(Set()).toSeq
     }
   }
 
-  def getCommitsByBranch(branchId: BranchId, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
+  def getCommitsByBranch(branchId: TreeBranch, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
     getBranchHeads(branchId).flatMap {
       commits =>
-        val commitIds = commits.map(c => CommitId(c.id, branchId.treeId))
+        val commitIds = commits.map(c => TreeCommit(c.id, branchId.treeId))
         getPreviousCommits(ImmutableLinkedHashMap[String, Commit](), commitIds, branchId.treeId, limit)
     }
   }
 
   protected final def getPreviousCommits(
-   results: ImmutableLinkedHashMap[String, Commit], commits: Seq[CommitId], treeId: String, limit: Int)
+   results: ImmutableLinkedHashMap[String, Commit], commits: Seq[TreeCommit], treeId: String, limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]] = {
     getPreviousCommitNodes(ImmutableLinkedHashMap(), commits, treeId, limit).map(_.map(commitNodeToCommit))
   }
 
   protected final def getPreviousCommitNodes(
-   results: ImmutableLinkedHashMap[String, CommitNode], commits: Seq[CommitId], treeId: String, limit: Int)
+   results: ImmutableLinkedHashMap[String, CommitNode], commits: Seq[TreeCommit], treeId: String, limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[CommitNode]] = {
 
     val commitNodesFuture = getCommits(commits)
@@ -144,7 +144,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
         val previousCommitIds = commitNodes
          .filterNot(c => newResults.contains(c.previousCommitId))
-         .map(c => CommitId(c.previousCommitId, treeId))
+         .map(c => TreeCommit(c.previousCommitId, treeId))
          .distinct
 
         if (newResults.size >= limit || previousCommitIds.isEmpty) {
@@ -161,7 +161,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     Commit(node.id, node.branchId, node.previousCommitId, "")
   }
 
-  def query(commitIds: Seq[CommitId], limit: Int, query: Query)
+  def query(commitIds: Seq[TreeCommit], limit: Int, query: Query)
    (implicit ec: ExecutionContext): Future[Seq[PersistableObject]] = {
 
     val commitsFuture = getCommits(commitIds)
@@ -366,10 +366,10 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     prevByteStore - resolveId(spaceAndId)
   }
 
-  override def getBranches()(implicit ec: ExecutionContext): Future[Seq[BranchId]] = {
+  override def getBranches()(implicit ec: ExecutionContext): Future[Seq[TreeBranch]] = {
     dao.getCompositeKeySet("heads").map { treesAndBranches =>
       treesAndBranches.map { case (treeId, branchId) =>
-        BranchId(branchId, treeId)
+        TreeBranch(branchId, treeId)
       }.toSeq
     }
   }

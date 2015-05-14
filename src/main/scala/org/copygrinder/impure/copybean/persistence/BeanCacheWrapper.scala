@@ -30,7 +30,8 @@ class BeanCacheWrapper {
   def apply(beanId: String): beanCache.Keyed = {
 
     new beanCache.Keyed(beanId) {
-      override def apply(magnet: ⇒ ValueMagnet[ReifiedCopybean])(implicit ec: ExecutionContext): Future[ReifiedCopybean] = {
+      override def apply(magnet: ⇒ ValueMagnet[ReifiedCopybean])
+       (implicit ec: ExecutionContext): Future[ReifiedCopybean] = {
         super.apply(magnet).map(bean => {
 
           bean.enforcedTypeIds.foreach(typeId => {

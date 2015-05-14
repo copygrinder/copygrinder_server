@@ -35,7 +35,7 @@ class CopybeanPersistenceService(
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
 
-  def fetchCopybeansFromCommits(ids: Seq[String], commitIds: Seq[CommitId])
+  def fetchCopybeansFromCommits(ids: Seq[String], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
 
     fetchFromCommit(ids.map(id => (Namespaces.bean, id)), commitIds) {
@@ -48,7 +48,7 @@ class CopybeanPersistenceService(
     }
   }
 
-  protected def reifyBeans(copybeans: Seq[Copybean], commitIds: Seq[CommitId])
+  protected def reifyBeans(copybeans: Seq[Copybean], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
 
     val commitsFuture = addInternalCommit(commitIds)
@@ -64,24 +64,25 @@ class CopybeanPersistenceService(
     }
   }
 
-  protected def addInternalCommit(commitIds: Seq[CommitId])(implicit siloScope: SiloScope): Future[Seq[CommitId]] = {
+  protected def addInternalCommit(commitIds: Seq[TreeCommit])
+   (implicit siloScope: SiloScope): Future[Seq[TreeCommit]] = {
     if (commitIds.exists(_.treeId == Trees.internal)) {
       Future {
         commitIds
       }
     } else {
-      getCommitIdOfActiveHeadOfBranch(BranchId(Branches.master, Trees.internal)).map(v => commitIds :+ v)
+      getCommitIdOfActiveHeadOfBranch(TreeBranch(Branches.master, Trees.internal)).map(v => commitIds :+ v)
     }
   }
 
-  protected def resolveTypes(copybean: AnonymousCopybean, commitIds: Seq[CommitId])
+  protected def resolveTypes(copybean: AnonymousCopybean, commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Set[CopybeanType]] = {
 
     fetchCopybeanTypesFromCommits(copybean.enforcedTypeIds.toSeq, commitIds).map(_.toSet)
   }
 
   def findExpandableBeans(
-   copybeans: Seq[ReifiedCopybean], expandableFields: Seq[String], commitIds: Seq[CommitId])
+   copybeans: Seq[ReifiedCopybean], expandableFields: Seq[String], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Map[String, ReifiedCopybean]] = {
 
     if (expandableFields.nonEmpty) {
@@ -133,7 +134,7 @@ class CopybeanPersistenceService(
   protected def storeBean(rawCopybeans: Seq[Copybean], commit: CommitRequest)
    (implicit siloScope: SiloScope): Future[(String, Seq[ReifiedCopybean])] = {
 
-    val commits = Seq(CommitId(commit.parentCommitId, commit.branchId.treeId))
+    val commits = Seq(TreeCommit(commit.parentCommitId, commit.branchId.treeId))
     val newCopybeanFuture = reifyBeans(rawCopybeans, commits)
 
     newCopybeanFuture.flatMap(copybeans => {
@@ -149,7 +150,7 @@ class CopybeanPersistenceService(
     })
   }
 
-  def findByCommit(commitIds: Seq[CommitId], params: Map[String, List[String]])
+  def findByCommit(commitIds: Seq[TreeCommit], params: Map[String, List[String]])
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
     val query = new Query(params.map(v => (Namespaces.bean, v._1) -> v._2), Some(Namespaces.bean))
     siloScope.persistor.query(commitIds, siloScope.defaultLimit, query).map(objects => {
@@ -161,7 +162,7 @@ class CopybeanPersistenceService(
   def update(id: String, anonCopybean: AnonymousCopybean, commit: CommitRequest)
    (implicit siloScope: SiloScope): Future[String] = {
 
-    val commits = Seq(CommitId(commit.parentCommitId, commit.branchId.treeId))
+    val commits = Seq(TreeCommit(commit.parentCommitId, commit.branchId.treeId))
     val rawBean = Seq(new CopybeanImpl(id, anonCopybean.enforcedTypeIds, anonCopybean.content))
 
     val copybeanFuture = reifyBeans(rawBean, commits)
@@ -201,20 +202,20 @@ class CopybeanPersistenceService(
         new CommitData((Namespaces.cbtype, cbType.id), Some(PersistableObject(cbType)))
       }
 
-      val commit = new CommitRequest(BranchId(Branches.master, Trees.internal), "", "", "")
+      val commit = new CommitRequest(TreeBranch(Branches.master, Trees.internal), "", "", "")
       siloScope.persistor.commit(commit, beanObjs ++ types)
     })
   }
 
-  def getBranches()(implicit siloScope: SiloScope): Future[Seq[BranchId]] = {
+  def getBranches()(implicit siloScope: SiloScope): Future[Seq[TreeBranch]] = {
     siloScope.persistor.getBranches()
   }
 
-  def getCommitsByBranch(branchId: BranchId)(implicit siloScope: SiloScope): Future[Seq[Commit]] = {
+  def getCommitsByBranch(branchId: TreeBranch)(implicit siloScope: SiloScope): Future[Seq[Commit]] = {
     siloScope.persistor.getCommitsByBranch(branchId, siloScope.defaultLimit)
   }
 
-  protected def enforceTypes(copybean: ReifiedCopybean, commitIds: Seq[CommitId])
+  protected def enforceTypes(copybean: ReifiedCopybean, commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Unit] = {
 
     val commitsFuture = addInternalCommit(commitIds)
@@ -275,7 +276,7 @@ class CopybeanPersistenceService(
 
   }
 
-  protected def fetchValidators(copybeanType: CopybeanType, commitIds: Seq[CommitId])
+  protected def fetchValidators(copybeanType: CopybeanType, commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Map[String, ReifiedCopybean]] = {
 
     if (copybeanType.fields.isDefined) {
@@ -302,7 +303,7 @@ class CopybeanPersistenceService(
     }
   }
 
-  protected def checkRefs(refs: Map[String, CopybeanFieldDef], commitIds: Seq[CommitId])
+  protected def checkRefs(refs: Map[String, CopybeanFieldDef], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Unit] = {
     if (refs.nonEmpty) {
       val sourceIds = refs.keySet

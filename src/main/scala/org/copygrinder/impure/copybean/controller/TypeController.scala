@@ -22,7 +22,8 @@ import play.api.libs.json._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class TypeController(persistenceService: TypePersistenceService) extends JsonReads with JsonWrites with ControllerSupport {
+class TypeController(persistenceService: TypePersistenceService)
+ extends JsonReads with JsonWrites with ControllerSupport {
 
   def fetchCopybeanType(id: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope, ex: ExecutionContext): JsValue = {
@@ -82,6 +83,8 @@ class TypeController(persistenceService: TypePersistenceService) extends JsonRea
     Json.toJson(future)
   }
 
-  protected val copybeanTypeReservedWords = Set("id", "displayName", "instanceNameFormat", "instanceNameFormat", "fields", "validators", "cardinality")
+  protected val copybeanTypeReservedWords = Set(
+    "id", "displayName", "instanceNameFormat", "instanceNameFormat", "fields", "validators", "cardinality"
+  )
 
 }

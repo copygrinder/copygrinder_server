@@ -19,7 +19,7 @@ import akka.actor.ActorContext
 import com.fasterxml.jackson.core.JsonParseException
 import org.copygrinder.impure.copybean.controller._
 import org.copygrinder.impure.system.SiloScopeFactory
-import org.copygrinder.pure.copybean.exception.{CopygrinderThrowableException, CopygrinderNotFoundException, CopygrinderRuntimeException, CopygrinderInputException}
+import org.copygrinder.pure.copybean.exception._
 import spray.http.StatusCodes._
 import spray.routing._
 

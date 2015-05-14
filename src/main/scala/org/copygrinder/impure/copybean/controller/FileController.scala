@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.JsonInputException
 import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ListReifiedField}
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.model.{BranchId, CommitRequest, Namespaces}
+import org.copygrinder.pure.copybean.persistence.model.{TreeBranch, CommitRequest, Namespaces}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json.{JsValue, Json}
 import spray.http.MultipartContent
@@ -116,7 +116,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
     Json.toJson(resultFuture.map(_.map(_.id)))
   }
 
-  protected def createMetaData(filename: String, hash: String, length: Long, contentType: String, branchId: BranchId,
+  protected def createMetaData(filename: String, hash: String, length: Long, contentType: String, branchId: TreeBranch,
    parentCommitId: String)
    (implicit siloScope: SiloScope, ec: ExecutionContext): Future[ReifiedCopybean] = {
 

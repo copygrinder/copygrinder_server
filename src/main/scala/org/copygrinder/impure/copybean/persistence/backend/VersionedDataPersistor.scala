@@ -22,24 +22,24 @@ trait VersionedDataPersistor {
 
   def initSilo()(implicit ec: ExecutionContext): Future[Unit]
 
-  def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[CommitId])
+  def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[TreeCommit])
    (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]]
 
-  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[CommitId], limit: Int)
+  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
-  def getBranches()(implicit ec: ExecutionContext): Future[Seq[BranchId]]
+  def getBranches()(implicit ec: ExecutionContext): Future[Seq[TreeBranch]]
 
-  def getBranchHeads(branchId: BranchId)
+  def getBranchHeads(branchId: TreeBranch)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
-  def getCommitsByBranch(branchId: BranchId, limit: Int)
+  def getCommitsByBranch(branchId: TreeBranch, limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
   def commit(commit: CommitRequest, datas: Seq[CommitData])
    (implicit ec: ExecutionContext): Future[Commit]
 
-  def query(commitIds: Seq[CommitId], limit: Int, query: Query)
+  def query(commitIds: Seq[TreeCommit], limit: Int, query: Query)
    (implicit ec: ExecutionContext): Future[Seq[PersistableObject]]
 
 }

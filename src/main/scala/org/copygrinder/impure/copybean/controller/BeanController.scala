@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
 import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, ReifiedCopybean, ReifiedCopybeanImpl, ReifiedField}
-import org.copygrinder.pure.copybean.persistence.model.{BranchId, CommitId, CommitRequest}
+import org.copygrinder.pure.copybean.persistence.model.{TreeBranch, TreeCommit, CommitRequest}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
@@ -107,7 +107,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
   }
 
   protected def decorateExpandRefs(
-   beans: Seq[ReifiedCopybean], expandFields: Seq[String], commitIds: Seq[CommitId])
+   beans: Seq[ReifiedCopybean], expandFields: Seq[String], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope, ec: ExecutionContext): Future[Seq[ReifiedCopybean]] = {
 
     val fieldToBeanMapFuture = persistenceService.findExpandableBeans(beans, expandFields, commitIds)

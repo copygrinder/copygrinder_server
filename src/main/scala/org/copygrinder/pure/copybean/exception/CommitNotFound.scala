@@ -13,8 +13,8 @@
  */
 package org.copygrinder.pure.copybean.exception
 
-import org.copygrinder.pure.copybean.persistence.model.CommitId
+import org.copygrinder.pure.copybean.persistence.model.TreeCommit
 
-case class CommitNotFound(commitId: CommitId) extends CopygrinderInputException("Commit not found: " + commitId) {
+case class CommitNotFound(commitId: TreeCommit) extends CopygrinderInputException("Commit not found: " + commitId) {
 
 }

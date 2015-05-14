@@ -15,7 +15,7 @@ package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.{JsonInputException, MissingParameter}
-import org.copygrinder.pure.copybean.persistence.model.{Branches, BranchId, Trees}
+import org.copygrinder.pure.copybean.persistence.model.{Branches, TreeBranch, Trees}
 import play.api.libs.json.{JsArray, JsObject, JsUndefined, JsValue}
 
 import scala.collection.immutable.{Seq, ListMap}
@@ -124,7 +124,7 @@ trait ControllerSupport {
   }
 
   protected def getBranchIds(params: Map[String, List[String]])
-   (implicit siloScope: SiloScope): Seq[BranchId] = {
+   (implicit siloScope: SiloScope): Seq[TreeBranch] = {
 
     val branchOpt = params.get("branch")
 
@@ -138,17 +138,17 @@ trait ControllerSupport {
       val branchId = branches.lift(index).getOrElse {
         siloScope.treeToDefaultBranchMap.getOrElse(treeId, Branches.master)
       }
-      BranchId(branchId, treeId)
+      TreeBranch(branchId, treeId)
     }
   }
 
-  protected def getBranchId(params: Map[String, List[String]])(implicit siloScope: SiloScope): BranchId = {
+  protected def getBranchId(params: Map[String, List[String]])(implicit siloScope: SiloScope): TreeBranch = {
     val branchIds = getBranchIds(params)
     branchIds.head
   }
 
   protected def getBranchId(branchOnly: String, params: Map[String, List[String]])
-   (implicit siloScope: SiloScope): BranchId = {
+   (implicit siloScope: SiloScope): TreeBranch = {
     getBranchId(params.updated("branch", List(branchOnly)))
   }
 

@@ -28,7 +28,7 @@ class TypePersistenceService(
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
 
-  def findCopybeanTypes(commitIds: Seq[CommitId], params: Map[String, Seq[String]])
+  def findCopybeanTypes(commitIds: Seq[TreeCommit], params: Map[String, Seq[String]])
    (implicit siloScope: SiloScope): Future[Seq[CopybeanType]] = {
     val query = new Query(params.map(v => (Namespaces.cbtype, v._1) -> v._2), Some(Namespaces.cbtype))
     siloScope.persistor.query(commitIds, siloScope.defaultLimit, query).map(objs => {

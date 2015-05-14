@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.{BranchNotFound, CopybeanTypeNotFound}
 import org.copygrinder.pure.copybean.model.{Commit, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.PredefinedCopybeanTypes
-import org.copygrinder.pure.copybean.persistence.model.{BranchId, CommitId, Namespaces, PersistableObject}
+import org.copygrinder.pure.copybean.persistence.model.{TreeBranch, TreeCommit, Namespaces, PersistableObject}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -26,8 +26,8 @@ trait PersistenceSupport extends LazyLogging {
 
   protected var predefinedCopybeanTypes: PredefinedCopybeanTypes
 
-  def getCommitIdOfActiveHeadOfBranch(branchId: BranchId)
-   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[CommitId] = {
+  def getCommitIdOfActiveHeadOfBranch(branchId: TreeBranch)
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[TreeCommit] = {
 
     val headsFuture = getBranchHeads(branchId)
 
@@ -40,14 +40,14 @@ trait PersistenceSupport extends LazyLogging {
         ""
       }
 
-      CommitId(id, branchId.treeId)
+      TreeCommit(id, branchId.treeId)
     })
 
     activeHeadFuture
   }
 
-  def getCommitIdOfActiveHeadOfBranches(branchIds: Seq[BranchId])
-   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[CommitId]] = {
+  def getCommitIdOfActiveHeadOfBranches(branchIds: Seq[TreeBranch])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[TreeCommit]] = {
     val futures = branchIds.map { branchId =>
       getCommitIdOfActiveHeadOfBranch(branchId)
     }
@@ -55,12 +55,12 @@ trait PersistenceSupport extends LazyLogging {
   }
 
 
-  def getBranchHeads(branchId: BranchId)
+  def getBranchHeads(branchId: TreeBranch)
    (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[Commit]] = {
     siloScope.persistor.getBranchHeads(branchId)
   }
 
-  protected def fetchFromCommit[T](ids: Seq[(String, String)], commitIds: Seq[CommitId])
+  protected def fetchFromCommit[T](ids: Seq[(String, String)], commitIds: Seq[TreeCommit])
    (func: ((String, String), Option[PersistableObject]) => T)
    (implicit siloScope: SiloScope, ec: ExecutionContext): Future[Seq[T]] = {
 
@@ -74,7 +74,7 @@ trait PersistenceSupport extends LazyLogging {
     }
   }
 
-  def fetchCopybeanTypesFromCommits(ids: Seq[String], commitIds: Seq[CommitId])
+  def fetchCopybeanTypesFromCommits(ids: Seq[String], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[CopybeanType]] = {
 
     fetchFromCommit(ids.map(id => (Namespaces.cbtype, id)), commitIds) {

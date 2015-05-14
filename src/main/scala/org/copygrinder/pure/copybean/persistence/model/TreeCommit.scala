@@ -13,6 +13,4 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-case class BranchId(id: String, treeId: String) {
-
-}
+case class TreeCommit(id: String, treeId: String)
