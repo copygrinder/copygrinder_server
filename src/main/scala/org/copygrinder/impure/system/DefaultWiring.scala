@@ -19,13 +19,12 @@ import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
 import org.copygrinder.impure.copybean.controller.{BeanController, FileController, SecurityController, TypeController}
 import org.copygrinder.impure.copybean.persistence._
-import org.copygrinder.impure.copybean.persistence.backend.{VersionedDataPersistor, BlobPersistor}
-import org.copygrinder.impure.copybean.persistence.backend.impl.{JsonSerializer, MapDbPersistor, FileBlobPersistor}
+import org.copygrinder.impure.copybean.persistence.backend.impl.{FileBlobPersistor, JsonSerializer, KeyValuePersistor}
+import org.copygrinder.impure.copybean.persistence.backend.{BlobPersistor, VersionedDataPersistor}
 import org.copygrinder.pure.copybean.persistence._
-import org.copygrinder.pure.copybean.persistence.model.Branches
-import spray.caching.{LruCache, Cache}
-import scala.concurrent.duration._
+import spray.caching.{Cache, LruCache}
 
+import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 class DefaultWiring {
@@ -119,7 +118,7 @@ class SiloScopeFactory(
 
       lazy val serializer = new JsonSerializer()
 
-      lazy val persistor: VersionedDataPersistor = new MapDbPersistor(siloId, root, serializer)
+      lazy val persistor: VersionedDataPersistor = new KeyValuePersistor(siloId, root, serializer)
 
       lazy val blobPersistor: BlobPersistor = new FileBlobPersistor(persistenceServiceModule.hashedFileResolver,
         fileDir, tempDir, siloId)

@@ -14,67 +14,28 @@
 package org.copygrinder.impure.copybean.persistence.backend.impl
 
 import java.io.File
-import java.util.concurrent.atomic.AtomicReference
 
 import net.jpountz.xxhash.XXHashFactory
-import org.apache.commons.io.FileUtils
 import org.copygrinder.impure.copybean.persistence.backend.{PersistentObjectSerializer, VersionedDataPersistor}
 import org.copygrinder.pure.collections.ImmutableLinkedHashMap
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.model.{Commit, CopybeanType, ReifiedCopybean}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.copygrinder.pure.copybean.persistence.model._
-import org.mapdb.{DB, DBMaker}
 
-import scala.annotation.tailrec
-import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
-//TODO: IMPLEMENT
-class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjectSerializer[Array[Byte]])
+class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentObjectSerializer[Array[Byte]])
  extends VersionedDataPersistor {
-
-  protected val db = new AtomicReference[Option[DB]](None)
 
   protected val hashFactory = XXHashFactory.fastestInstance()
 
   protected val idEncoder = new IdEncoderDecoder()
 
-  protected def getDb(allowNew: Boolean = false) = {
-    if (db.get().isEmpty) {
-
-      if (!allowNew && (!storageDir.exists() || storageDir.list().isEmpty)) {
-        throw new SiloNotInitialized(silo)
-      }
-
-      FileUtils.forceMkdir(storageDir)
-      val newDb = DBMaker
-       .newFileDB(new File(storageDir, "datastore.mapdb"))
-       .closeOnJvmShutdown()
-       .cacheLRUEnable()
-       .make()
-
-      val success = db.compareAndSet(None, Some(newDb))
-      if (success) {
-        newDb
-      } else {
-        newDb.close()
-        db.get().get
-      }
-    } else {
-      db.get().get
-    }
-  }
+  protected val dao = new MapDbDao(silo, storageDir)
 
   def initSilo()(implicit ec: ExecutionContext): Future[Unit] = {
-    Future {
-      blocking {
-        if (storageDir.exists() && storageDir.list().nonEmpty) {
-          throw new SiloAlreadyInitialized(silo)
-        }
-        getDb(allowNew = true)
-      }
-    }
+    dao.initSilo()
   }
 
   protected def fetchTypesFromCommitNodes(commitNodes: Seq[CommitNode])(typeIds: Set[String])
@@ -85,27 +46,23 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
     })
   }
 
-  protected def getCommits(commitIds: Seq[CommitId]): Seq[CommitNode] = {
-    blocking {
-      commitIds.flatMap { commitId =>
-        val root = getDb().createHashMap(commitId.treeId).makeOrGet[String, CommitNode]
-        val commitNodeOpt = Option(root.get(commitId.id))
-        if (commitNodeOpt.isDefined) {
-          commitNodeOpt
-        } else if (commitId.id.isEmpty) {
-          None
-        } else {
-          throw new CommitNotFound(commitId)
-        }
-      }
-    }
-  }
+  protected def getCommits(commitIds: Seq[CommitId])(implicit ec: ExecutionContext): Future[Seq[CommitNode]] = {
 
+    val treeIdAndCommits = commitIds.filter(_.id.nonEmpty).groupBy(_.treeId)
+
+    val futures = treeIdAndCommits.map { case (treeId, commits) =>
+      dao.getSeq[CommitNode](treeId, commits.map(_.id)).map(_.values)
+    }.toSeq
+
+    Future.sequence(futures).map(_.flatten)
+  }
 
   def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[CommitId])
    (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
-    val commits = getCommits(commitIds)
-    getByIdsAndCommitNodes(ids, commits)
+    getCommits(commitIds).flatMap {
+      commits =>
+        getByIdsAndCommitNodes(ids, commits)
+    }
   }
 
   protected def getByIdsAndCommitNodes(ids: Seq[(String, String)], commits: Seq[CommitNode])
@@ -113,67 +70,90 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
 
     val futures = ids.map {
       namespaceAndId =>
-
-        val byteArrayOpt = commits.foldLeft(Option.empty[Array[Byte]]) {
-          (result, commit) =>
-            if (result.isEmpty) {
-              blocking {
-                commit.byteStore.get(resolveId(namespaceAndId))
-              }
-            } else {
-              result
-            }
-        }
-
-        if (byteArrayOpt.nonEmpty) {
-          serializer.deserialize(namespaceAndId._1, fetchTypesFromCommitNodes(commits), byteArrayOpt.get).map(Option(_))
-        } else {
-          Future(Option.empty[PersistableObject])
-        }
+        getByIdAndCommitNodes(commits, namespaceAndId)
     }
 
     Future.sequence(futures)
   }
 
+  protected def getByIdAndCommitNodes(commits: Seq[CommitNode], namespaceAndId: (String, String))
+   (implicit ec: ExecutionContext): Future[Option[PersistableObject]] = {
+    val byteArrayOpt = commits.foldLeft(Option.empty[Array[Byte]]) {
+      (result, commit) =>
+        if (result.isEmpty) {
+          blocking {
+            commit.byteStore.get(resolveId(namespaceAndId))
+          }
+        } else {
+          result
+        }
+    }
+
+    if (byteArrayOpt.nonEmpty) {
+      serializer.deserialize(namespaceAndId._1, fetchTypesFromCommitNodes(commits), byteArrayOpt.get).map(Option(_))
+    } else {
+      Future(Option.empty[PersistableObject])
+    }
+  }
+
   def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[CommitId], limit: Int)
-   (implicit ec: ExecutionContext): Future[Seq[Commit]] = ???
+   (implicit ec: ExecutionContext): Future[Seq[Commit]] = {
+
+    val prevCommitsFuture = getPreviousCommits(ImmutableLinkedHashMap(), commitIds, commitIds.head.treeId, limit)
+
+    prevCommitsFuture.map {
+      prevCommits =>
+        val relevantCommits = prevCommits.filter {
+          prevCommit =>
+            true
+        }
+        relevantCommits
+    }
+
+  }
 
   def getBranchHeads(branchId: BranchId)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
-    Future {
-      val heads = blocking {
-        val headsMap = getDb().createHashMap("$$heads").makeOrGet[String, Set[Commit]]
-        Option(headsMap.get(branchId.treeId))
-      }.getOrElse(Set())
-      heads.filter(_.branchId == branchId.id).toSeq
+    dao.getCompositeOpt[Set[Commit]]("heads", (branchId.treeId, branchId.id)).map { headsOpt =>
+      headsOpt.getOrElse(Set()).toSeq
     }
   }
 
   def getCommitsByBranch(branchId: BranchId, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
-    getBranchHeads(branchId).map {
+    getBranchHeads(branchId).flatMap {
       commits =>
         val commitIds = commits.map(c => CommitId(c.id, branchId.treeId))
-        getPreviousCommits(ImmutableLinkedHashMap[String, Commit](), commitIds, branchId, limit)
+        getPreviousCommits(ImmutableLinkedHashMap[String, Commit](), commitIds, branchId.treeId, limit)
     }
   }
 
-  @tailrec
   protected final def getPreviousCommits(
-   results: ImmutableLinkedHashMap[String, Commit], commits: Seq[CommitId], branchId: BranchId, limit: Int
-   ): Seq[Commit] = {
+   results: ImmutableLinkedHashMap[String, Commit], commits: Seq[CommitId], treeId: String, limit: Int)
+   (implicit ec: ExecutionContext): Future[Seq[Commit]] = {
+    getPreviousCommitNodes(ImmutableLinkedHashMap(), commits, treeId, limit).map(_.map(commitNodeToCommit))
+  }
 
-    val commitNodes = getCommits(commits)
-    val castCommits = commitNodes.map(commitNodeToCommit)
-    val newResults = results ++ castCommits.map(c => c.id -> c)
+  protected final def getPreviousCommitNodes(
+   results: ImmutableLinkedHashMap[String, CommitNode], commits: Seq[CommitId], treeId: String, limit: Int)
+   (implicit ec: ExecutionContext): Future[Seq[CommitNode]] = {
 
-    val previousCommitIds = commitNodes
-     .filterNot(c => newResults.contains(c.previousCommitId))
-     .map(c => CommitId(c.previousCommitId, branchId.treeId))
-     .distinct
+    val commitNodesFuture = getCommits(commits)
+    commitNodesFuture.flatMap {
+      commitNodes =>
 
-    if (newResults.size >= limit || previousCommitIds.isEmpty) {
-      newResults.values.take(limit).toSeq
-    } else {
-      getPreviousCommits(newResults, previousCommitIds, branchId, limit)
+        val newResults = results ++ commitNodes.map(n => (n.id, n))
+
+        val previousCommitIds = commitNodes
+         .filterNot(c => newResults.contains(c.previousCommitId))
+         .map(c => CommitId(c.previousCommitId, treeId))
+         .distinct
+
+        if (newResults.size >= limit || previousCommitIds.isEmpty) {
+          Future {
+            newResults.values.take(limit).toSeq
+          }
+        } else {
+          getPreviousCommitNodes(newResults, previousCommitIds, treeId, limit)
+        }
     }
   }
 
@@ -184,21 +164,28 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   def query(commitIds: Seq[CommitId], limit: Int, query: Query)
    (implicit ec: ExecutionContext): Future[Seq[PersistableObject]] = {
 
-    val commits = getCommits(commitIds)
+    val commitsFuture = getCommits(commitIds)
 
-    val ids = commits.flatMap {
-      commitNode =>
+    val commitsAndIdsFuture = commitsFuture.map {
+      commitNodes =>
+        val ids = commitNodes.flatMap {
+          commitNode =>
 
-        val allIds = commitNode.byteStore.keys.map(splitId(_))
+            val allIds = commitNode.byteStore.keys.map(splitId(_))
 
-        if (query.namespaceRestriction.isDefined) {
-          allIds.filter(_._1 == query.namespaceRestriction.get)
-        } else {
-          allIds
+            if (query.namespaceRestriction.isDefined) {
+              allIds.filter(_._1 == query.namespaceRestriction.get)
+            } else {
+              allIds
+            }
         }
+        (commitNodes, ids)
     }
 
-    doQuery(commits, limit, ids, query)
+    commitsAndIdsFuture.flatMap {
+      case (commits, ids) =>
+        doQuery(commits, limit, ids, query)
+    }
   }
 
   protected def doQuery(commits: Seq[CommitNode], limit: Int, ids: Iterable[(String, String)], query: Query)
@@ -263,55 +250,45 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
 
   def commit(request: CommitRequest, datas: Seq[CommitData])(implicit ec: ExecutionContext): Future[Commit] = {
 
-    val previousCommitFuture = Future {
-      blocking {
-        val root = getDb().createHashMap(request.branchId.treeId).makeOrGet[String, CommitNode]
+    dao.getOpt[CommitNode](request.branchId.treeId, request.parentCommitId).flatMap { previousCommitOpt =>
 
-        val previousCommitOpt = Option(root.get(request.parentCommitId))
-        val previousCommit = if (previousCommitOpt.isEmpty) {
-          if (request.parentCommitId.isEmpty) {
-            new CommitNode("", "", "", Map())
-          } else {
-            throw new BadParent("Parent Commit doesn't exist: " + request.parentCommitId)
-          }
+      val previousCommit = if (previousCommitOpt.isEmpty) {
+        if (request.parentCommitId.isEmpty) {
+          new CommitNode("", "", "", Map())
         } else {
-          previousCommitOpt.get
+          throw new BadParent("Parent Commit doesn't exist: " + request.parentCommitId)
+        }
+      } else {
+        previousCommitOpt.get
+      }
+
+      createNewByteStore(datas, previousCommit, request.branchId.treeId).flatMap { newByteStore =>
+        val newHash: String = buildNewHash(request, newByteStore)
+
+        val newCommitNode = new CommitNode(newHash, request.branchId.id, request.parentCommitId, newByteStore)
+
+        dao.set(request.branchId.treeId, newHash, newCommitNode).flatMap { _ =>
+
+          val newCommit = new Commit(newHash, request.branchId.id, request.parentCommitId, "")
+
+          updateHeads(request.branchId.treeId, newCommit).map { _ =>
+            newCommit
+          }
         }
 
-        (root, previousCommit)
       }
     }
 
-    previousCommitFuture.flatMap {
-      case (root, previousCommit) =>
-
-        createNewByteStore(datas, previousCommit, request.branchId.treeId).map(newByteStore => {
-          val newHash: String = buildNewHash(request, newByteStore)
-
-          val newCommitNode = new CommitNode(newHash, request.branchId.id, request.parentCommitId, newByteStore)
-          blocking {
-            root.put(newHash, newCommitNode)
-            root.getEngine.commit()
-          }
-
-          val newCommit = new Commit(newHash, request.branchId.id, request.parentCommitId, "")
-          updateHeads(request.branchId.treeId, newCommit)
-
-          newCommit
-        })
-    }
   }
 
-  protected def updateHeads(treeId: String, newCommit: Commit) = {
+  protected def updateHeads(treeId: String, newCommit: Commit)(implicit ec: ExecutionContext): Future[Unit] = {
 
-    val headsMap = getDb().createHashMap("$$heads").makeOrGet[String, Set[Commit]]
-    val existingHeads = Option(headsMap.get(treeId)).getOrElse(Set())
-
-    val newHeads = existingHeads.filter(_.id != newCommit.parentCommitId) + newCommit
-    blocking {
-      headsMap.put(treeId, newHeads)
-      headsMap.getEngine.commit()
+    dao.getCompositeOpt[Set[Commit]]("heads", (treeId, newCommit.branchId)).map { headsOpt =>
+      val existingHeads = headsOpt.getOrElse(Set())
+      val newHeads = existingHeads.filter(_.id != newCommit.parentCommitId) + newCommit
+      dao.setComposite("heads", (treeId, newCommit.branchId), newHeads)
     }
+
   }
 
   protected val seed = 9283923842393L
@@ -390,20 +367,10 @@ class MapDbPersistor(silo: String, storageDir: File, serializer: PersistentObjec
   }
 
   override def getBranches()(implicit ec: ExecutionContext): Future[Seq[BranchId]] = {
-    Future {
-      blocking {
-
-        val headsMap = getDb().createHashMap("$$heads").makeOrGet[String, Set[Commit]]
-
-        headsMap.entrySet().flatMap {
-          entry =>
-            val treeId = entry.getKey
-            entry.getValue.map {
-              commit =>
-                BranchId(commit.branchId, treeId)
-            }
-        }.toSeq
-      }
+    dao.getCompositeKeySet("heads").map { treesAndBranches =>
+      treesAndBranches.map { case (treeId, branchId) =>
+        BranchId(branchId, treeId)
+      }.toSeq
     }
   }
 }
