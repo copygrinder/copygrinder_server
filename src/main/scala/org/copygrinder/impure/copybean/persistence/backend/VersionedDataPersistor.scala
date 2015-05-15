@@ -28,7 +28,7 @@ trait VersionedDataPersistor {
   def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
-  def getBranches()(implicit ec: ExecutionContext): Future[Seq[TreeBranch]]
+  def getBranches(treeIds: Seq[String])(implicit ec: ExecutionContext): Future[Seq[TreeBranch]]
 
   def getBranchHeads(branchId: TreeBranch)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]

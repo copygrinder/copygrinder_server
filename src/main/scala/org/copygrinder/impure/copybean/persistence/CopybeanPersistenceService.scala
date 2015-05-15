@@ -207,8 +207,8 @@ class CopybeanPersistenceService(
     })
   }
 
-  def getBranches()(implicit siloScope: SiloScope): Future[Seq[TreeBranch]] = {
-    siloScope.persistor.getBranches()
+  def getBranchesFromTrees(treeIds: Seq[String])(implicit siloScope: SiloScope): Future[Seq[TreeBranch]] = {
+    siloScope.persistor.getBranches(treeIds)
   }
 
   def getCommitsByBranch(branchId: TreeBranch)(implicit siloScope: SiloScope): Future[Seq[Commit]] = {

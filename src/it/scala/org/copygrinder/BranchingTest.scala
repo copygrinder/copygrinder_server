@@ -74,10 +74,44 @@ class BranchingTest extends IntegrationTestSupport {
     doReq(req)
   }
 
+  it should "POST new sub-branch copybeans" in {
+
+    val json =
+      """
+        |{
+        |  "enforcedTypeIds": [
+        |    "branchType1"
+        |  ],
+        |  "content": {
+        |    "string-field":"brand new branch"
+        |  }
+        |}""".stripMargin
+
+    val req = copybeansUrl.POST
+     .addQueryParameter("parent", getBranchHead("test"))
+     .addQueryParameter("branch", "test2")
+     .setContentType("application/json", "UTF8")
+     .setBody(json)
+
+    doReq(req)
+  }
+
+  it should "get the old and new beans in the sub-branch" in {
+    val req = copybeansUrl.GET
+     .addQueryParameter("branch", "test2")
+
+    doReqThen(req) { response =>
+      val jsonArray = Json.parse(response.getResponseBody).as[JsArray]
+      assert(jsonArray.value.size == 2)
+      assert(jsonArray.\\("string-field").contains(JsString("brand new branch")))
+    }
+  }
+
   it should "get the branch out of the list of branches" in {
     val req = branchesUrl.GET
     doReqThen(req) { response =>
-      assert(response.getResponseBody.contains("test"))
+      assert(response.getResponseBody.contains(""""test""""))
+      assert(response.getResponseBody.contains(""""test2""""))
     }
   }
 

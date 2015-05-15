@@ -89,14 +89,20 @@ class MapDbDao(silo: String, storageDir: File) {
     }
   }
 
-  def getCompositeKeySet(tableId: String)(implicit ec: ExecutionContext): Future[Set[(String, String)]] = {
+  def getCompositeKeySet(tableId: String, outerKey: String)
+   (implicit ec: ExecutionContext): Future[Set[String]] = {
     Future {
       blocking {
         val tx = getTxMaker().makeTx()
         val table = tx.createHashMap(tableId).makeOrGet[String, Map[String, Any]]
-        val result = table.flatMap { case (outerKey, entrySet) =>
-          entrySet.keySet.map(innerKey => (outerKey, innerKey))
-        }.toSet
+        val innerMapOpt = Option(table.get(outerKey))
+
+        val result = if (innerMapOpt.isDefined) {
+          innerMapOpt.get.keySet
+        } else {
+          Set.empty[String]
+        }
+
         tx.close()
         result
       }

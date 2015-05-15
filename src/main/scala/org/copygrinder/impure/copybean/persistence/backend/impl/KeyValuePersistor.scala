@@ -366,12 +366,15 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     prevByteStore - resolveId(spaceAndId)
   }
 
-  override def getBranches()(implicit ec: ExecutionContext): Future[Seq[TreeBranch]] = {
-    dao.getCompositeKeySet("heads").map { treesAndBranches =>
-      treesAndBranches.map { case (treeId, branchId) =>
-        TreeBranch(branchId, treeId)
-      }.toSeq
+  override def getBranches(treeIds: Seq[String])(implicit ec: ExecutionContext): Future[Seq[TreeBranch]] = {
+    val futures = treeIds.map { treeId =>
+      dao.getCompositeKeySet("heads", treeId).map { branches =>
+        branches.map { branchId =>
+          TreeBranch(branchId, treeId)
+        }.toSeq
+      }
     }
+    Future.sequence(futures).map(_.flatten)
   }
 }
 

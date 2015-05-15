@@ -173,10 +173,8 @@ class BeanController(persistenceService: CopybeanPersistenceService)
 
     val treeIds = getRawTreeIds(params)
 
-    val future = persistenceService.getBranches().map { branches =>
-      branches.filter { branchId =>
-        treeIds.contains(branchId.treeId)
-      }.map { branchId =>
+    val future = persistenceService.getBranchesFromTrees(treeIds).map { branches =>
+      branches.map { branchId =>
         branchId.id
       }
     }
