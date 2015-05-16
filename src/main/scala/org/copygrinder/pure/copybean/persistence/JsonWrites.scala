@@ -16,6 +16,7 @@ package org.copygrinder.pure.copybean.persistence
 import org.copygrinder.pure.copybean.exception.JsonWriteException
 import org.copygrinder.pure.copybean.model.ReifiedField._
 import org.copygrinder.pure.copybean.model._
+import org.copygrinder.pure.copybean.persistence.model.BeanDelta
 import play.api.libs.json._
 
 import scala.collection.immutable.ListMap
@@ -42,37 +43,37 @@ trait JsonWrites extends DefaultWrites {
       case dec: BigDecimal => JsNumber(dec.toLong)
       case s: String => JsString(s)
       case m: ListMap[_, _] => convertListMap(m)
-      case seq: Seq[_] => convertList(seq)
+      case seq: Iterable[_] => convertList(seq)
       case null => JsNull //scalastyle:ignore
       case x => throw new JsonWriteException(s"Can't write JSON for value '$x' with class '${x.getClass}'")
     }
   }
 
-  protected def convertList(list: Seq[Any]): JsArray = {
+  protected def convertList(list: Iterable[Any]): JsArray = {
     if (list.nonEmpty) {
       val head = list.head
       head match {
         case _: String =>
-          traversableWrites[String].writes(list.asInstanceOf[Seq[String]])
+          traversableWrites[String].writes(list.asInstanceOf[Iterable[String]])
         case _ => if (list.forall(_.isInstanceOf[Int])) {
-          traversableWrites[Int].writes(list.asInstanceOf[Seq[Int]])
+          traversableWrites[Int].writes(list.asInstanceOf[Iterable[Int]])
         } else if (list.exists(_.isInstanceOf[BigDecimal])) {
           traversableWrites[BigDecimal].writes(list.map {
             case int: Int => BigDecimal(int)
             case dec: BigDecimal => dec
           })
         } else if (list.head.isInstanceOf[Boolean]) {
-          traversableWrites[Boolean].writes(list.asInstanceOf[Seq[Boolean]])
+          traversableWrites[Boolean].writes(list.asInstanceOf[Iterable[Boolean]])
         } else {
           head match {
             case _: Map[_, _] =>
-              val newList = list.asInstanceOf[Seq[Map[String, Any]]].map(map => {
+              val newList = list.asInstanceOf[Iterable[Map[String, Any]]].map(map => {
                 val newMap = map.map(entry => {
                   entry._1 -> entry._2
                 })
                 stringAnyMapToJsObject(newMap)
               })
-              JsArray(newList)
+              JsArray(newList.toSeq)
             case _ =>
               throw new JsonWriteException(s"Can't write JSON for list with value '$head")
           }
@@ -222,5 +223,50 @@ trait JsonWrites extends DefaultWrites {
       }
     }
   }
+
+  implicit val deltaWrites = new Writes[Iterable[BeanDelta]] {
+    def writes(deltas: Iterable[BeanDelta]): JsValue = {
+
+      val fieldChanges = deltas.foldLeft(Json.obj()) { (result, delta) =>
+        val id = delta.newField.fieldDef.id
+
+        val innerObj = Json.obj()
+
+        val obj = if (delta.oldField.isDefined) {
+          innerObj + ("oldValue" -> reifiedFieldWrites(delta.oldField.get, delta.oldBean.get))
+        } else {
+          innerObj
+        }
+
+        val newObj = obj + ("newValue" -> reifiedFieldWrites(delta.newField, delta.newBean))
+        result ++ Json.obj(id -> newObj)
+      }
+
+      val resultObj = Json.obj("fieldChanges" -> fieldChanges)
+
+      val delta = deltas.head
+
+      if (delta.oldBean.isDefined) {
+        val oldTypeIds = delta.oldBean.get.enforcedTypeIds
+        val deltaTypes = delta.newBean.enforcedTypeIds.diff(oldTypeIds)
+        if (deltaTypes.nonEmpty) {
+          resultObj ++ Json.obj(
+            "oldEnforcedTypeIds" -> convertAny(delta.newBean.enforcedTypeIds),
+            "newEnforcedTypeIds" -> convertAny(delta.newBean.enforcedTypeIds)
+          )
+        } else {
+          resultObj
+        }
+      } else {
+        if (delta.newBean.enforcedTypeIds.nonEmpty) {
+          resultObj ++ Json.obj("newEnforcedTypeIds" -> convertAny(delta.newBean.enforcedTypeIds))
+        } else {
+          resultObj
+        }
+      }
+
+    }
+  }
+
 
 }

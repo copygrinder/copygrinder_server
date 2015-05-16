@@ -53,7 +53,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
 
         metaDataFuture.flatMap { case (existingMetaDataOpt) =>
 
-          val metaDataBean = existingMetaDataOpt.head.get.bean
+          val metaDataBean = existingMetaDataOpt.head.get._1.bean
           val hash = metaDataBean.content.get("hash").get.asInstanceOf[String]
           val filename = metaDataBean.content.get("filename").get.asInstanceOf[String]
           val contentType = metaDataBean.content.get("contentType").get.asInstanceOf[String]

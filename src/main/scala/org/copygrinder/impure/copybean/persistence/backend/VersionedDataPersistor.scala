@@ -23,7 +23,7 @@ trait VersionedDataPersistor {
   def initSilo()(implicit ec: ExecutionContext): Future[Unit]
 
   def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[TreeCommit])
-   (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]]
+   (implicit ec: ExecutionContext): Future[Seq[Option[(PersistableObject, Commit)]]]
 
   def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]

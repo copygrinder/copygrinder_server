@@ -24,13 +24,14 @@ import org.copygrinder.pure.copybean.persistence.model._
 import org.copygrinder.pure.copybean.validator.FieldValidator
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class CopybeanPersistenceService(
  copybeanTypeEnforcer: CopybeanTypeEnforcer,
  idEncoderDecoder: IdEncoderDecoder,
  _predefinedCopybeanTypes: PredefinedCopybeanTypes,
- predefinedCopybeans: PredefinedCopybeans
+ predefinedCopybeans: PredefinedCopybeans,
+ deltaCalculator: DeltaCalculator
  ) extends PersistenceSupport {
 
   override protected var predefinedCopybeanTypes = _predefinedCopybeanTypes
@@ -215,6 +216,26 @@ class CopybeanPersistenceService(
     siloScope.persistor.getCommitsByBranch(branchId, siloScope.defaultLimit)
   }
 
+  def getHistoryByIdAndCommits(id: String, commitIds: Seq[TreeCommit])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[Commit]] = {
+    siloScope.persistor.getHistoryByIdAndCommits((Namespaces.bean, id), commitIds, siloScope.defaultLimit)
+  }
+
+  def getDeltaByIdAndCommit(id: String, commitId: TreeCommit)
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Iterable[BeanDelta]] = {
+
+    siloScope.persistor.getByIdsAndCommits(Seq((Namespaces.bean, id)), Seq(commitId)).flatMap { beanOpts =>
+      val (obj, commit) = beanOpts.head.getOrElse(throw new CopybeanNotFound(id))
+      val bean = obj.bean
+
+      val prevCommit = TreeCommit(commit.parentCommitId, commitId.treeId)
+      siloScope.persistor.getByIdsAndCommits(Seq((Namespaces.bean, id)), Seq(prevCommit)).map { prevObjAndCommits =>
+        val prevBean = prevObjAndCommits.head.map(_._1.bean)
+        deltaCalculator.calcBeanDeltas(prevBean, bean)
+      }
+    }
+  }
+
   protected def enforceTypes(copybean: ReifiedCopybean, commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Unit] = {
 
@@ -313,7 +334,7 @@ class CopybeanPersistenceService(
 
       foundIdsFuture.flatMap(foundIds => {
 
-        val flattenedFoundIds = foundIds.flatten.map(_.bean.id)
+        val flattenedFoundIds = foundIds.flatten.map(_._1.bean.id)
 
         val diffs = sourceIds.diff(flattenedFoundIds.toSet)
         if (diffs.nonEmpty) {

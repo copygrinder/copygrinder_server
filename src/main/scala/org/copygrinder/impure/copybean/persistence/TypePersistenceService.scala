@@ -19,7 +19,7 @@ import org.copygrinder.pure.copybean.persistence._
 import org.copygrinder.pure.copybean.persistence.model._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class TypePersistenceService(
@@ -52,6 +52,11 @@ class TypePersistenceService(
   def delete(id: String, commit: CommitRequest)(implicit siloScope: SiloScope): Future[Commit] = {
     val data = CommitData((Namespaces.cbtype, id), None)
     siloScope.persistor.commit(commit, Seq(data))
+  }
+
+  def getHistoryByIdAndCommits(id: String, commitIds: Seq[TreeCommit])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[Commit]] = {
+    siloScope.persistor.getHistoryByIdAndCommits((Namespaces.cbtype, id), commitIds, siloScope.defaultLimit)
   }
 
 }

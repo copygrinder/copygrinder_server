@@ -69,7 +69,7 @@ trait PersistenceSupport extends LazyLogging {
     persistableObjsFuture.map { objs =>
 
       ids.zipWithIndex.map { case (id, index) =>
-        func(id, objs(index))
+        func(id, objs(index).map(_._1))
       }
     }
   }
@@ -86,11 +86,6 @@ trait PersistenceSupport extends LazyLogging {
           dataOpt.get.cbType
         }
     }
-  }
-
-  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit])
-   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[Commit]] = {
-    siloScope.persistor.getHistoryByIdAndCommits(id, commitIds, siloScope.defaultLimit)
   }
 
 }

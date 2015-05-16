@@ -13,7 +13,6 @@
  */
 package org.copygrinder.pure.copybean.model
 
-import org.copygrinder.pure.copybean.exception.TypeValidationException
 import org.copygrinder.pure.copybean.persistence.UntypedCaster
 
 case class ReifiedField (fieldDef: CopybeanFieldDef, value: Any, parent: String)

@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
 import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, ReifiedCopybean, ReifiedCopybeanImpl, ReifiedField}
-import org.copygrinder.pure.copybean.persistence.model.{Namespaces, TreeBranch, TreeCommit, CommitRequest}
+import org.copygrinder.pure.copybean.persistence.model.{CommitRequest, TreeCommit}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
@@ -195,10 +195,18 @@ class BeanController(persistenceService: CopybeanPersistenceService)
     val branchIds = getBranchIds(params)
 
     val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).map { heads =>
-      persistenceService.getHistoryByIdAndCommits((Namespaces.bean, id), heads)
+      persistenceService.getHistoryByIdAndCommits(id, heads)
     }
 
     Json.toJson(future)
+  }
+
+  def getDeltaByIdAndCommit(id: String, commitId: String, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
+    val treeId = getBranchId(params).treeId
+    val treeCommit = TreeCommit(commitId, treeId)
+    val deltas = persistenceService.getDeltaByIdAndCommit(id, treeCommit)
+    Json.toJson(deltas)
   }
 
 }

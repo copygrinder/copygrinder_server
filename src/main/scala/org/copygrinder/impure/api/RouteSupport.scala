@@ -77,7 +77,11 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
 
   protected val copybeansIdPath = copybeansIdPathPartial & end
 
-  protected val copybeansIdHistoryPath = copybeansIdPathPartial & pathPrefix("history") & end
+  protected val copybeansIdHistoryPathPartial = copybeansIdPathPartial & pathPrefix("history")
+
+  protected val copybeansIdHistoryPath = copybeansIdHistoryPathPartial & end
+
+  protected val copybeansIdHistoryDeltaPath = copybeansIdHistoryPathPartial & pathPrefix(Segment) & end
 
   protected val copybeansTypesPathPartial = siloPathPartial & pathPrefix("types")
 
@@ -87,7 +91,9 @@ trait RouteSupport extends Directives with PlayJsonSupport with LazyLogging {
 
   protected val copybeansTypeIdPath = copybeansTypeIdPathPartial & end
 
-  protected val copybeansTypeIdHistoryPath = copybeansTypeIdPathPartial & pathPrefix("history") & end
+  protected val copybeansTypeIdHistoryPathPartial = copybeansTypeIdPathPartial & pathPrefix("history")
+
+  protected val copybeansTypeIdHistoryPath = copybeansTypeIdHistoryPathPartial & end
 
   protected val filePath = siloPathPartial & pathPrefix("files") & end
 

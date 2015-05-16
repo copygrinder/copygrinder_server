@@ -32,4 +32,8 @@ object FutureWrapper {
 
     wrappedFuture
   }
+
+  def apply[T](body: => T)(implicit executor: ExecutionContext): Future[T] = {
+    apply(Future(body))
+  }
 }

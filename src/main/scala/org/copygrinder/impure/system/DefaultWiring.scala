@@ -91,11 +91,14 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes)
 
+  lazy val deltaCalculator = new DeltaCalculator
+
   lazy val copybeanPersistenceService = new CopybeanPersistenceService(
     copybeanTypeEnforcer,
     idEncoderDecoder,
     predefinedCopybeanTypes,
-    predefinedCopybeans
+    predefinedCopybeans,
+    deltaCalculator
   )
 
 }
