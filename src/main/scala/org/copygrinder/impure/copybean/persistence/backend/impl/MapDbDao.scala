@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicReference
 import org.apache.commons.io.FileUtils
 import org.copygrinder.pure.collections.ImmutableLinkedHashMap
 import org.copygrinder.pure.copybean.exception._
-import org.mapdb.{DBMaker, TxMaker}
+import org.mapdb.{DB, DBMaker, TxMaker}
 
 import scala.collection.JavaConversions._
 import scala.concurrent._
@@ -138,11 +138,16 @@ class MapDbDao(silo: String, storageDir: File) {
     }
   }
 
-  def setComposite[T](tableId: String, key: (String, String), value: T)
+  def setComposite[T](tableId: String, key: (String, String), value: T)(txOpt: Option[DB] = None)
    (implicit ec: ExecutionContext): Future[Unit] = {
     Future {
       blocking {
-        val tx = getTxMaker().makeTx()
+        val tx = if (txOpt.isDefined) {
+          txOpt.get
+        } else {
+          getTxMaker().makeTx()
+        }
+
         val table = tx.createHashMap(tableId).makeOrGet[String, Map[String, T]]
         val mapOpt = Option(table.get(key._1))
         val map = if (mapOpt.isDefined) {
@@ -152,20 +157,26 @@ class MapDbDao(silo: String, storageDir: File) {
         }
         val newMap = map.updated(key._2, value)
         table.put(key._1, newMap)
-        tx.commit()
-        tx.close()
+
+        if (txOpt.isEmpty) {
+          tx.commit()
+          tx.close()
+        }
       }
     }
   }
 
-  def set[T](tableId: String, key: String, value: T)(implicit ec: ExecutionContext): Future[Unit] = {
+  def setAndThen[T](tableId: String, key: String, value: T)(func: (Option[DB]) => Future[Unit])
+   (implicit ec: ExecutionContext): Future[Unit] = {
     Future {
       blocking {
         val tx = getTxMaker().makeTx()
         val table = tx.createHashMap(tableId).makeOrGet[String, T]
         table.put(key, value)
-        tx.commit()
-        tx.close()
+        func(Some(tx)).map { _ =>
+          tx.commit()
+          tx.close()
+        }
       }
     }
   }

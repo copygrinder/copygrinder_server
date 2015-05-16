@@ -140,4 +140,48 @@ class BranchingTest extends IntegrationTestSupport {
     }
   }
 
+  it should "not allow creating multiple heads" in {
+
+    val head = getBranchHead("test")
+
+    val json =
+      """
+        |{
+        |  "enforcedTypeIds": [
+        |    "branchType1"
+        |  ],
+        |  "content": {
+        |    "string-field":"another head1"
+        |  }
+        |}""".stripMargin
+
+    val req = copybeansUrl.POST
+     .addQueryParameter("parent", head)
+     .addQueryParameter("branch", "test")
+     .setContentType("application/json", "UTF8")
+     .setBody(json)
+
+    doReq(req)
+
+    val json2 =
+      """
+        |{
+        |  "enforcedTypeIds": [
+        |    "branchType1"
+        |  ],
+        |  "content": {
+        |    "string-field":"another head2"
+        |  }
+        |}""".stripMargin
+
+    val req2 = copybeansUrl.POST
+     .addQueryParameter("parent", head)
+     .addQueryParameter("branch", "test")
+     .setContentType("application/json", "UTF8")
+     .setBody(json2)
+
+    doReq(req, 400)
+
+  }
+
 }

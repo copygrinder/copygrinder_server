@@ -250,45 +250,55 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
   def commit(request: CommitRequest, datas: Seq[CommitData])(implicit ec: ExecutionContext): Future[Commit] = {
 
-    dao.getOpt[CommitNode](request.branchId.treeId, request.parentCommitId).flatMap { previousCommitOpt =>
+    val treeId = request.branchId.treeId
+    val branchId = request.branchId.id
+    val parentCommitId = request.parentCommitId
 
-      val previousCommit = if (previousCommitOpt.isEmpty) {
-        if (request.parentCommitId.isEmpty) {
-          new CommitNode("", "", "", Map())
+    dao.getCompositeOpt[Set[Commit]]("heads", (treeId, branchId)).flatMap { headsOpt =>
+
+      dao.getOpt[CommitNode](treeId, parentCommitId).flatMap { previousCommitOpt =>
+
+        val previousCommit = if (previousCommitOpt.isEmpty) {
+          if (request.parentCommitId.isEmpty) {
+            new CommitNode("", "", "", None, Map(), Set())
+          } else {
+            throw new BadParent("Parent Commit doesn't exist: " + parentCommitId)
+          }
         } else {
-          throw new BadParent("Parent Commit doesn't exist: " + request.parentCommitId)
+          previousCommitOpt.get
         }
-      } else {
-        previousCommitOpt.get
-      }
 
-      createNewByteStore(datas, previousCommit, request.branchId.treeId).flatMap { newByteStore =>
-        val newHash: String = buildNewHash(request, newByteStore)
+        createNewByteStore(datas, previousCommit, treeId).flatMap { newByteStore =>
+          val newHash: String = buildNewHash(request, newByteStore)
 
-        val newCommitNode = new CommitNode(newHash, request.branchId.id, request.parentCommitId, newByteStore)
+          val changedIds = datas.map(data => resolveId(data.id)).toSet
 
-        dao.set(request.branchId.treeId, newHash, newCommitNode).flatMap { _ =>
+          val newCommitNode = new CommitNode(newHash, branchId, parentCommitId, None, newByteStore, changedIds)
+          val newCommit = new Commit(newHash, branchId, parentCommitId, "")
 
-          val newCommit = new Commit(newHash, request.branchId.id, request.parentCommitId, "")
+          val newHeads = buildNewHeads(parentCommitId, headsOpt, newCommit)
 
-          updateHeads(request.branchId.treeId, newCommit).map { _ =>
+          dao.setAndThen(treeId, newHash, newCommitNode) {
+            dao.setComposite("heads", (treeId, newCommit.branchId), newHeads)
+          }.map { _ =>
             newCommit
           }
         }
-
       }
+
     }
 
   }
 
-  protected def updateHeads(treeId: String, newCommit: Commit)(implicit ec: ExecutionContext): Future[Unit] = {
+  protected def buildNewHeads(parentCommitId: String, headsOpt: Option[Set[Commit]], newCommit: Commit): Set[Commit] = {
+    val existingHeads = headsOpt.getOrElse(Set())
+    val newHeads = existingHeads.filter(_.id != parentCommitId) + newCommit
 
-    dao.getCompositeOpt[Set[Commit]]("heads", (treeId, newCommit.branchId)).map { headsOpt =>
-      val existingHeads = headsOpt.getOrElse(Set())
-      val newHeads = existingHeads.filter(_.id != newCommit.parentCommitId) + newCommit
-      dao.setComposite("heads", (treeId, newCommit.branchId), newHeads)
+    if (existingHeads.nonEmpty && newHeads.size > existingHeads.size) {
+      throw new MultipleHeadsException(newCommit.branchId)
     }
 
+    newHeads
   }
 
   protected val seed = 9283923842393L
@@ -378,6 +388,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
   }
 }
 
-protected case class CommitNode(
- id: String, branchId: String, previousCommitId: String, byteStore: Map[String, Array[Byte]]
- )
+protected case class CommitNode(id: String, branchId: String, previousCommitId: String, mergeData: Option[MergeData],
+ byteStore: Map[String, Array[Byte]], changedIds: Set[String])
+
+protected case class MergeData(mergedCommitId: String, excludedIds: Map[String, String])

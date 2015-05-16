@@ -85,8 +85,8 @@ trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterE
     Await.result(FutureWrapper(responseFuture), 1 second)
   }
 
-  def doReq(req: Req): Response = {
-    doReqThen(req) { response =>
+  def doReq(req: Req, status: Int = 200): Response = {
+    doReqThen(req, status) { response =>
       response
     }
   }
