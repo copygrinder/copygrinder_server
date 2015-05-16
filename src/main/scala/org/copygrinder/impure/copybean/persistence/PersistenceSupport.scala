@@ -88,4 +88,9 @@ trait PersistenceSupport extends LazyLogging {
     }
   }
 
+  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit])
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[Commit]] = {
+    siloScope.persistor.getHistoryByIdAndCommits(id, commitIds, siloScope.defaultLimit)
+  }
+
 }

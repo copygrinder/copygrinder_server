@@ -24,7 +24,7 @@ import org.copygrinder.pure.copybean.persistence.model._
 import org.copygrinder.pure.copybean.validator.FieldValidator
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 class CopybeanPersistenceService(
  copybeanTypeEnforcer: CopybeanTypeEnforcer,

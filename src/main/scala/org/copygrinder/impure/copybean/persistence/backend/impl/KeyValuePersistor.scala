@@ -46,22 +46,29 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     })
   }
 
-  protected def getCommits(commitIds: Seq[TreeCommit])(implicit ec: ExecutionContext): Future[Seq[CommitNode]] = {
+  protected def getCommits(commitIds: Seq[TreeCommit])
+   (implicit ec: ExecutionContext): Future[Seq[(String, CommitNode)]] = {
 
     val treeIdAndCommits = commitIds.filter(_.id.nonEmpty).groupBy(_.treeId)
 
     val futures = treeIdAndCommits.map { case (treeId, commits) =>
-      dao.getSeq[CommitNode](treeId, commits.map(_.id)).map(_.values)
+      dao.getSeq[CommitNode](treeId, commits.map(_.id)).map(results => (treeId, results.values))
     }.toSeq
 
-    Future.sequence(futures).map(_.flatten)
+    Future.sequence(futures).map { values =>
+      values.flatMap { treeAndCommitNodes =>
+        treeAndCommitNodes._2.map { node =>
+          (treeAndCommitNodes._1, node)
+        }
+      }
+    }
   }
 
   def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[TreeCommit])
    (implicit ec: ExecutionContext): Future[Seq[Option[PersistableObject]]] = {
     getCommits(commitIds).flatMap {
       commits =>
-        getByIdsAndCommitNodes(ids, commits)
+        getByIdsAndCommitNodes(ids, commits.map(_._2))
     }
   }
 
@@ -99,15 +106,13 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
   def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]] = {
 
-    val prevCommitsFuture = getPreviousCommits(ImmutableLinkedHashMap(), commitIds, commitIds.head.treeId, limit)
+    val prevCommitsFuture = getPreviousCommitNodes(ImmutableLinkedHashMap(), commitIds, limit)
 
-    prevCommitsFuture.map {
-      prevCommits =>
-        val relevantCommits = prevCommits.filter {
-          prevCommit =>
-            true
-        }
-        relevantCommits
+    prevCommitsFuture.map { prevCommits =>
+      val relevantCommits = prevCommits.filter { prevCommit =>
+        prevCommit.changedIds.contains(resolveId(id))
+      }
+      relevantCommits.map(commitNodeToCommit)
     }
 
   }
@@ -129,31 +134,29 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
   protected final def getPreviousCommits(
    results: ImmutableLinkedHashMap[String, Commit], commits: Seq[TreeCommit], treeId: String, limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]] = {
-    getPreviousCommitNodes(ImmutableLinkedHashMap(), commits, treeId, limit).map(_.map(commitNodeToCommit))
+    getPreviousCommitNodes(ImmutableLinkedHashMap(), commits, limit).map(_.map(commitNodeToCommit))
   }
 
-  protected final def getPreviousCommitNodes(
-   results: ImmutableLinkedHashMap[String, CommitNode], commits: Seq[TreeCommit], treeId: String, limit: Int)
-   (implicit ec: ExecutionContext): Future[Seq[CommitNode]] = {
+  protected final def getPreviousCommitNodes(results: ImmutableLinkedHashMap[String, CommitNode],
+   commits: Seq[TreeCommit], limit: Int)(implicit ec: ExecutionContext): Future[Seq[CommitNode]] = {
 
     val commitNodesFuture = getCommits(commits)
-    commitNodesFuture.flatMap {
-      commitNodes =>
+    commitNodesFuture.flatMap { commitNodes =>
 
-        val newResults = results ++ commitNodes.map(n => (n.id, n))
+      val newResults = results ++ commitNodes.map(_._2).map(n => (n.id, n))
 
-        val previousCommitIds = commitNodes
-         .filterNot(c => newResults.contains(c.previousCommitId))
-         .map(c => TreeCommit(c.previousCommitId, treeId))
-         .distinct
+      val previousCommitIds = commitNodes
+       .filterNot(c => newResults.contains(c._2.previousCommitId))
+       .map(c => TreeCommit(c._2.previousCommitId, c._1))
+       .distinct
 
-        if (newResults.size >= limit || previousCommitIds.isEmpty) {
-          Future {
-            newResults.values.take(limit).toSeq
-          }
-        } else {
-          getPreviousCommitNodes(newResults, previousCommitIds, treeId, limit)
+      if (newResults.size >= limit || previousCommitIds.isEmpty) {
+        Future {
+          newResults.values.take(limit).toSeq
         }
+      } else {
+        getPreviousCommitNodes(newResults, previousCommitIds, limit)
+      }
     }
   }
 
@@ -166,25 +169,24 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
     val commitsFuture = getCommits(commitIds)
 
-    val commitsAndIdsFuture = commitsFuture.map {
-      commitNodes =>
-        val ids = commitNodes.flatMap {
-          commitNode =>
+    val commitsAndIdsFuture = commitsFuture.map { commitNodes =>
+      val ids = commitNodes.map(_._2).flatMap {
+        commitNode =>
 
-            val allIds = commitNode.byteStore.keys.map(splitId(_))
+          val allIds = commitNode.byteStore.keys.map(splitId(_))
 
-            if (query.namespaceRestriction.isDefined) {
-              allIds.filter(_._1 == query.namespaceRestriction.get)
-            } else {
-              allIds
-            }
-        }
-        (commitNodes, ids)
+          if (query.namespaceRestriction.isDefined) {
+            allIds.filter(_._1 == query.namespaceRestriction.get)
+          } else {
+            allIds
+          }
+      }
+      (commitNodes, ids)
     }
 
     commitsAndIdsFuture.flatMap {
       case (commits, ids) =>
-        doQuery(commits, limit, ids, query)
+        doQuery(commits.map(_._2), limit, ids, query)
     }
   }
 

@@ -16,7 +16,7 @@ package org.copygrinder.impure.copybean.controller
 import org.copygrinder.impure.copybean.persistence.TypePersistenceService
 import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.model.{Commit, CopybeanType}
-import org.copygrinder.pure.copybean.persistence.model.CommitRequest
+import org.copygrinder.pure.copybean.persistence.model.{Namespaces, CommitRequest}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
@@ -79,6 +79,18 @@ class TypeController(persistenceService: TypePersistenceService)
 
     val commit = new CommitRequest(branchId, parentCommitId, "", "")
     val future = func(commit).map(_.id)
+
+    Json.toJson(future)
+  }
+
+  def getHistoryById(id: String, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
+
+    val branchIds = getBranchIds(params)
+
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).map { heads =>
+      persistenceService.getHistoryByIdAndCommits((Namespaces.cbtype, id), heads)
+    }
 
     Json.toJson(future)
   }

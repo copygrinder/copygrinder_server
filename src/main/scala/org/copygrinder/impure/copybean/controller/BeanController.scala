@@ -18,7 +18,7 @@ import org.copygrinder.impure.system.SiloScope
 import org.copygrinder.pure.copybean.exception.UnknownQueryParameter
 import org.copygrinder.pure.copybean.model.ReifiedField.{ListReifiedField, ReferenceReifiedField}
 import org.copygrinder.pure.copybean.model.{AnonymousCopybean, ReifiedCopybean, ReifiedCopybeanImpl, ReifiedField}
-import org.copygrinder.pure.copybean.persistence.model.{TreeBranch, TreeCommit, CommitRequest}
+import org.copygrinder.pure.copybean.persistence.model.{Namespaces, TreeBranch, TreeCommit, CommitRequest}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json._
 
@@ -186,6 +186,18 @@ class BeanController(persistenceService: CopybeanPersistenceService)
    (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
     val branchId = getBranchId(branchOnly, params)
     val future = persistenceService.getCommitsByBranch(branchId)
+    Json.toJson(future)
+  }
+
+  def getHistoryById(id: String, params: Map[String, List[String]])
+   (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
+
+    val branchIds = getBranchIds(params)
+
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).map { heads =>
+      persistenceService.getHistoryByIdAndCommits((Namespaces.bean, id), heads)
+    }
+
     Json.toJson(future)
   }
 
