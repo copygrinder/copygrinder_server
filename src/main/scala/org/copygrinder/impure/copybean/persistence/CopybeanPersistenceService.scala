@@ -203,7 +203,7 @@ class CopybeanPersistenceService(
         new CommitData((Namespaces.cbtype, cbType.id), Some(PersistableObject(cbType)))
       }
 
-      val commit = new CommitRequest(TreeBranch(Branches.master, Trees.internal), "", "", "")
+      val commit = new CommitRequest(TreeBranch(Branches.master, Trees.internal), "", "", "", None)
       siloScope.persistor.commit(commit, beanObjs ++ types)
     })
   }

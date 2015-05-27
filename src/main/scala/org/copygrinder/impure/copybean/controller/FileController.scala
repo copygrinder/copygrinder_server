@@ -127,7 +127,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
       "contentType" -> contentType
     ))
 
-    val commit = new CommitRequest(branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(branchId, parentCommitId, "", "", None)
     copybeanPersistenceService.storeAnonBean(Seq(metaData), commit).map(_._2.head)
   }
 

@@ -55,7 +55,9 @@ class BeanController(persistenceService: CopybeanPersistenceService)
    (implicit siloScope: SiloScope, ec: ExecutionContext): JsValue = {
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
-    val commit = new CommitRequest(branchId, parentCommitId, "", "")
+
+    val commit = new CommitRequest(branchId, parentCommitId, "", "", None)
+
     val beanFuture = persistenceService.storeAnonBean(anonCopybeans, commit)
     Json.toJson(beanFuture.map(_._2.map(_.id))).as[JsArray]
   }
@@ -151,7 +153,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
    (implicit siloScope: SiloScope): JsValue = {
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
-    val commit = new CommitRequest(branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(branchId, parentCommitId, "", "", None)
     val newCommitId = persistenceService.update(id, anonCopybean, commit)
     Json.toJson(newCommitId)
   }
@@ -160,7 +162,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
    (implicit siloScope: SiloScope): JsValue = {
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
-    val commit = new CommitRequest(branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(branchId, parentCommitId, "", "", None)
     val newCommitId = persistenceService.delete(id, commit)
     Json.toJson(newCommitId)
   }

@@ -77,7 +77,7 @@ class TypeController(persistenceService: TypePersistenceService)
     val branchId = getBranchId(params)
     val parentCommitId = getParentCommitId(params)
 
-    val commit = new CommitRequest(branchId, parentCommitId, "", "")
+    val commit = new CommitRequest(branchId, parentCommitId, "", "", None)
     val future = func(commit).map(_.id)
 
     Json.toJson(future)

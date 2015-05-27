@@ -14,8 +14,8 @@
 package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception.{JsonInputException, MissingParameter}
-import org.copygrinder.pure.copybean.persistence.model.{Branches, TreeBranch, Trees}
+import org.copygrinder.pure.copybean.exception.{CopygrinderInputException, JsonInputException, MissingParameter}
+import org.copygrinder.pure.copybean.persistence.model._
 import play.api.libs.json.{JsArray, JsObject, JsUndefined, JsValue}
 
 import scala.collection.immutable.{Seq, ListMap}
@@ -150,6 +150,29 @@ trait ControllerSupport {
   protected def getBranchId(branchOnly: String, params: Map[String, List[String]])
    (implicit siloScope: SiloScope): TreeBranch = {
     getBranchId(params.updated("branch", List(branchOnly)))
+  }
+
+  protected def getMergeRequest(params: Map[String, List[String]]) = {
+    params.get("mergeParent").flatMap(_.headOption).map { parent =>
+
+      val excludedIds = getParams(params, "excludedIds").map { id => splitId(id) }.toSet
+
+      MergeRequest(parent, excludedIds)
+    }
+  }
+
+  protected def splitId(id: String): (String, String) = {
+    val index = id.indexOf('.')
+    if (index > 0) {
+      val (left, right) = id.splitAt(index)
+      if (left == "type") {
+        (Namespaces.cbtype, right.drop(1))
+      } else {
+        throw new CopygrinderInputException(s"Namespace '$left' is unknown.")
+      }
+    } else {
+      (Namespaces.bean, id)
+    }
   }
 
 }
