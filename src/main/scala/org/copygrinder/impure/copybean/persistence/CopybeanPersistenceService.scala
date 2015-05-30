@@ -39,12 +39,12 @@ class CopybeanPersistenceService(
   def fetchCopybeansFromCommits(ids: Seq[String], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
 
-    fetchFromCommit(ids.map(id => (Namespaces.bean, id)), commitIds) {
-      case ((namespace, id), dataOpt) =>
+    fetchFromCommit(ids, commitIds) {
+      case (id, dataOpt) =>
         if (dataOpt.isEmpty) {
           throw new CopybeanNotFound(id)
         } else {
-          dataOpt.get.bean
+          dataOpt.get
         }
     }
   }
@@ -90,7 +90,7 @@ class CopybeanPersistenceService(
       val expandAll = expandableFields.contains("*")
 
       val referenceFields = copybeans.flatMap(copybean => {
-        copybean.fields.flatMap(field => {
+        copybean.reifiedFields.flatMap(field => {
           if (expandAll || expandableFields.contains("content." + field._1)) {
             field._2 match {
               case r: ReferenceReifiedField => Seq(Some(r))
@@ -141,7 +141,7 @@ class CopybeanPersistenceService(
     newCopybeanFuture.flatMap(copybeans => {
       val beanAndDataFutures = copybeans.map(newBean => {
         enforceTypes(newBean, commits).map(_ => {
-          (newBean, CommitData((Namespaces.bean, newBean.id), Some(PersistableObject(newBean))))
+          (newBean, CommitData(newBean.id, Some(newBean)))
         })
       })
       Future.sequence(beanAndDataFutures).flatMap(beanAndDataSeq => {
@@ -153,10 +153,8 @@ class CopybeanPersistenceService(
 
   def findByCommit(commitIds: Seq[TreeCommit], params: Map[String, List[String]])
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
-    val query = new Query(params.map(v => (Namespaces.bean, v._1) -> v._2), Some(Namespaces.bean))
-    siloScope.persistor.query(commitIds, siloScope.defaultLimit, query).map(objects => {
-      objects.map(_.bean)
-    })
+    val query = new Query(params)
+    siloScope.persistor.query(commitIds, siloScope.defaultLimit, query)
   }
 
 
@@ -173,7 +171,7 @@ class CopybeanPersistenceService(
       val copybean = copybeans.head
 
       enforceTypes(copybean, commits).flatMap(_ => {
-        val data = CommitData((Namespaces.bean, copybean.id), Some(PersistableObject(copybean)))
+        val data = CommitData(copybean.id, Some(copybean))
         siloScope.persistor.commit(commit, Seq(data)).map(_.id)
       })
 
@@ -181,7 +179,7 @@ class CopybeanPersistenceService(
   }
 
   def delete(id: String, commit: CommitRequest)(implicit siloScope: SiloScope): Future[String] = {
-    val data = CommitData((Namespaces.bean, id), None)
+    val data = CommitData(id, None)
     siloScope.persistor.commit(commit, Seq(data)).map(_.id)
   }
 
@@ -196,11 +194,11 @@ class CopybeanPersistenceService(
       })
 
       val beanObjs = reifiedBeans.map { bean =>
-        new CommitData((Namespaces.bean, bean.id), Some(PersistableObject(bean)))
+        new CommitData(bean.id, Some(bean))
       }.toSeq
 
       val types = predefinedCopybeanTypes.predefinedTypes.values.map { cbType =>
-        new CommitData((Namespaces.cbtype, cbType.id), Some(PersistableObject(cbType)))
+        new CommitData(cbType.id, Some(cbType))
       }
 
       val commit = new CommitRequest(TreeBranch(Branches.master, Trees.internal), "", "", "", None)
@@ -218,19 +216,18 @@ class CopybeanPersistenceService(
 
   def getHistoryByIdAndCommits(id: String, commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[Commit]] = {
-    siloScope.persistor.getHistoryByIdAndCommits((Namespaces.bean, id), commitIds, siloScope.defaultLimit)
+    siloScope.persistor.getHistoryByIdAndCommits(id, commitIds, siloScope.defaultLimit)
   }
 
   def getDeltaByIdAndCommit(id: String, commitId: TreeCommit)
    (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Iterable[BeanDelta]] = {
 
-    siloScope.persistor.getByIdsAndCommits(Seq((Namespaces.bean, id)), Seq(commitId)).flatMap { beanOpts =>
-      val (obj, commit) = beanOpts.head.getOrElse(throw new CopybeanNotFound(id))
-      val bean = obj.bean
+    siloScope.persistor.getByIdsAndCommits(Seq(id), Seq(commitId)).flatMap { beanOpts =>
+      val (bean, commit) = beanOpts.head.getOrElse(throw new CopybeanNotFound(id))
 
       val prevCommit = TreeCommit(commit.parentCommitId, commitId.treeId)
-      siloScope.persistor.getByIdsAndCommits(Seq((Namespaces.bean, id)), Seq(prevCommit)).map { prevObjAndCommits =>
-        val prevBean = prevObjAndCommits.head.map(_._1.bean)
+      siloScope.persistor.getByIdsAndCommits(Seq(id), Seq(prevCommit)).map { prevObjAndCommits =>
+        val prevBean = prevObjAndCommits.head.map(_._1)
         deltaCalculator.calcBeanDeltas(prevBean, bean)
       }
     }
@@ -329,12 +326,12 @@ class CopybeanPersistenceService(
     if (refs.nonEmpty) {
       val sourceIds = refs.keySet
       val foundIdsFuture = siloScope.persistor.getByIdsAndCommits(
-        sourceIds.toSeq.map(v => ("bean", v)), commitIds
+        sourceIds.toSeq, commitIds
       )
 
       foundIdsFuture.flatMap(foundIds => {
 
-        val flattenedFoundIds = foundIds.flatten.map(_._1.bean.id)
+        val flattenedFoundIds = foundIds.flatten.map(_._1.id)
 
         val diffs = sourceIds.diff(flattenedFoundIds.toSet)
         if (diffs.nonEmpty) {

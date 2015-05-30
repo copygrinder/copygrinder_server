@@ -25,7 +25,6 @@ import spray.routing._
 
 class CopygrinderApi(
  _ac: ActorContext,
- _typeController: TypeController,
  _beanController: BeanController,
  _fileController: FileController,
  _securityController: SecurityController,
@@ -34,8 +33,6 @@ class CopygrinderApi(
  ) extends ReadRoutes with WriteRoutes with CorsSupport {
 
   override implicit def ac = _ac
-
-  override val typeController = _typeController
 
   override val beanController = _beanController
 

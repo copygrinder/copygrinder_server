@@ -170,8 +170,6 @@ trait JsonWrites extends DefaultWrites {
 
   implicit val cardinalityWrites = enumWrites(Cardinality)
 
-  implicit val copybeanTypeWrites = Json.writes[CopybeanType]
-
   implicit val commitWrites = Json.writes[Commit]
 
 
@@ -180,7 +178,7 @@ trait JsonWrites extends DefaultWrites {
       Json.obj(
         "id" -> bean.id,
         "enforcedTypeIds" -> bean.enforcedTypeIds,
-        "content" -> reifiedFieldWritesMap(bean.fields, bean),
+        "content" -> reifiedFieldWritesMap(bean.reifiedFields, bean),
         "names" -> bean.names
       )
     }
@@ -191,7 +189,7 @@ trait JsonWrites extends DefaultWrites {
       Json.obj(
         "id" -> bean.id,
         "enforcedTypeIds" -> bean.enforcedTypeIds,
-        "content" -> unreifiedFieldWritesMap.writes(bean.fields)
+        "content" -> unreifiedFieldWritesMap.writes(bean.reifiedFields)
       )
     }
   }

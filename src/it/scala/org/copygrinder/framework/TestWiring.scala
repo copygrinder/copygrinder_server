@@ -38,7 +38,7 @@ object TestWiring {
 
       override def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
         new CopygrinderApi(
-          ac, typeController, beanController, fileController, securityController, siloScopeFactory,
+          ac, beanController, fileController, securityController, siloScopeFactory,
         globalModule.configuration.adminForceHttps) {
           implicit val ec: ExecutionContext = ac.dispatcher
           override val allCopygrinderRoutes: Route = copygrinderReadRoutes ~ copygrinderWriteRoutes ~

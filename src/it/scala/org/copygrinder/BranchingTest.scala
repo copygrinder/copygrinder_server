@@ -26,20 +26,25 @@ class BranchingTest extends IntegrationTestSupport {
     val json =
       """
         |{
-        |  "id": "branchType1",
-        |  "displayName": "Branch Type One",
-        |  "instanceNameFormat": "$content.string-field$",
-        |  "fields": [
-        |    {
-        |      "id": "string-field",
-        |      "type": "String",
-        |      "displayName": "String field"
-        |    }
+        |  "enforcedTypeIds": [
+        |    "type"
         |  ],
-        |  "cardinality": "Many"
+        |  "content": {
+        |    "typeId": "branchType1",
+        |    "displayName": "Branch Type One",
+        |    "instanceNameFormat": "$content.string-field$",
+        |    "fields": [
+        |      {
+        |        "id": "string-field",
+        |        "type": "String",
+        |        "displayName": "String field"
+        |      }
+        |    ],
+        |    "cardinality": "Many"
+        |  }
         |}""".stripMargin
 
-    val req = copybeansTypesUrl.POST
+    val req = copybeansUrl.POST
      .addQueryParameter("parent", "")
      .addQueryParameter("branch", "test")
      .setContentType("application/json", "UTF8")
@@ -49,7 +54,7 @@ class BranchingTest extends IntegrationTestSupport {
   }
 
   it should "get the test branch head" in {
-    getBranchHead("test") should be("2R2W0Q382V94R")
+    getBranchHead("test") should not be empty
   }
 
   it should "POST new branch copybeans" in {
@@ -102,7 +107,7 @@ class BranchingTest extends IntegrationTestSupport {
 
     doReqThen(req) { response =>
       val jsonArray = Json.parse(response.getResponseBody).as[JsArray]
-      assert(jsonArray.value.size == 2)
+      assert(jsonArray.value.size == 3)
       assert(jsonArray.\\("string-field").contains(JsString("brand new branch")))
     }
   }
@@ -110,8 +115,8 @@ class BranchingTest extends IntegrationTestSupport {
   it should "get the branch out of the list of branches" in {
     val req = branchesUrl.GET
     doReqThen(req) { response =>
-      assert(response.getResponseBody.contains(""""test""""))
-      assert(response.getResponseBody.contains(""""test2""""))
+      assert(response.getResponseBody.contains( """"test""""))
+      assert(response.getResponseBody.contains( """"test2""""))
     }
   }
 
@@ -121,8 +126,13 @@ class BranchingTest extends IntegrationTestSupport {
 
     doReqThen(req) { response =>
       val jsonArray = Json.parse(response.getResponseBody).as[JsArray]
-      assert(jsonArray.value.size == 1)
-      assert(jsonArray.value.head.\("content").\("string-field").as[JsString].value == "hello world")
+      assert(jsonArray.value.size == 2)
+      assert(jsonArray.value.exists { v =>
+        v.\("content").\("string-field") match {
+          case s: JsString => s.value == "hello world"
+          case o => false
+        }
+      })
     }
   }
 

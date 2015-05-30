@@ -13,7 +13,7 @@
  */
 package org.copygrinder.pure.copybean.persistence
 
-import org.copygrinder.pure.copybean.model.{ReifiedField, ReifiedCopybeanImpl, ReifiedCopybean}
+import org.copygrinder.pure.copybean.model.{ReifiedCopybeanImpl, ReifiedCopybean}
 import org.copygrinder.pure.copybean.persistence.model.BeanDelta
 
 import scala.collection.immutable.ListMap
@@ -26,15 +26,15 @@ class DeltaCalculator {
       ReifiedCopybeanImpl(newBean.enforcedTypeIds, ListMap(), newBean.id, newBean.types)
     )
 
-    val oldFields = oldBean.fields.values.toSet
-    val newFields = newBean.fields.values.toSet
+    val oldFields = oldBean.reifiedFields.values.toSet
+    val newFields = newBean.reifiedFields.values.toSet
 
     val changedFieldIds = newFields.diff(oldFields).map(_.fieldDef.id)
 
     changedFieldIds.map { fieldId =>
 
-      val oldFieldOpt = oldBean.fields.get(fieldId)
-      val newField = newBean.fields.get(fieldId).get
+      val oldFieldOpt = oldBean.reifiedFields.get(fieldId)
+      val newField = newBean.reifiedFields.get(fieldId).get
 
       BeanDelta(oldFieldOpt, oldBeanOpt, newField, newBean)
     }

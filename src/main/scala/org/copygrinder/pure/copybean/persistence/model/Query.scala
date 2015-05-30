@@ -13,10 +13,10 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-case class Query(params: Map[(String, String), Seq[String]], namespaceRestriction: Option[String]) {
+case class Query(params: Map[String, Seq[String]]) {
 
   val hints = Set("tree", "branch", "expand", "fields")
 
-  lazy val fieldsAndValues = params.filterNot(param => hints.contains(param._1._2))
+  lazy val fieldsAndValues = params.filterNot(param => hints.contains(param._1))
 
 }

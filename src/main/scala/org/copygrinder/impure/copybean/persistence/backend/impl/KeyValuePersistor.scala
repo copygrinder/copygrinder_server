@@ -19,7 +19,7 @@ import net.jpountz.xxhash.XXHashFactory
 import org.copygrinder.impure.copybean.persistence.backend.{PersistentObjectSerializer, VersionedDataPersistor}
 import org.copygrinder.pure.collections.ImmutableLinkedHashMap
 import org.copygrinder.pure.copybean.exception._
-import org.copygrinder.pure.copybean.model.{Commit, CopybeanType, ReifiedCopybean}
+import org.copygrinder.pure.copybean.model.{Copybean, Commit, CopybeanType, ReifiedCopybean}
 import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
 import org.copygrinder.pure.copybean.persistence.model._
 
@@ -40,10 +40,15 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
   protected def fetchTypesFromCommitNodes(commitNodes: Seq[CommitNode])(typeIds: Set[String])
    (implicit ec: ExecutionContext): Future[Set[CopybeanType]] = {
-    val typesFuture = getByIdsAndCommitNodes(typeIds.toSeq.map(typeId => (Namespaces.cbtype, typeId)), commitNodes)
-    typesFuture.map(obj => {
-      obj.flatten.map(_._1.cbType).toSet
-    })
+    if (typeIds.nonEmpty) {
+      val query = new Query(Map("content.typeId" -> typeIds.toSeq))
+      doQuery(commitNodes, commitNodes.length, query).map(_.map { bean =>
+        val cbType = CopybeanType(bean)
+        cbType
+      }.toSet)
+    } else {
+      Future(Set())
+    }
   }
 
   protected def getCommits(commitIds: Seq[TreeCommit])
@@ -64,50 +69,62 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     }
   }
 
-  def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[TreeCommit])
-   (implicit ec: ExecutionContext): Future[Seq[Option[(PersistableObject, Commit)]]] = {
+  def getByIdsAndCommits(ids: Seq[String], commitIds: Seq[TreeCommit])
+   (implicit ec: ExecutionContext): Future[Seq[Option[(ReifiedCopybean, Commit)]]] = {
     getCommits(commitIds).flatMap { commits =>
       getByIdsAndCommitNodes(ids, commits.map(_._2))
     }
   }
 
-  protected def getByIdsAndCommitNodes(ids: Seq[(String, String)], commits: Seq[CommitNode])
-   (implicit ec: ExecutionContext): Future[Seq[Option[(PersistableObject, Commit)]]] = {
+  protected def getByIdsAndCommitNodes(ids: Seq[String], commits: Seq[CommitNode])
+   (implicit ec: ExecutionContext): Future[Seq[Option[(ReifiedCopybean, Commit)]]] = {
 
-    val futures = ids.map { namespaceAndId =>
-      getByIdAndCommitNodes(commits, namespaceAndId)
+    doGetByIdsAndCommitNodes(ids, commits) { byteArray =>
+      serializer.deserialize(fetchTypesFromCommitNodes(commits), byteArray)
+    }
+  }
+
+  protected def getCopybeanByIdsAndCommitNodes(ids: Seq[String], commits: Seq[CommitNode])
+   (implicit ec: ExecutionContext): Future[Seq[Option[(Copybean, Commit)]]] = {
+
+    doGetByIdsAndCommitNodes(ids, commits) { byteArray =>
+      Future(serializer.deserializeCopybean(byteArray))
+    }
+  }
+
+  protected def doGetByIdsAndCommitNodes[T](ids: Seq[String], commits: Seq[CommitNode])
+   (func: (Array[Byte] => Future[T]))(implicit ec: ExecutionContext): Future[Seq[Option[(T, Commit)]]] = {
+
+    val futures = ids.map { id =>
+      val byteArrayOpt = commits.foldLeft(Option.empty[(Array[Byte], CommitNode)]) { (result, commit) =>
+        if (result.isEmpty) {
+          commit.byteStore.get(id).map((_, commit))
+        } else {
+          result
+        }
+      }
+
+      if (byteArrayOpt.nonEmpty) {
+        val (byteArray, commit) = byteArrayOpt.get
+        func(byteArray).map { bean =>
+          Option(bean, commitNodeToCommit(commit))
+        }
+      } else {
+        Future(Option.empty[(T, Commit)])
+      }
     }
 
     Future.sequence(futures)
   }
 
-  protected def getByIdAndCommitNodes(commits: Seq[CommitNode], namespaceAndId: (String, String))
-   (implicit ec: ExecutionContext): Future[Option[(PersistableObject, Commit)]] = {
-    val byteArrayOpt = commits.foldLeft(Option.empty[(Array[Byte], CommitNode)]) { (result, commit) =>
-      if (result.isEmpty) {
-        commit.byteStore.get(resolveId(namespaceAndId)).map((_, commit))
-      } else {
-        result
-      }
-    }
-
-    if (byteArrayOpt.nonEmpty) {
-      val (byteArray, commit) = byteArrayOpt.get
-      serializer.deserialize(namespaceAndId._1, fetchTypesFromCommitNodes(commits), byteArray).
-       map(v => Option(v, commitNodeToCommit(commit)))
-    } else {
-      Future(Option.empty[(PersistableObject, Commit)])
-    }
-  }
-
-  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit], limit: Int)
+  def getHistoryByIdAndCommits(id: String, commitIds: Seq[TreeCommit], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]] = {
 
     val prevCommitsFuture = getPreviousCommitNodes(ImmutableLinkedHashMap(), commitIds, limit)
 
     prevCommitsFuture.map { prevCommits =>
       val relevantCommits = prevCommits.filter { prevCommit =>
-        prevCommit.changedIds.contains(resolveId(id))
+        prevCommit.changedIds.contains(id)
       }
       relevantCommits.map(commitNodeToCommit)
     }
@@ -162,64 +179,46 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
   }
 
   def query(commitIds: Seq[TreeCommit], limit: Int, query: Query)
-   (implicit ec: ExecutionContext): Future[Seq[PersistableObject]] = {
+   (implicit ec: ExecutionContext): Future[Seq[ReifiedCopybean]] = {
 
     val commitsFuture = getCommits(commitIds)
 
-    val commitsAndIdsFuture = commitsFuture.map { commitNodes =>
-      val ids = commitNodes.map(_._2).flatMap {
-        commitNode =>
-
-          val allIds = commitNode.byteStore.keys.map(splitId(_))
-
-          if (query.namespaceRestriction.isDefined) {
-            allIds.filter(_._1 == query.namespaceRestriction.get)
-          } else {
-            allIds
-          }
-      }
-      (commitNodes, ids)
-    }
-
-    commitsAndIdsFuture.flatMap {
-      case (commits, ids) =>
-        doQuery(commits.map(_._2), limit, ids, query)
+    commitsFuture.flatMap { commitNodes =>
+      doQuery(commitNodes.map(_._2), limit, query)
     }
   }
 
-  protected def doQuery(commits: Seq[CommitNode], limit: Int, ids: Iterable[(String, String)], query: Query)
-   (implicit ec: ExecutionContext) = {
-    getByIdsAndCommitNodes(ids.toSeq, commits).map(_.flatten).map(objSeq => {
-      objSeq.map(_._1).filter(obj => {
-        query.fieldsAndValues.forall {
-          case ((namespace, fieldId), values) =>
-            namespace match {
-              case Namespaces.bean =>
-                if (obj.beanOrType.isLeft) {
-                  queryBean(fieldId, values, obj.bean)
-                } else {
-                  true
-                }
-              case Namespaces.cbtype =>
-                if (obj.beanOrType.isRight) {
-                  queryType(fieldId, values, obj.cbType)
-                } else {
-                  true
-                }
-              case other => throw new CopygrinderRuntimeException("Unknown namespace: " + other)
-            }
+  protected def doQuery(commits: Seq[CommitNode], limit: Int, query: Query)
+   (implicit ec: ExecutionContext): Future[Seq[ReifiedCopybean]] = {
+
+    val ids = commits.flatMap { commitNode =>
+      commitNode.byteStore.keys
+    }
+
+    val beansFuture = getCopybeanByIdsAndCommitNodes(ids.toSeq, commits).map(_.flatten).map(objSeq => {
+      objSeq.map(_._1).filter(bean => {
+        query.fieldsAndValues.forall { case (fieldId, values) =>
+          queryBean(fieldId, values, bean)
         }
       }).take(limit)
     })
+
+    beansFuture.flatMap { beans =>
+      val futures = beans.map { bean =>
+        serializer.reifyBean(bean, fetchTypesFromCommitNodes(commits))
+      }
+      Future.sequence(futures)
+    }
+
   }
 
-  protected def queryBean(fieldId: String, values: Seq[String], reifiedCopybean: ReifiedCopybean): Boolean = {
+  protected def queryBean(fieldId: String, values: Seq[String], copybean: Copybean): Boolean = {
 
     val (left, right) = splitFirstDot(fieldId)
 
     if (left == "content" && right.nonEmpty) {
       values.exists(value => {
-        val contentOpt = reifiedCopybean.content.get(right)
+        val contentOpt = copybean.content.get(right)
         if (contentOpt.isDefined) {
           val hit = contentOpt.get.toString == value
           hit
@@ -229,7 +228,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
       })
     } else if (fieldId == "enforcedTypeIds") {
       values.exists(value => {
-        reifiedCopybean.enforcedTypeIds.contains(value)
+        copybean.enforcedTypeIds.contains(value)
       })
     } else {
       throw new CopygrinderRuntimeException("Unknown query field: " + fieldId)
@@ -270,7 +269,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
         createNewByteStore(datas, previousCommit, treeId).flatMap { newByteStore =>
           val newHash: String = buildNewHash(request, newByteStore)
 
-          val changedIds = datas.map(data => resolveId(data.id)).toSet
+          val changedIds = datas.map(data => data.id).toSet
 
           val newCommitNode = new CommitNode(newHash, branchId, parentCommitId, None, newByteStore, changedIds)
           val newCommit = new Commit(newHash, branchId, parentCommitId, "")
@@ -320,7 +319,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
         result.flatMap(resultByteStore => {
 
           if (data.obj.nonEmpty) {
-            val existingBytesOpt = previousCommit.byteStore.get(resolveId(data.id))
+            val existingBytesOpt = previousCommit.byteStore.get(data.id)
             if (existingBytesOpt.nonEmpty) {
               handleUpdateCommit(data, resultByteStore, previousCommit, existingBytesOpt.get)
             } else {
@@ -338,23 +337,10 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     }
   }
 
-  protected def resolveId(id: (String, String)) = {
-    id._1 + "." + id._2
-  }
-
-  protected def splitId(id: String) = {
-    splitFirstDot(id)
-  }
-
-  protected def splitFirstDot(id: String) = {
-    val (left, right) = id.splitAt(id.indexOf('.'))
-    (left, right.drop(1))
-  }
-
-  protected def handleNewCommit(spaceAndId: (String, String), prevByteStore: Map[String, Array[Byte]],
-   obj: PersistableObject): Map[String, Array[Byte]] = {
+  protected def handleNewCommit(spaceAndId: String, prevByteStore: Map[String, Array[Byte]],
+   obj: ReifiedCopybean): Map[String, Array[Byte]] = {
     val json = serializer.serialize(obj)
-    prevByteStore + (resolveId(spaceAndId) -> json)
+    prevByteStore + (spaceAndId -> json)
   }
 
   protected def handleUpdateCommit(
@@ -366,13 +352,13 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
     val json = serializer.serialize(obj)
     Future {
-      resultByteStore.updated(resolveId(spaceAndId), json)
+      resultByteStore.updated(spaceAndId, json)
     }
   }
 
-  protected def handleDeleteCommit(spaceAndId: (String, String), prevByteStore: Map[String, Array[Byte]]
+  protected def handleDeleteCommit(spaceAndId: String, prevByteStore: Map[String, Array[Byte]]
    ): Map[String, Array[Byte]] = {
-    prevByteStore - resolveId(spaceAndId)
+    prevByteStore - spaceAndId
   }
 
   override def getBranches(treeIds: Seq[String])(implicit ec: ExecutionContext): Future[Seq[TreeBranch]] = {
@@ -384,6 +370,11 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
       }
     }
     Future.sequence(futures).map(_.flatten)
+  }
+
+  protected def splitFirstDot(id: String) = {
+    val (left, right) = id.splitAt(id.indexOf('.'))
+    (left, right.drop(1))
   }
 }
 

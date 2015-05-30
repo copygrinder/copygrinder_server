@@ -16,7 +16,7 @@ package org.copygrinder.impure.api
 import java.io.{PrintWriter, StringWriter}
 
 import com.fasterxml.jackson.core.JsonParseException
-import org.copygrinder.impure.copybean.controller.{BeanController, FileController, TypeController}
+import org.copygrinder.impure.copybean.controller.{BeanController, FileController}
 import org.copygrinder.pure.copybean.exception._
 import org.copygrinder.pure.copybean.persistence.JsonWrites
 import spray.http.HttpHeaders._
@@ -28,8 +28,6 @@ import spray.routing.authentication.BasicAuth
 import scala.concurrent.Future
 
 trait ReadRoutes extends RouteSupport with JsonWrites {
-
-  val typeController: TypeController
 
   val beanController: BeanController
 
@@ -52,11 +50,7 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
   }
 
   protected val copybeanReadRoute = {
-    BuildRoute(copybeansTypeIdPath & get) { implicit siloScope => (id, params) =>
-      typeController.fetchCopybeanType(id, params)
-    } ~ BuildRoute(copybeansTypesPath & get) { implicit siloScope => params =>
-      typeController.findCopybeanTypes(params)
-    } ~ BuildRoute(copybeansIdPath & get) { implicit siloScope => (id, params) =>
+    BuildRoute(copybeansIdPath & get) { implicit siloScope => (id, params) =>
       beanController.fetchCopybean(id, params)
     } ~ BuildRoute(copybeansPath & get) { implicit siloScope => params =>
       beanController.find(params)
@@ -72,8 +66,6 @@ trait ReadRoutes extends RouteSupport with JsonWrites {
       beanController.getHistoryById(id, params)
     } ~ BuildRoute(copybeansIdHistoryDeltaPath & get) { implicit siloScope => (id, commitId, params) =>
       beanController.getDeltaByIdAndCommit(id, commitId, params)
-    } ~ BuildRoute(copybeansTypeIdHistoryPath & get) { implicit siloScope => (id, params) =>
-      typeController.getHistoryById(id, params)
     } ~ copybeansIdFieldPath.&(get) { (siloId, beanId, fieldId, params) =>
       implicit lazy val siloScope = siloScopeFactory.build(siloId)
       onSuccess(

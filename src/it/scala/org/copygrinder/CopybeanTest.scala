@@ -33,45 +33,55 @@ class CopybeanTest extends IntegrationTestSupport {
     val json =
       """
         |[{
-        |  "id": "testtype1",
-        |  "displayName": "TestTypeOne",
-        |  "instanceNameFormat": "This bean is named $content.testfield2$ $content.testfield1$.",
-        |  "fields": [
-        |    {
-        |      "id": "testfield1",
-        |      "type": "String",
-        |      "displayName": "String field",
-        |      "validators": [{"type":"required"}]
-        |    },{
-        |      "id": "testfield2",
-        |      "type": "Integer",
-        |      "displayName": "Integer field"
-        |    },{
-        |      "id": "testfield3",
-        |      "type": "Boolean",
-        |      "displayName": "Boolean field"
-        |    },{
-        |      "id": "testfield4",
-        |      "type": "File",
-        |      "displayName": "File field"
-        |    },{
-        |      "id": "testfield5",
-        |      "type": "Image",
-        |      "displayName": "Image field"
-        |    },{
-        |      "id": "testfield6",
-        |      "type": "Html",
-        |      "displayName": "Html field"
-        |    }
+        |  "enforcedTypeIds": [
+        |    "type"
         |  ],
-        |  "cardinality": "Many"
+        |  "content": {
+        |    "typeId": "testtype1",
+        |    "displayName": "TestTypeOne",
+        |    "instanceNameFormat": "This bean is named $content.testfield2$ $content.testfield1$.",
+        |    "fields": [
+        |      {
+        |        "id": "testfield1",
+        |        "type": "String",
+        |        "displayName": "String field",
+        |        "validators": [{"type":"required"}]
+        |      },{
+        |        "id": "testfield2",
+        |        "type": "Integer",
+        |        "displayName": "Integer field"
+        |      },{
+        |        "id": "testfield3",
+        |        "type": "Boolean",
+        |        "displayName": "Boolean field"
+        |      },{
+        |        "id": "testfield4",
+        |        "type": "File",
+        |        "displayName": "File field"
+        |      },{
+        |        "id": "testfield5",
+        |        "type": "Image",
+        |        "displayName": "Image field"
+        |      },{
+        |        "id": "testfield6",
+        |        "type": "Html",
+        |        "displayName": "Html field"
+        |      }
+        |    ],
+        |    "cardinality": "Many"
+        |  }
         |},{
-        |  "id": "testtype2",
-        |  "displayName": "TestTypeTwo",
-        |  "cardinality": "One"
+        |  "enforcedTypeIds": [
+        |    "type"
+        |  ],
+        |  "content": {
+        |    "typeId": "testtype2",
+        |    "displayName": "TestTypeTwo",
+        |    "cardinality": "One"
+        |  }
         |}]""".stripMargin
 
-    val req = copybeansTypesUrl.POST
+    val req = copybeansUrl.POST
      .addQueryParameter("parent", "")
      .setContentType("application/json", "UTF8").setBody(json)
 
@@ -216,7 +226,7 @@ class CopybeanTest extends IntegrationTestSupport {
 
   it should "search for predefined types" in {
 
-    val req = copybeanTypeIdUrl("classBackedFieldValidator").GET
+    val req = copybeanIdUrl("classBackedFieldValidator").GET
      .addQueryParameter("tree", "internal")
 
     val responseFuture = Http(req).map { response =>
@@ -286,13 +296,27 @@ class CopybeanTest extends IntegrationTestSupport {
     val json =
       """
         |{
-        |  "id": "testtype2",
-        |  "displayName": "TestTypeTwo-Edited",
-        |  "cardinality": "One",
-        |  "instanceNameFormat": "$displayName$"
+        |  "enforcedTypeIds": [
+        |    "type"
+        |  ],
+        |  "content": {
+        |    "typeId": "testtype2",
+        |    "instanceNameFormat": "$displayName$",
+        |    "displayName": "TestTypeTwo-Edited",
+        |    "cardinality": "One"
+        |  }
         |}""".stripMargin
 
-    val req = copybeanTypeIdUrl("testtype2").PUT
+    val idReq = copybeansUrl
+     .addQueryParameter("enforcedTypeIds", "type")
+     .addQueryParameter("content.typeId", "testtype2")
+     .addQueryParameter("fields", "id")
+
+    val id = doReqThen(idReq) { response =>
+      Json.parse(response.getResponseBody).as[JsArray].value.head.\("id").as[JsString].value
+    }
+
+    val req = copybeanIdUrl(id).PUT
      .setContentType("application/json", "UTF8")
      .addQueryParameter("parent", getBranchHead())
      .setBody(json)
@@ -303,7 +327,7 @@ class CopybeanTest extends IntegrationTestSupport {
 
     Await.result(responseFuture, 1 second)
 
-    val req2 = copybeansTypesUrl.GET.setQueryParameters(Map("id" -> Seq("testtype2")))
+    val req2 = copybeanIdUrl(id).GET.setQueryParameters(Map("content.typeId" -> Seq("testtype2")))
 
     val responseFuture2 = Http(req2).map { response =>
       checkStatus(req2, response)
@@ -359,18 +383,17 @@ class CopybeanTest extends IntegrationTestSupport {
 
     val req3 = copybeanFileUrl(id, "testfield4").GET
 
-    val responseFuture3 = Http(req3).map { response =>
+    doReqThen(req3) { response =>
       checkStatus(req3, response)
       val body = response.getResponseBody
       assert(body.length > 2 * 1024)
     }
 
-    Await.result(responseFuture3, 1 second)
   }
 
   protected def getMetaDataId(response: Response) = {
     val json = Json.parse(response.getResponseBody).as[JsArray]
-    json.value.seq(0).as[JsString].value
+    json.value.seq.head.as[JsString].value
   }
 
   it should "handle Image fields" in {
@@ -423,58 +446,63 @@ class CopybeanTest extends IntegrationTestSupport {
     val json =
       """
         |{
-        |  "id": "listtype",
-        |  "displayName": "List Example",
-        |  "instanceNameFormat": "List type",
-        |  "fields":
-        |    [{
-        |      "id": "stringlist",
-        |      "type": "List",
-        |      "displayName": "String List field",
-        |      "attributes": {
-        |        "listType": "String"
-        |      }
-        |    },{
-        |      "id": "intlist",
-        |      "type": "List",
-        |      "displayName": "Integer List field",
-        |      "attributes": {
-        |        "listType": "Integer"
-        |      }
-        |    },{
-        |      "id": "longlist",
-        |      "type": "List",
-        |      "displayName": "Long List field",
-        |      "attributes": {
-        |        "listType": "Long"
-        |      }
-        |    },{
-        |      "id": "booleanlist",
-        |      "type": "List",
-        |      "displayName": "Boolean List field",
-        |      "attributes": {
-        |        "listType": "Boolean"
-        |      }
-        |    },{
-        |      "id": "filelist",
-        |      "type": "List",
-        |      "displayName": "File List field",
-        |      "attributes": {
-        |        "listType": "File"
-        |      }
-        |    },{
-        |      "id": "htmllist",
-        |      "type": "List",
-        |      "displayName": "Html List field",
-        |      "attributes": {
-        |        "listType": "Html"
-        |      }
-        |    }
+        |  "enforcedTypeIds": [
+        |    "type"
         |  ],
-        |  "cardinality": "Many"
+        |  "content": {
+        |    "typeId": "listtype",
+        |    "displayName": "List Example",
+        |    "instanceNameFormat": "List type",
+        |    "fields":
+        |      [{
+        |        "id": "stringlist",
+        |        "type": "List",
+        |        "displayName": "String List field",
+        |        "attributes": {
+        |          "listType": "String"
+        |        }
+        |      },{
+        |        "id": "intlist",
+        |        "type": "List",
+        |        "displayName": "Integer List field",
+        |        "attributes": {
+        |          "listType": "Integer"
+        |        }
+        |      },{
+        |        "id": "longlist",
+        |        "type": "List",
+        |        "displayName": "Long List field",
+        |        "attributes": {
+        |          "listType": "Long"
+        |        }
+        |      },{
+        |        "id": "booleanlist",
+        |        "type": "List",
+        |        "displayName": "Boolean List field",
+        |        "attributes": {
+        |          "listType": "Boolean"
+        |        }
+        |      },{
+        |        "id": "filelist",
+        |        "type": "List",
+        |        "displayName": "File List field",
+        |        "attributes": {
+        |          "listType": "File"
+        |        }
+        |      },{
+        |        "id": "htmllist",
+        |        "type": "List",
+        |        "displayName": "Html List field",
+        |        "attributes": {
+        |          "listType": "Html"
+        |        }
+        |      }
+        |    ],
+        |    "cardinality": "Many"
+        |  }
         |}""".stripMargin
 
-    val req = copybeansTypesUrl.POST
+    val req = copybeansUrl.POST
      .setContentType("application/json", "UTF8")
      .addQueryParameter("parent", getBranchHead())
      .setBody(json)

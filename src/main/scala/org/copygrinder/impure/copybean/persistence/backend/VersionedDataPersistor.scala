@@ -13,7 +13,7 @@
  */
 package org.copygrinder.impure.copybean.persistence.backend
 
-import org.copygrinder.pure.copybean.model.Commit
+import org.copygrinder.pure.copybean.model.{ReifiedCopybean, Commit}
 import org.copygrinder.pure.copybean.persistence.model._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,10 +22,10 @@ trait VersionedDataPersistor {
 
   def initSilo()(implicit ec: ExecutionContext): Future[Unit]
 
-  def getByIdsAndCommits(ids: Seq[(String, String)], commitIds: Seq[TreeCommit])
-   (implicit ec: ExecutionContext): Future[Seq[Option[(PersistableObject, Commit)]]]
+  def getByIdsAndCommits(ids: Seq[String], commitIds: Seq[TreeCommit])
+   (implicit ec: ExecutionContext): Future[Seq[Option[(ReifiedCopybean, Commit)]]]
 
-  def getHistoryByIdAndCommits(id: (String, String), commitIds: Seq[TreeCommit], limit: Int)
+  def getHistoryByIdAndCommits(id: String, commitIds: Seq[TreeCommit], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
   def getBranches(treeIds: Seq[String])(implicit ec: ExecutionContext): Future[Seq[TreeBranch]]
@@ -40,6 +40,6 @@ trait VersionedDataPersistor {
    (implicit ec: ExecutionContext): Future[Commit]
 
   def query(commitIds: Seq[TreeCommit], limit: Int, query: Query)
-   (implicit ec: ExecutionContext): Future[Seq[PersistableObject]]
+   (implicit ec: ExecutionContext): Future[Seq[ReifiedCopybean]]
 
 }

@@ -117,12 +117,12 @@ class BeanController(persistenceService: CopybeanPersistenceService)
     fieldToBeanMapFuture.map(fieldToBeanMap => {
 
       beans.map(bean => {
-        val newFields = bean.fields.map(field => {
+        val newFields = bean.reifiedFields.map(field => {
           val decoratedField = decorateField(field._2, fieldToBeanMap)
           (field._1, decoratedField)
         })
         new ReifiedCopybeanImpl(bean.enforcedTypeIds, bean.content, bean.id, bean.types) {
-          override lazy val fields = newFields
+          override lazy val reifiedFields = newFields
         }
       })
 

@@ -13,8 +13,7 @@
  */
 package org.copygrinder.impure.copybean.persistence.backend
 
-import org.copygrinder.pure.copybean.model.{CopybeanType, Copybean, ReifiedCopybean}
-import org.copygrinder.pure.copybean.persistence.model.PersistableObject
+import org.copygrinder.pure.copybean.model.{Copybean, CopybeanType, ReifiedCopybean}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -22,9 +21,14 @@ trait PersistentObjectSerializer[T] {
 
   type FetchTypes = Set[String] => Future[Set[CopybeanType]]
 
-  def serialize(persistableObject: PersistableObject): T
+  def serialize(persistableObject: ReifiedCopybean): T
 
-  def deserialize(namespace: String, fetchTypes: FetchTypes, data: Array[Byte])
-   (implicit ec: ExecutionContext): Future[PersistableObject]
+  def deserialize(fetchTypes: FetchTypes, data: Array[Byte])
+   (implicit ec: ExecutionContext): Future[ReifiedCopybean]
+
+  def deserializeCopybean(data: Array[Byte])
+   (implicit ec: ExecutionContext): Copybean
+
+  def reifyBean(bean: Copybean, fetchTypes: FetchTypes)(implicit ec: ExecutionContext): Future[ReifiedCopybean]
 
 }

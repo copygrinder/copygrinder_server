@@ -16,4 +16,4 @@ package org.copygrinder.pure.copybean.persistence.model
 case class CommitRequest(
  branchId: TreeBranch, parentCommitId: String, author: String, comment: String, mergeRequestOpt: Option[MergeRequest])
 
-case class MergeRequest(mergeParentId: String, excludedIds: Set[(String, String)])
+case class MergeRequest(mergeParentId: String, excludedIds: Set[String])

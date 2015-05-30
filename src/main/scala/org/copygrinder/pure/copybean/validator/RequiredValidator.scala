@@ -22,9 +22,8 @@ class RequiredValidator extends FieldValidator {
 
   override def validate(copybean: Copybean, field: String, args: Option[ListMap[String, Any]]): Unit = {
 
-    val fieldValue = copybean.content.get(field).getOrElse(
-      throw new TypeValidationException(s"Field '$field' was not defined but is required")
-    )
+    val fieldValue = copybean.content.getOrElse(field,
+      throw new TypeValidationException(s"Field '$field' was not defined but is required in bean $copybean"))
 
     fieldValue match {
       case str: String =>

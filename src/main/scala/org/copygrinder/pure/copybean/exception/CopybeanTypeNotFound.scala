@@ -14,6 +14,6 @@
 package org.copygrinder.pure.copybean.exception
 
 case class CopybeanTypeNotFound(id: String) extends CopygrinderNotFoundException(
-  s"Copybean Type with id=$id was not found") {
+  s"Copybean Type with typeId=$id was not found") {
 
 }

@@ -117,8 +117,6 @@ trait JsonReads extends JsonReadUtils with LazyLogging {
 
   implicit val cardinalityReads = enumReads(Cardinality)
 
-  implicit val copybeanTypeRead = readWrapper(Json.reads[CopybeanType])
-
   implicit val anonymousCopybeanReads: Reads[AnonymousCopybean] = readWrapper((
    (JsPath \ "enforcedTypeIds").read[Set[String]] and
     (JsPath \ "content").read[ListMap[String, Any]]

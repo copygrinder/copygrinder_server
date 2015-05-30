@@ -15,10 +15,10 @@ package org.copygrinder.impure.copybean.persistence
 
 import com.typesafe.scalalogging.LazyLogging
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception.{BranchNotFound, CopybeanTypeNotFound}
-import org.copygrinder.pure.copybean.model.{Commit, CopybeanType}
+import org.copygrinder.pure.copybean.exception.{CopybeanTypeNotFound}
+import org.copygrinder.pure.copybean.model.{ReifiedCopybean, Commit, CopybeanType}
 import org.copygrinder.pure.copybean.persistence.PredefinedCopybeanTypes
-import org.copygrinder.pure.copybean.persistence.model.{TreeBranch, TreeCommit, Namespaces, PersistableObject}
+import org.copygrinder.pure.copybean.persistence.model.{Query, TreeBranch, TreeCommit}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -60,8 +60,8 @@ trait PersistenceSupport extends LazyLogging {
     siloScope.persistor.getBranchHeads(branchId)
   }
 
-  protected def fetchFromCommit[T](ids: Seq[(String, String)], commitIds: Seq[TreeCommit])
-   (func: ((String, String), Option[PersistableObject]) => T)
+  protected def fetchFromCommit[T](ids: Seq[String], commitIds: Seq[TreeCommit])
+   (func: (String, Option[ReifiedCopybean]) => T)
    (implicit siloScope: SiloScope, ec: ExecutionContext): Future[Seq[T]] = {
 
     val persistableObjsFuture = siloScope.persistor.getByIdsAndCommits(ids, commitIds)
@@ -77,15 +77,18 @@ trait PersistenceSupport extends LazyLogging {
   def fetchCopybeanTypesFromCommits(ids: Seq[String], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope, ex: ExecutionContext): Future[Seq[CopybeanType]] = {
 
-    fetchFromCommit(ids.map(id => (Namespaces.cbtype, id)), commitIds) {
-      case ((namespace, id), dataOpt) =>
-
-        if (dataOpt.isEmpty) {
+    val query = Query(Map("content.typeId" -> ids))
+    siloScope.persistor.query(commitIds, siloScope.defaultLimit, query).map { beans =>
+      val types = beans.map(CopybeanType(_))
+      val typeMap = types.map(t => t.typeId -> t).toMap
+      ids.foreach{id =>
+        if (!typeMap.contains(id)) {
           throw new CopybeanTypeNotFound(id)
-        } else {
-          dataOpt.get.cbType
         }
+      }
+      types
     }
+
   }
 
 }

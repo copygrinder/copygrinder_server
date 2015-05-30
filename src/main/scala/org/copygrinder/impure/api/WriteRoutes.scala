@@ -28,20 +28,12 @@ import spray.routing.authentication.BasicAuth
 
 trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
 
-  val typeController: TypeController
-
   val beanController: BeanController
 
   val fileController: FileController
 
   protected def postRoutes = {
-    BuildRoute(copybeansTypesPath & post & entity(as[Seq[CopybeanType]])) {
-      implicit siloScope => (params, typeSeq) =>
-        typeController.store(typeSeq, params)
-    } ~ BuildRoute(copybeansTypesPath & post & entity(as[CopybeanType])) {
-      implicit siloScope => (params, copybeanType) =>
-        typeController.store(Seq(copybeanType), params)
-    } ~ BuildRoute(copybeansPath & post & entity(as[Seq[AnonymousCopybean]])) {
+    BuildRoute(copybeansPath & post & entity(as[Seq[AnonymousCopybean]])) {
       implicit siloScope => (params, anonBeans) =>
         beanController.store(anonBeans, params)
     } ~ BuildRoute(copybeansPath & post & entity(as[AnonymousCopybean])) {
@@ -57,11 +49,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
   }
 
   protected val putRoutes = {
-    BuildRoute(copybeansTypeIdPath & put & entity(as[CopybeanType])) {
-      implicit siloScope: SiloScope => (id, params, copybeanType) =>
-        typeController.update(copybeanType, params)
-        ""
-    } ~ BuildRoute(copybeansIdPath & put & entity(as[AnonymousCopybean])) {
+    BuildRoute(copybeansIdPath & put & entity(as[AnonymousCopybean])) {
       implicit siloScope: SiloScope => (id, params, copybean) => {
         beanController.update(id, copybean, params)
       }
@@ -74,10 +62,7 @@ trait WriteRoutes extends RouteSupport with JsonReads with JsonWrites {
   }
 
   protected val deleteRoutes = {
-    BuildRoute(copybeansTypeIdPath & delete) {
-      implicit siloScope: SiloScope => (id, params) =>
-        typeController.delete(id, params)
-    } ~ BuildRoute(copybeansIdPath & delete) {
+    BuildRoute(copybeansIdPath & delete) {
       implicit siloScope: SiloScope => (id, params) =>
         beanController.delete(id, params)
     }

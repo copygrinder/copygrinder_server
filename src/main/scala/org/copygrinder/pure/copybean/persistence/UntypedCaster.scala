@@ -57,6 +57,21 @@ class UntypedCaster {
     func(seq, parentId, s"$targetId.$key")
   }
 
+  def mapGetToMap(data: Map[Any, Any], key: Any, parentId: String, targetId: String): Map[Any, Any] = {
+
+    val valueOpt = data.get(key)
+    if (valueOpt.isDefined) {
+      val value = valueOpt.get
+      if (value.isInstanceOf[Map[_, _]]) {
+        value.asInstanceOf[Map[Any, Any]]
+      } else {
+        throw new TypeValidationException(s"$parentId requires Map $targetId.$key to be a map, not $value")
+      }
+    } else {
+      throw new TypeValidationException(s"$parentId requires Map $targetId to contain key $key")
+    }
+  }
+
   def seqToMap(data: Seq[Any], parentId: String, targetId: String): Seq[Map[Any, Any]] = {
 
     data.zipWithIndex.map(valueAndIndex => {

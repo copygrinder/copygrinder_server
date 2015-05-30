@@ -155,23 +155,9 @@ trait ControllerSupport {
   protected def getMergeRequest(params: Map[String, List[String]]) = {
     params.get("mergeParent").flatMap(_.headOption).map { parent =>
 
-      val excludedIds = getParams(params, "excludedIds").map { id => splitId(id) }.toSet
+      val excludedIds = getParams(params, "excludedIds").toSet
 
       MergeRequest(parent, excludedIds)
-    }
-  }
-
-  protected def splitId(id: String): (String, String) = {
-    val index = id.indexOf('.')
-    if (index > 0) {
-      val (left, right) = id.splitAt(index)
-      if (left == "type") {
-        (Namespaces.cbtype, right.drop(1))
-      } else {
-        throw new CopygrinderInputException(s"Namespace '$left' is unknown.")
-      }
-    } else {
-      (Namespaces.bean, id)
     }
   }
 

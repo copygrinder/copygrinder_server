@@ -39,58 +39,71 @@ class ReferenceTest extends IntegrationTestSupport {
     val json =
       """
         |[{
-        |  "id": "reftype1",
-        |  "displayName": "Reference Type One",
-        |  "instanceNameFormat": "$content.ref-field$",
-        |  "fields": [
-        |    {
-        |      "id": "ref-field",
-        |      "type": "Reference",
-        |      "displayName": "Reference field",
-        |      "attributes": {
-        |        "refs": [
-        |          {"refValidationTypes": ["reftype2"], "refDisplayType": "reftype2"}
-        |        ]
-        |      }
-        |    },{
-        |      "id": "reflist",
-        |      "type": "List",
-        |      "displayName": "Reference List field",
-        |      "attributes": {
-        |        "listType": "Reference",
-        |        "refs": [
-        |          {"refValidationTypes": ["reftype2"], "refDisplayType": "reftype2"},
-        |          {"refValidationTypes": ["reftype3"], "refDisplayType": "reftype3"}
-        |        ]
-        |      }
-        |    }
+        |  "enforcedTypeIds": [
+        |    "type"
         |  ],
-        |  "cardinality": "One"
+        |  "content": {
+        |    "typeId": "reftype1",
+        |    "displayName": "Reference Type One",
+        |    "instanceNameFormat": "$content.ref-field$",
+        |    "fields": [
+        |      {
+        |        "id": "ref-field",
+        |        "type": "Reference",
+        |        "displayName": "Reference field",
+        |        "attributes": {
+        |          "refs": [
+        |            {"refValidationTypes": ["reftype2"], "refDisplayType": "reftype2"}
+        |          ]
+        |        }
+        |      },{
+        |        "id": "reflist",
+        |        "type": "List",
+        |        "displayName": "Reference List field",
+        |        "attributes": {
+        |          "listType": "Reference",
+        |          "refs": [
+        |            {"refValidationTypes": ["reftype2"], "refDisplayType": "reftype2"},
+        |            {"refValidationTypes": ["reftype3"], "refDisplayType": "reftype3"}
+        |          ]
+        |        }
+        |      }
+        |    ],
+        |    "cardinality": "One"
+        |  }
         |},{
-        |  "id": "reftype2",
-        |  "displayName": "Reference Type Two",
-        |  "instanceNameFormat": "$content.stringfield$",
-        |  "cardinality": "Many",
-        |  "fields":
-        |    [{
+        |  "enforcedTypeIds": [
+        |    "type"
+        |  ],
+        |  "content": {
+        |    "typeId": "reftype2",
+        |    "displayName": "Reference Type Two",
+        |    "instanceNameFormat": "$content.stringfield$",
+        |    "cardinality": "Many",
+        |    "fields": [{
         |      "id": "stringfield",
         |      "type": "String",
         |      "displayName": "String Field"
         |    }]
+        |  }
         |},{
-        |  "id": "reftype3",
-        |  "displayName": "Reference Type Three",
-        |  "instanceNameFormat": "$content.other-string-field$",
-        |  "cardinality": "Many",
-        |  "fields":
-        |    [{
+        |  "enforcedTypeIds": [
+        |    "type"
+        |  ],
+        |  "content": {
+        |    "typeId": "reftype3",
+        |    "displayName": "Reference Type Three",
+        |    "instanceNameFormat": "$content.other-string-field$",
+        |    "cardinality": "Many",
+        |    "fields": [{
         |      "id": "other-string-field",
         |      "type": "String",
         |      "displayName": "String Field"
         |    }]
+        |  }
         |}]""".stripMargin
 
-    val req = copybeansTypesUrl.POST
+    val req = copybeansUrl.POST
      .addQueryParameter("parent", getBranchHead())
      .setContentType("application/json", "UTF8")
      .setBody(json)

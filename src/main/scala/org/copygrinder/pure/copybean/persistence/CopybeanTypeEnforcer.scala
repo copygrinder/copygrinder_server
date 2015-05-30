@@ -26,7 +26,7 @@ class CopybeanTypeEnforcer() {
 
     val copybeanTypes = copybean.types
 
-    val reifiedFields = copybean.fields.values
+    val reifiedFields = copybean.reifiedFields.values
     checkFields(reifiedFields)
 
     copybeanTypes.foreach(copybeanType => {

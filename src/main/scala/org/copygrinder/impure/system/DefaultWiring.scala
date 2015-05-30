@@ -17,7 +17,7 @@ import java.io.File
 
 import akka.actor.{ActorContext, Props}
 import org.copygrinder.impure.api.CopygrinderApi
-import org.copygrinder.impure.copybean.controller.{BeanController, FileController, SecurityController, TypeController}
+import org.copygrinder.impure.copybean.controller.{BeanController, FileController, SecurityController}
 import org.copygrinder.impure.copybean.persistence._
 import org.copygrinder.impure.copybean.persistence.backend.impl.{FileBlobPersistor, JsonSerializer, KeyValuePersistor}
 import org.copygrinder.impure.copybean.persistence.backend.{BlobPersistor, VersionedDataPersistor}
@@ -55,8 +55,6 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
     persistenceServiceModule
   )
 
-  lazy val typeController = new TypeController(persistenceServiceModule.typePersistenceService)
-
   lazy val beanController = new BeanController(persistenceServiceModule.copybeanPersistenceService)
 
   lazy val fileController = new FileController(persistenceServiceModule.copybeanPersistenceService)
@@ -64,7 +62,7 @@ class ServerModule(globalModule: GlobalModule, persistenceServiceModule: Persist
   lazy val securityController = new SecurityController(globalModule.configuration)
 
   def copygrinderApiFactory(ac: ActorContext): CopygrinderApi = {
-    new CopygrinderApi(ac, typeController, beanController, fileController, securityController, siloScopeFactory,
+    new CopygrinderApi(ac, beanController, fileController, securityController, siloScopeFactory,
       globalModule.configuration.adminForceHttps)
   }
 
@@ -88,8 +86,6 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
   lazy val predefinedCopybeanTypes = new PredefinedCopybeanTypes()
 
   lazy val predefinedCopybeans = new PredefinedCopybeans()
-
-  lazy val typePersistenceService = new TypePersistenceService(predefinedCopybeanTypes)
 
   lazy val deltaCalculator = new DeltaCalculator
 

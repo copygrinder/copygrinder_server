@@ -13,9 +13,10 @@
  */
 package org.copygrinder.pure.copybean.model
 
+import org.copygrinder.pure.copybean.exception.JsonInputException
 import org.copygrinder.pure.copybean.persistence.UntypedCaster
 
-case class ReifiedField (fieldDef: CopybeanFieldDef, value: Any, parent: String)
+case class ReifiedField(fieldDef: CopybeanFieldDef, value: Any, parent: String)
 
 object ReifiedField {
 
@@ -31,6 +32,7 @@ object ReifiedField {
       case FieldType.Reference => new ReifiedField(fieldDef, value, parent) with ReferenceReifiedField
       case FieldType.File | FieldType.Image => new ReifiedField(fieldDef, value, parent) with FileOrImageReifiedField
       case FieldType.List => new ReifiedField(fieldDef, value, parent) with ListReifiedField
+      case FieldType.Map => new ReifiedField(fieldDef, value, parent) with MapReifiedField
       case FieldType.Unknown => new ReifiedField(fieldDef, value, parent) with UnknownReifiedField
     }
 
@@ -103,6 +105,10 @@ object ReifiedField {
       nestedReifiedField.castVal.toString
       nestedReifiedField
     })
+  }
+
+  trait MapReifiedField extends ReifiedFieldSupport {
+    lazy val castVal: Map[Any, Any] = caster.anyToMap(value, parent, target)
   }
 
   trait UnknownReifiedField extends ReifiedFieldSupport {

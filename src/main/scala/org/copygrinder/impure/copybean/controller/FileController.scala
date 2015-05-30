@@ -15,10 +15,10 @@ package org.copygrinder.impure.copybean.controller
 
 import org.copygrinder.impure.copybean.persistence.CopybeanPersistenceService
 import org.copygrinder.impure.system.SiloScope
-import org.copygrinder.pure.copybean.exception.JsonInputException
+import org.copygrinder.pure.copybean.exception.{CopygrinderInputException, JsonInputException}
 import org.copygrinder.pure.copybean.model.ReifiedField.{FileOrImageReifiedField, ListReifiedField}
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.model.{TreeBranch, CommitRequest, Namespaces}
+import org.copygrinder.pure.copybean.persistence.model.{TreeBranch, CommitRequest}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json.{JsValue, Json}
 import spray.http.MultipartContent
@@ -45,15 +45,18 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
 
         val reifiedBean = reifiedBeans.head
 
-        val reifiedField = getValue(field, reifiedBean).asInstanceOf[FileOrImageReifiedField]
+        val reifiedField = getValue(field, reifiedBean) match {
+          case f: FileOrImageReifiedField => f
+          case o => throw new CopygrinderInputException(s"Field '$field' in bean ${reifiedBean.id} was not a file.")
+        }
 
         val metaDataId = reifiedField.metaData
 
-        val metaDataFuture = siloScope.persistor.getByIdsAndCommits(Seq((Namespaces.bean, metaDataId)), heads)
+        val metaDataFuture = siloScope.persistor.getByIdsAndCommits(Seq(metaDataId), heads)
 
         metaDataFuture.flatMap { case (existingMetaDataOpt) =>
 
-          val metaDataBean = existingMetaDataOpt.head.get._1.bean
+          val metaDataBean = existingMetaDataOpt.head.get._1
           val hash = metaDataBean.content.get("hash").get.asInstanceOf[String]
           val filename = metaDataBean.content.get("filename").get.asInstanceOf[String]
           val contentType = metaDataBean.content.get("contentType").get.asInstanceOf[String]
@@ -78,9 +81,9 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
 
   protected def getValue(field: String, bean: ReifiedCopybean): ReifiedField = {
     val result = parseField(field) { fieldId =>
-      bean.fields.get(field)
+      bean.reifiedFields.get(field)
     } { (fieldId, index) =>
-      bean.fields.get(fieldId).map(field => {
+      bean.reifiedFields.get(fieldId).map(field => {
         field.asInstanceOf[ListReifiedField].castVal(index)
       })
     }

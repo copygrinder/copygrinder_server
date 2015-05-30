@@ -13,4 +13,6 @@
  */
 package org.copygrinder.pure.copybean.persistence.model
 
-case class CommitData(id: (String, String), obj: Option[PersistableObject])
+import org.copygrinder.pure.copybean.model.ReifiedCopybean
+
+case class CommitData(id: String, obj: Option[ReifiedCopybean])

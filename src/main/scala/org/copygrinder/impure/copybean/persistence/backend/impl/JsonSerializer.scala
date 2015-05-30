@@ -17,7 +17,6 @@ import java.nio.charset.Charset
 
 import org.copygrinder.impure.copybean.persistence.backend.PersistentObjectSerializer
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.model.{Namespaces, PersistableObject}
 import org.copygrinder.pure.copybean.persistence.{JsonReads, JsonWrites}
 import play.api.libs.json.{Json, Reads, Writes}
 
@@ -26,42 +25,24 @@ import scala.concurrent.{ExecutionContext, Future}
 class JsonSerializer extends PersistentObjectSerializer[Array[Byte]] with JsonReads with JsonWrites {
 
 
-  def serialize(persistableObject: PersistableObject): Array[Byte] = {
-    if (persistableObject.beanOrType.isLeft) {
-      val json = unreifiedCopybeanWrites.writes(persistableObject.bean)
-      json.toString().getBytes(Charset.forName("UTF-8"))
-    } else {
-      implicitly[Writes[CopybeanType]]
-       .writes(persistableObject.cbType).toString()
-       .getBytes(Charset.forName("UTF-8"))
-    }
+  def serialize(persistableObject: ReifiedCopybean): Array[Byte] = {
+    val json = unreifiedCopybeanWrites.writes(persistableObject)
+    json.toString().getBytes(Charset.forName("UTF-8"))
   }
 
-  def deserialize(namespace: String, fetchTypes: FetchTypes, data: Array[Byte])
-   (implicit ec: ExecutionContext): Future[PersistableObject] = {
-    val json = new String(data, "UTF-8")
-
-    namespace match {
-      case Namespaces.bean =>
-        val jsonParsed = Json.parse(json)
-        val beanResult = implicitly[Reads[CopybeanImpl]].reads(jsonParsed)
-        reifyBean(beanResult.get, fetchTypes).map(reifiedBean => {
-          PersistableObject(reifiedBean)
-        })
-      case Namespaces.cbtype =>
-        Future {
-          val jsonParsed = Json.parse(json)
-          val cbType = implicitly[Reads[CopybeanType]].reads(jsonParsed)
-          PersistableObject(cbType.get)
-        }
-      case other => throw new RuntimeException("Unknown Namespace " + other)
-    }
-
+  def deserialize(fetchTypes: FetchTypes, data: Array[Byte])(implicit ec: ExecutionContext): Future[ReifiedCopybean] = {
+    val beanResult = deserializeCopybean(data)
+    reifyBean(beanResult, fetchTypes)
   }
 
-  protected def reifyBean(bean: Copybean, fetchTypes: FetchTypes)
-   (implicit ec: ExecutionContext): Future[ReifiedCopybean] = {
+  def reifyBean(bean: Copybean, fetchTypes: FetchTypes)(implicit ec: ExecutionContext): Future[ReifiedCopybean] = {
     fetchTypes(bean.enforcedTypeIds).map(types => ReifiedCopybean(bean, types))
   }
 
+  override def deserializeCopybean(data: Array[Byte])(implicit ec: ExecutionContext): Copybean = {
+    val json = new String(data, "UTF-8")
+
+    val jsonParsed = Json.parse(json)
+    implicitly[Reads[CopybeanImpl]].reads(jsonParsed).get
+  }
 }
