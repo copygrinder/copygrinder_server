@@ -16,7 +16,7 @@ package org.copygrinder.pure.copybean.persistence
 import org.copygrinder.pure.copybean.exception.JsonWriteException
 import org.copygrinder.pure.copybean.model.ReifiedField._
 import org.copygrinder.pure.copybean.model._
-import org.copygrinder.pure.copybean.persistence.model.BeanDelta
+import org.copygrinder.pure.copybean.persistence.model.{MergeData, BeanDelta}
 import play.api.libs.json._
 
 import scala.collection.immutable.ListMap
@@ -170,7 +170,23 @@ trait JsonWrites extends DefaultWrites {
 
   implicit val cardinalityWrites = enumWrites(Cardinality)
 
-  implicit val commitWrites = Json.writes[Commit]
+  implicit val mergeDataWrites = Json.writes[MergeData]
+
+  implicit val commitWrites = new Writes[Commit] {
+    override def writes(c: Commit): JsValue = {
+      val out = Json.obj(
+        "id" -> c.id,
+        "branchId" -> c.branchId,
+        "parentCommitId" -> c.parentCommitId,
+        "author" -> c.author
+      )
+
+      c.mergeData.fold(out) { mergeData =>
+        out + ("merge" -> mergeDataWrites.writes(mergeData))
+      }
+
+    }
+  }
 
 
   implicit val reifiedCopybeanWrites: Writes[ReifiedCopybeanImpl] = new Writes[ReifiedCopybeanImpl] {

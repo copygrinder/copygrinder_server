@@ -50,6 +50,10 @@ trait IntegrationTestSupport extends FlatSpec with Matchers with BeforeAndAfterE
 
   val filesUrl = baseUrl / "files"
 
+  def copybeanIdHistoryUrl(id: String) = copybeanIdUrl(id) / "history"
+
+  def copybeanIdCommitDeltaUrl(id: String, commit: String) = copybeanIdHistoryUrl(id) / commit
+
   def copybeanFileUrl(id: String, field: String) = copybeansUrl / id / field
 
   def checkStatus(req: Req, response: Response, code: Int = 200) = {

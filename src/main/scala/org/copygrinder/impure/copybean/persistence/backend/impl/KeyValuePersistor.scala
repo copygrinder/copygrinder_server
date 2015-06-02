@@ -175,7 +175,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
   }
 
   protected def commitNodeToCommit(node: CommitNode): Commit = {
-    Commit(node.id, node.branchId, node.previousCommitId, "")
+    Commit(node.id, node.branchId, node.previousCommitId, "", node.mergeData)
   }
 
   def query(commitIds: Seq[TreeCommit], limit: Int, query: Query)
@@ -271,8 +271,12 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
           val changedIds = datas.map(data => data.id).toSet
 
-          val newCommitNode = new CommitNode(newHash, branchId, parentCommitId, None, newByteStore, changedIds)
-          val newCommit = new Commit(newHash, branchId, parentCommitId, "")
+          val mergeData = request.mergeRequestOpt.map{ mergeReq =>
+            MergeData(mergeReq.mergeParentId, mergeReq.excludedIds)
+          }
+
+          val newCommitNode = new CommitNode(newHash, branchId, parentCommitId, mergeData, newByteStore, changedIds)
+          val newCommit = commitNodeToCommit(newCommitNode)
 
           val newHeads = buildNewHeads(parentCommitId, headsOpt, newCommit)
 
@@ -381,4 +385,3 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 protected case class CommitNode(id: String, branchId: String, previousCommitId: String, mergeData: Option[MergeData],
  byteStore: Map[String, Array[Byte]], changedIds: Set[String])
 
-protected case class MergeData(mergedCommitId: String, excludedIds: Map[String, String])

@@ -20,7 +20,7 @@ import com.ning.http.multipart.FilePart
 import dispatch.Defaults._
 import dispatch._
 import org.copygrinder.framework.IntegrationTestSupport
-import play.api.libs.json.{JsArray, JsString, Json}
+import play.api.libs.json.{JsObject, JsArray, JsString, Json}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -536,5 +536,29 @@ class CopybeanTest extends IntegrationTestSupport {
 
     doReq(req2)
   }
+
+  it should "get an edited bean's commit history and delta" in {
+
+    val req = copybeansUrl.GET.addQueryParameter("content.testfield1", "1-edited")
+
+    val id = doReqThen(req) { result =>
+      Json.parse(result.getResponseBody).\\("id").head.asInstanceOf[JsString].value
+    }
+
+    val req2 = copybeanIdHistoryUrl(id).GET
+    val commitId = doReqThen(req2) { result =>
+      val json = Json.parse(result.getResponseBody).as[JsArray]
+      assert(json.value.length == 2)
+      json.value.head.\("id").as[JsString].value
+    }
+
+    val req3 = copybeanIdCommitDeltaUrl(id, commitId).GET
+    doReqThen(req3) { result =>
+      val json = Json.parse(result.getResponseBody).\("fieldChanges").\("testfield1")
+      assert(json.\("oldValue").as[JsString].value == "1")
+      assert(json.\("newValue").as[JsString].value == "1-edited")
+    }
+  }
+
 
 }

@@ -13,6 +13,8 @@
  */
 package org.copygrinder.pure.copybean.model
 
-case class Commit(id: String, branchId: String, parentCommitId: String, author: String) {
+import org.copygrinder.pure.copybean.persistence.model.MergeData
+
+case class Commit(id: String, branchId: String, parentCommitId: String, author: String, mergeData: Option[MergeData]) {
 
 }

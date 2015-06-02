@@ -196,7 +196,7 @@ class BeanController(persistenceService: CopybeanPersistenceService)
 
     val branchIds = getBranchIds(params)
 
-    val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).map { heads =>
+    val future = persistenceService.getCommitIdOfActiveHeadOfBranches(branchIds).flatMap { heads =>
       persistenceService.getHistoryByIdAndCommits(id, heads)
     }
 

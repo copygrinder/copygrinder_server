@@ -89,7 +89,7 @@ class FileController(copybeanPersistenceService: CopybeanPersistenceService)
     }
 
     result.getOrElse(
-      throw new JsonInputException("Field $field was not found in bean $id")
+      throw new JsonInputException(s"Field $field was not found in bean ${bean.id}")
     )
   }
 

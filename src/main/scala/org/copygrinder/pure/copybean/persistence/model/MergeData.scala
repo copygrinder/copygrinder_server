@@ -11,17 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.impure.system
+package org.copygrinder.pure.copybean.persistence.model
 
-import akka.actor.{Actor, ActorLogging, DeadLetter}
-
-class DeadLetterActor extends Actor with ActorLogging {
-  def receive: Actor.Receive = {
-    case d: DeadLetter => {
-      log.error("sending actor: " + d.sender)
-      log.error("recipient actor: " + d.recipient)
-      log.error("message: " + d.message)
-    }
-  }
-}
-
+case class MergeData(mergedCommitId: String, excludedIds: Set[String])
