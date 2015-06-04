@@ -81,8 +81,6 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
 
   lazy val idEncoderDecoder = new IdEncoderDecoder()
 
-  lazy val copybeanTypeEnforcer = new CopybeanTypeEnforcer()
-
   lazy val predefinedCopybeanTypes = new PredefinedCopybeanTypes()
 
   lazy val predefinedCopybeans = new PredefinedCopybeans()
@@ -90,7 +88,6 @@ class PersistenceServiceModule(globalModule: GlobalModule) {
   lazy val deltaCalculator = new DeltaCalculator
 
   lazy val copybeanPersistenceService = new CopybeanPersistenceService(
-    copybeanTypeEnforcer,
     idEncoderDecoder,
     predefinedCopybeanTypes,
     predefinedCopybeans,
