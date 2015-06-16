@@ -11,18 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.copygrinder.pure.copybean.model
+package org.copygrinder.pure.copybean.exception
 
-import org.copygrinder.pure.copybean.persistence.model.MergeData
+case class MergeException(message: String) extends CopygrinderInputException(message) {
 
-case class Commit(
- id: String,
- branchId: String,
- parentCommitId: String,
- author: String,
- mergeData: Option[MergeData],
- changedIds: CommitChange,
- knownCommits: Set[String]
- )
-
-case class CommitChange(beanIdToFieldIdToDeltaHash: Map[String, Map[String, String]] = Map())
+}

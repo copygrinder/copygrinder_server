@@ -13,22 +13,10 @@
  */
 package org.copygrinder.pure.copybean.persistence
 
-import java.util.UUID
+import net.jpountz.xxhash.XXHashFactory
 
-import org.copygrinder.UnitTest
+object HashFactoryWrapper {
 
-class IdEncoderDecoderTest extends UnitTest {
-  
-  val idGenerator = new IdEncoderDecoder()
+  val hashFactory = XXHashFactory.fastestInstance()
 
-  val uuid1 = new UUID(0, 0)
-  val uuid2 = new UUID(5234423498494123456L, 2234423498494123452L)
-  
-  "encodeUuid" should "return a string of 25 zeros for a zero UUID" in {
-    idGenerator.encodeUuid(uuid1) should be ("00000000000000000000000000")
-  }
-  
-  "decodeUuid" should "be able to rebuild a UUID" in {
-    idGenerator.decodeUuid(idGenerator.encodeUuid(uuid2)) should be (uuid2)
-  }
 }

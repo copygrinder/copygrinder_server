@@ -30,10 +30,10 @@ class CopybeanPersistenceService(
  idEncoderDecoder: IdEncoderDecoder,
  predefinedCopybeanTypes: PredefinedCopybeanTypes,
  predefinedCopybeans: PredefinedCopybeans,
- deltaCalculator: DeltaCalculator
+ deltaCalculator: DeltaCalculator,
+ typeEnforcer: TypeEnforcer,
+ historyService: HistoryService
  ) extends LazyLogging {
-
-
 
   def fetchCopybeansFromCommits(ids: Seq[String], commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Seq[ReifiedCopybean]] = {
@@ -74,8 +74,6 @@ class CopybeanPersistenceService(
       getCommitIdOfActiveHeadOfBranch(TreeBranch(Branches.master, Trees.internal)).map(v => commitIds :+ v)
     }
   }
-
-  val typeEnforcer = new TypeEnforcer(new CopybeanTypeEnforcer())
 
   protected def resolveTypes(copybean: AnonymousCopybean, commitIds: Seq[TreeCommit])
    (implicit siloScope: SiloScope): Future[Set[CopybeanType]] = {
@@ -212,7 +210,10 @@ class CopybeanPersistenceService(
   }
 
   def getCommitsByBranch(branchId: TreeBranch)(implicit siloScope: SiloScope): Future[Seq[Commit]] = {
-    siloScope.persistor.getCommitsByBranch(branchId, siloScope.defaultLimit)
+    getBranchHeads(branchId).flatMap { commits =>
+      val heads = commits.map(c => TreeCommit(c.id, branchId.treeId))
+      siloScope.persistor.getHistoryByCommits(heads, siloScope.defaultLimit)
+    }
   }
 
   def getHistoryByIdAndCommits(id: String, commitIds: Seq[TreeCommit])
@@ -298,5 +299,31 @@ class CopybeanPersistenceService(
     }
 
   }
+
+  def getMergeDeltas(sourceCommit: TreeCommit, targetCommit: TreeCommit)
+   (implicit siloScope: SiloScope, ex: ExecutionContext):Unit = {
+
+  }
+
+  protected def getLca(sourceCommit: TreeCommit, targetCommit: TreeCommit)
+   (implicit siloScope: SiloScope, ex: ExecutionContext): Future[String] = {
+
+    siloScope.persistor.getHistoryByCommits(Seq(sourceCommit, targetCommit), siloScope.defaultLimit).map { history =>
+      val historyMap = history.map(h => h.id -> h).toMap
+      val sourceId = sourceCommit.id
+      val targetId = targetCommit.id
+
+      /*val lcaOpt = historyService.findLca(sourceId, targetId, historyMap)
+      if (lcaOpt.isDefined) {
+        lcaOpt.get
+        null
+      } else {
+        throw new CopygrinderRuntimeException(s"Couldn't find common ancestor of $sourceId and $targetId")
+      }*/
+      ""
+    }
+
+  }
+
 
 }

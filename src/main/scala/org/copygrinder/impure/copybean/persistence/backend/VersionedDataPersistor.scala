@@ -33,13 +33,12 @@ trait VersionedDataPersistor {
   def getBranchHeads(branchId: TreeBranch)
    (implicit ec: ExecutionContext): Future[Seq[Commit]]
 
-  def getCommitsByBranch(branchId: TreeBranch, limit: Int)
-   (implicit ec: ExecutionContext): Future[Seq[Commit]]
-
   def commit(commit: CommitRequest, datas: Seq[CommitData])
    (implicit ec: ExecutionContext): Future[Commit]
 
   def query(commitIds: Seq[TreeCommit], limit: Int, query: Query)
    (implicit ec: ExecutionContext): Future[Seq[ReifiedCopybean]]
+
+  def getHistoryByCommits(commits: Seq[TreeCommit], limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]]
 
 }

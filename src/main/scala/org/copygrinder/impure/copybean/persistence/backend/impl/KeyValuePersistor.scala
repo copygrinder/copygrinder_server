@@ -19,8 +19,8 @@ import net.jpountz.xxhash.XXHashFactory
 import org.copygrinder.impure.copybean.persistence.backend.{PersistentObjectSerializer, VersionedDataPersistor}
 import org.copygrinder.pure.collections.ImmutableLinkedHashMap
 import org.copygrinder.pure.copybean.exception._
-import org.copygrinder.pure.copybean.model.{Copybean, Commit, CopybeanType, ReifiedCopybean}
-import org.copygrinder.pure.copybean.persistence.IdEncoderDecoder
+import org.copygrinder.pure.copybean.model._
+import org.copygrinder.pure.copybean.persistence.{HashFactoryWrapper, DeltaCalculator, IdEncoderDecoder}
 import org.copygrinder.pure.copybean.persistence.model._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -28,11 +28,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentObjectSerializer[Array[Byte]])
  extends VersionedDataPersistor {
 
-  protected val hashFactory = XXHashFactory.fastestInstance()
+  protected val hashFactory = HashFactoryWrapper.hashFactory
 
   protected val idEncoder = new IdEncoderDecoder()
 
   protected val dao = new MapDbDao(silo, storageDir)
+
+  protected val deltaCalc = new DeltaCalculator
 
   def initSilo()(implicit ec: ExecutionContext): Future[Unit] = {
     dao.initSilo()
@@ -124,7 +126,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
     prevCommitsFuture.map { prevCommits =>
       val relevantCommits = prevCommits.filter { prevCommit =>
-        prevCommit.changedIds.contains(id)
+        prevCommit.changedIds.beanIdToFieldIdToDeltaHash.contains(id)
       }
       relevantCommits.map(commitNodeToCommit)
     }
@@ -137,16 +139,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     }
   }
 
-  def getCommitsByBranch(branchId: TreeBranch, limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
-    getBranchHeads(branchId).flatMap {
-      commits =>
-        val commitIds = commits.map(c => TreeCommit(c.id, branchId.treeId))
-        getPreviousCommits(ImmutableLinkedHashMap[String, Commit](), commitIds, branchId.treeId, limit)
-    }
-  }
-
-  protected final def getPreviousCommits(
-   results: ImmutableLinkedHashMap[String, Commit], commits: Seq[TreeCommit], treeId: String, limit: Int)
+  protected final def getPreviousCommits(commits: Seq[TreeCommit], limit: Int)
    (implicit ec: ExecutionContext): Future[Seq[Commit]] = {
     getPreviousCommitNodes(ImmutableLinkedHashMap(), commits, limit).map(_.map(commitNodeToCommit))
   }
@@ -175,7 +168,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
   }
 
   protected def commitNodeToCommit(node: CommitNode): Commit = {
-    Commit(node.id, node.branchId, node.previousCommitId, "", node.mergeData)
+    Commit(node.id, node.branchId, node.previousCommitId, "", node.mergeData, node.changedIds, node.knownCommits)
   }
 
   def query(commitIds: Seq[TreeCommit], limit: Int, query: Query)
@@ -258,7 +251,7 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
 
         val previousCommit = if (previousCommitOpt.isEmpty) {
           if (request.parentCommitId.isEmpty) {
-            new CommitNode("", "", "", None, Map(), Set())
+            new CommitNode("", "", "", None, Map(), CommitChange(), Set(""))
           } else {
             throw new BadParent("Parent Commit doesn't exist: " + parentCommitId)
           }
@@ -267,29 +260,54 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
         }
 
         createNewByteStore(datas, previousCommit, treeId).flatMap { newByteStore =>
-          val newHash: String = buildNewHash(request, newByteStore)
-
-          val changedIds = datas.map(data => data.id).toSet
-
-          val mergeData = request.mergeRequestOpt.map{ mergeReq =>
-            MergeData(mergeReq.mergeParentId, mergeReq.excludedIds)
-          }
-
-          val newCommitNode = new CommitNode(newHash, branchId, parentCommitId, mergeData, newByteStore, changedIds)
-          val newCommit = commitNodeToCommit(newCommitNode)
-
-          val newHeads = buildNewHeads(parentCommitId, headsOpt, newCommit)
-
-          dao.setAndThen(treeId, newHash, newCommitNode) {
-            dao.setComposite("heads", (treeId, newCommit.branchId), newHeads)
-          }.map { _ =>
-            newCommit
-          }
+          doActualCommit(request, previousCommit, datas, headsOpt, newByteStore)
         }
       }
 
     }
 
+  }
+
+  protected def doActualCommit(request: CommitRequest, previousCommit: CommitNode, datas: Seq[CommitData],
+   headsOpt: Option[Set[Commit]], newByteStore: Map[String, Array[Byte]])
+   (implicit ec: ExecutionContext): Future[Commit] = {
+
+    val treeId = request.branchId.treeId
+    val branchId = request.branchId.id
+    val parentCommitId = request.parentCommitId
+
+    val newHash: String = buildNewHash(request, newByteStore)
+
+    val changedIds = datas.map(data => data.id)
+    val newBeansMap = datas.filter(_.obj.isDefined).map(data => data.id -> data.obj.get).toMap
+
+    getByIdsAndCommits(changedIds, Seq(TreeCommit(parentCommitId, treeId))).flatMap { oldBeans =>
+
+      val oldBeansMap = oldBeans.flatten.map { case (bean, _) =>
+        bean.id -> bean
+      }.toMap
+
+      val commitChange = deltaCalc.calcBeanCommitDeltas(oldBeansMap, newBeansMap)
+
+      val mergeData = request.mergeRequestOpt.map { mergeReq =>
+        MergeData(mergeReq.mergeParentId, mergeReq.excludedIds)
+      }
+
+      val newKnownCommits1 = previousCommit.knownCommits + newHash
+      val newKnownCommits2 = mergeData.fold(newKnownCommits1)(newKnownCommits1 + _.mergedCommitId)
+
+      val newCommitNode = new CommitNode(newHash, branchId, parentCommitId, mergeData, newByteStore, commitChange,
+        newKnownCommits2)
+      val newCommit = commitNodeToCommit(newCommitNode)
+
+      val newHeads = buildNewHeads(parentCommitId, headsOpt, newCommit)
+
+      dao.setAndThen(treeId, newHash, newCommitNode) {
+        dao.setComposite("heads", (treeId, newCommit.branchId), newHeads)
+      }.map { _ =>
+        newCommit
+      }
+    }
   }
 
   protected def buildNewHeads(parentCommitId: String, headsOpt: Option[Set[Commit]], newCommit: Commit): Set[Commit] = {
@@ -380,8 +398,12 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     val (left, right) = id.splitAt(id.indexOf('.'))
     (left, right.drop(1))
   }
+
+  def getHistoryByCommits(commits: Seq[TreeCommit], limit: Int)(implicit ec: ExecutionContext): Future[Seq[Commit]] = {
+    getPreviousCommits(commits, limit)
+  }
 }
 
 protected case class CommitNode(id: String, branchId: String, previousCommitId: String, mergeData: Option[MergeData],
- byteStore: Map[String, Array[Byte]], changedIds: Set[String])
+ byteStore: Map[String, Array[Byte]], changedIds: CommitChange, knownCommits: Set[String])
 
