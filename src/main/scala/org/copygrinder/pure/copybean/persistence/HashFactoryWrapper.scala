@@ -13,10 +13,16 @@
  */
 package org.copygrinder.pure.copybean.persistence
 
-import net.jpountz.xxhash.XXHashFactory
+import net.jpountz.xxhash.{StreamingXXHash64, XXHashFactory}
 
 object HashFactoryWrapper {
 
-  val hashFactory = XXHashFactory.fastestInstance()
+  protected val hashFactory = XXHashFactory.fastestInstance()
+
+  protected final val seed = 9283923842393L
+
+  def newHash(): StreamingXXHash64 = {
+    hashFactory.newStreamingHash64(seed)
+  }
 
 }

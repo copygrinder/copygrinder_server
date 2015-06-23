@@ -28,8 +28,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentObjectSerializer[Array[Byte]])
  extends VersionedDataPersistor {
 
-  protected val hashFactory = HashFactoryWrapper.hashFactory
-
   protected val idEncoder = new IdEncoderDecoder()
 
   protected val dao = new MapDbDao(silo, storageDir)
@@ -321,10 +319,8 @@ class KeyValuePersistor(silo: String, storageDir: File, serializer: PersistentOb
     newHeads
   }
 
-  protected val seed = 9283923842393L
-
   protected def buildNewHash(request: CommitRequest, newByteStore: Map[String, Array[Byte]]): String = {
-    val newHashBuilder = hashFactory.newStreamingHash64(seed)
+    val newHashBuilder = HashFactoryWrapper.newHash()
     newByteStore.values.foreach(byteArray => newHashBuilder.update(byteArray, 0, byteArray.length))
     val parentCommitAsByteArray = request.parentCommitId.getBytes("UTF-8")
     newHashBuilder.update(parentCommitAsByteArray, 0, parentCommitAsByteArray.size)

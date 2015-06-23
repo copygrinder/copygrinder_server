@@ -20,8 +20,6 @@ import scala.collection.immutable.ListMap
 
 class DeltaCalculator {
 
-  protected val hashFactory = HashFactoryWrapper.hashFactory
-
   protected val idEncoder = new IdEncoderDecoder()
 
   def calcBeanDeltas(oldBeanOpt: Option[ReifiedCopybean], newBean: ReifiedCopybean): Iterable[BeanDelta] = {
@@ -85,7 +83,7 @@ class DeltaCalculator {
         field.value.toString.getBytes
       }
 
-      val builder = hashFactory.newStreamingHash64(seed)
+      val builder = HashFactoryWrapper.newHash()
       builder.update(bytes, 0, bytes.size)
       val hash = idEncoder.encodeLong(builder.getValue)
       fieldId -> hash
