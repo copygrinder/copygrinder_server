@@ -23,7 +23,7 @@ import scala.annotation.tailrec
 case class TrieNode(
  id: Long = 0L,
  slots: IndexedSeq[Long] = IndexedSeq(),
- slotKeys: IndexedSeq[Option[Long]] = IndexedSeq(),
+ slotKeys: IndexedSeq[Option[BigInt]] = IndexedSeq(),
  bitmap: Long = 0L,
  overflowBitmap: Long = 0L,
  overflowCounts: IndexedSeq[Byte] = IndexedSeq(),
@@ -35,11 +35,11 @@ case class TrieNode(
     slots.length
   }
 
-  def get(key: Long): Option[(Long, Boolean)] = {
+  def get(key: BigInt): Option[(Long, Boolean)] = {
     getWithSlotIndex(key).map { case (value, isObj, slotIndex) => (value, isObj) }
   }
 
-  protected def getWithSlotIndex(key: Long): Option[(Long, Boolean, Int)] = {
+  protected def getWithSlotIndex(key: BigInt): Option[(Long, Boolean, Int)] = {
 
     val (mask, indexExists) = getMaskAndExists(key)
 
@@ -66,7 +66,7 @@ case class TrieNode(
 
   }
 
-  protected def getMaskAndExists(key: Long) = {
+  protected def getMaskAndExists(key: BigInt) = {
 
     val mask = getMask(key)
     val indexExists = (bitmap & mask) != 0
@@ -74,8 +74,8 @@ case class TrieNode(
     (mask, indexExists)
   }
 
-  protected def getMask(key: Long): Long = {
-    val index = (key >>> level) & 0x3F
+  protected def getMask(key: BigInt): Long = {
+    val index = key.>>(level).&(0x3F).toLong
     val mask = 1L << index
     mask
   }
@@ -85,7 +85,7 @@ case class TrieNode(
   }
 
 
-  protected def getFromOverflows(key: Long, mask: Long): Option[(Long, Boolean, Int)] = {
+  protected def getFromOverflows(key: BigInt, mask: Long): Option[(Long, Boolean, Int)] = {
 
     val overflowExists = doesOverflowExist(mask)
 
@@ -134,7 +134,7 @@ case class TrieNode(
     overflowStartIndex
   }
 
-  def addOrGetNextNodeId(key: Long, value: Long): AddResult = {
+  def addOrGetNextNodeId(key: BigInt, value: Long): AddResult = {
 
     val existingValueOpt = getWithSlotIndex(key)
 
@@ -156,7 +156,7 @@ case class TrieNode(
 
   }
 
-  protected def addToNode(key: Long, value: Long): AddResult = {
+  protected def addToNode(key: BigInt, value: Long): AddResult = {
 
     val (mask, indexExists) = getMaskAndExists(key)
 
@@ -173,7 +173,7 @@ case class TrieNode(
         newOverflowBitmap -> newOverflowCounts
       }
 
-      val (newOverflowCounts, newSlots, newSlotKeys) = calcNewNodeValues(
+      val (newOverflowCounts, newSlots, newSlotKeys) = calcNewNodeOverflowValues(
         key, value, mask, newOverflowBitmap, newOverflowCounts1)
 
       AddResult.newNodeOnly(
@@ -185,34 +185,44 @@ case class TrieNode(
       val newBitmap = bitmap | mask
       val slotIndex = java.lang.Long.bitCount(newBitmap & (mask - 1))
 
-      val (newSlots, newSlotKeys) = calcNewSlotsAndKeys(key, value, slotIndex)
+      val (newSlots, newSlotKeys) = insertKeyAndValue(key, value, slotIndex)
       AddResult.newNodeOnly(copyWithCalcId(slots = newSlots, slotKeys = newSlotKeys, bitmap = newBitmap))
     }
 
   }
 
-  protected def calcNewNodeValues(
-   key: Long, value: Long, mask: Long, newOverflowBitmap: Long, overflowCounts: IndexedSeq[Byte]) = {
+  protected def calcNewNodeOverflowValues(
+   key: BigInt, value: Long, mask: Long, newOverflowBitmap: Long, overflowCounts: IndexedSeq[Byte]) = {
 
     val (overflowCount, overflowStartIndex, overflowOffset) = calcOverflowCountStartIndexAndOffset(mask,
       newOverflowBitmap, overflowCounts)
 
     val newOverflowCount = overflowCount + 1
     val slotIndex = overflowStartIndex + overflowCount
-    val newOverflowCounts = if (overflowCounts.length <= overflowOffset) {
-      //TODO: UH OH.  MIGHT BE WRONG
-      overflowCounts :+ newOverflowCount.toByte
-    } else {
-      overflowCounts.updated(overflowOffset, newOverflowCount.toByte)
-    }
+    val newOverflowCounts = overflowCounts.updated(overflowOffset, newOverflowCount.toByte)
 
-    val (newSlots, newSlotKeys) = calcNewSlotsAndKeys(key, value, slotIndex)
+    val mainSlotIndex = getSlotIndex(mask)
+    val mainSlotKey = slotKeys(mainSlotIndex).get
+
+    val (newSlots, newSlotKeys) = if (key < mainSlotKey) {
+      val mainSlotValue = slots(mainSlotIndex)
+      val (tmpSlots, tmpSlotKeys) = insertKeyAndValue(mainSlotKey, mainSlotValue, overflowStartIndex)
+      val updatedSlots = tmpSlots.updated(mainSlotIndex, value)
+      val updatedKeys = tmpSlotKeys.updated(mainSlotIndex, Some(key))
+      (updatedSlots, updatedKeys)
+    } else {
+      val sortedSlotIndex = (overflowStartIndex to slotIndex - 1).find { i =>
+        key < slotKeys(i).get
+      }.getOrElse(slotIndex)
+
+      insertKeyAndValue(key, value, sortedSlotIndex)
+    }
 
     (newOverflowCounts, newSlots, newSlotKeys)
   }
 
 
-  protected def calcNewSlotsAndKeys(key: Long, value: Long, slotIndex: Int) = {
+  protected def insertKeyAndValue(key: BigInt, value: Long, slotIndex: Int) = {
 
     val (slotsLeft, slotsRight) = slots.splitAt(slotIndex)
     val newSlots = (slotsLeft :+ value) ++ slotsRight
@@ -223,11 +233,7 @@ case class TrieNode(
     (newSlots, newSlotKeys)
   }
 
-  protected def addToSubNode(key: Long, value: Long): AddResult = {
-    doAddToSubNode(key, value)
-  }
-
-  protected final def doAddToSubNode(key: Long, value: Long): AddResult = {
+  protected def addToSubNode(key: BigInt, value: Long): AddResult = {
 
     val (parentNode, subNode) = breakNodeIntoSubNode(key, value)
 
@@ -249,21 +255,11 @@ case class TrieNode(
       }
     }
 
-
   }
 
+  protected def breakNodeIntoSubNode(key: BigInt, value: Long): (TrieNode, TrieNode) = {
 
-  protected def breakNodeIntoSubNode(key: Long, value: Long): (TrieNode, TrieNode) = {
-
-    val (overflowCount, largestOverflowOffset) = overflowCounts.zipWithIndex.maxBy(_._1)
-
-    val slotStartIndex = calcOverflowStartIndex(largestOverflowOffset)
-
-    val overflowKeys = slotKeys.splitAt(slotStartIndex)._2.take(overflowCount).flatten
-
-    val slotIndex = findOverflowSlotIndex(largestOverflowOffset)
-
-    val removalKeys = slotKeys(slotIndex) ++ overflowKeys
+    val (slotIndex, removalKeys) = calcRemovalKeys()
 
     val removedKeysAndValues = removalKeys.map { removalKey =>
       val valueOpt = get(removalKey)
@@ -290,7 +286,27 @@ case class TrieNode(
     tmpTrie -> subNode
   }
 
-  protected def addTriePointer(node: TrieNode, key: Long, subNodeId: Long, slotIndex: Int) = {
+  protected def calcRemovalKeys(): (Int, Iterable[BigInt]) = {
+    if (overflowCounts.nonEmpty) {
+
+      val (overflowCount, largestOverflowOffset) = overflowCounts.zipWithIndex.maxBy(_._1)
+
+      val slotStartIndex = calcOverflowStartIndex(largestOverflowOffset)
+
+      val overflowKeys = slotKeys.splitAt(slotStartIndex)._2.take(overflowCount).flatten
+
+      val slotIndex = findOverflowSlotIndex(largestOverflowOffset)
+
+      val removalKeys = slotKeys(slotIndex) ++ overflowKeys
+      (slotIndex, removalKeys)
+    } else {
+      val slotIndex = slotKeys.indexWhere(_.isDefined)
+      val removalKey = slotKeys(slotIndex).get
+      (slotIndex, Seq(removalKey))
+    }
+  }
+
+  protected def addTriePointer(node: TrieNode, key: BigInt, subNodeId: Long, slotIndex: Int) = {
     val tmpTrie = node.addToNode(key, subNodeId).newNode.get
     tmpTrie.copyWithCalcId(slotKeys = tmpTrie.slotKeys.updated(slotIndex, None))
   }
@@ -313,8 +329,7 @@ case class TrieNode(
     }
   }
 
-
-  def removeOrGetNextNodeId(key: Long): RemoveResult = {
+  def removeOrGetNextNodeId(key: BigInt): RemoveResult = {
 
     val valueOpt = getWithSlotIndex(key)
 
@@ -339,7 +354,7 @@ case class TrieNode(
 
   }
 
-  protected def removeFromOverflow(key: Long, mask: Long, slotIndex: Int): RemoveResult = {
+  protected def removeFromOverflow(key: BigInt, mask: Long, slotIndex: Int): RemoveResult = {
     val (overflowCount, overflowStartIndex, overflowOffset) = calcOverflowCountStartIndexAndOffset(mask,
       overflowBitmap, overflowCounts)
     val (swappedSlots, swappedSlotKeys, swappedSlotIndex) = swapMainSlotWithOverflowIfNeeded(slots, slotKeys, key,
@@ -362,8 +377,8 @@ case class TrieNode(
     }
   }
 
-  protected def swapMainSlotWithOverflowIfNeeded(oldSlots: IndexedSeq[Long], oldSlotKeys: IndexedSeq[Option[Long]],
-   key: Long, slotIndex: Int, overflowSlotIndex: Int) = {
+  protected def swapMainSlotWithOverflowIfNeeded(oldSlots: IndexedSeq[Long], oldSlotKeys: IndexedSeq[Option[BigInt]],
+   key: BigInt, slotIndex: Int, overflowSlotIndex: Int) = {
     if (oldSlotKeys(slotIndex).contains(key)) {
 
       val oldMainValue = oldSlots(slotIndex)
@@ -382,7 +397,7 @@ case class TrieNode(
     }
   }
 
-  protected def removeSlot(slots: IndexedSeq[Long], slotKeys: IndexedSeq[Option[Long]], slotIndex: Int) = {
+  protected def removeSlot(slots: IndexedSeq[Long], slotKeys: IndexedSeq[Option[BigInt]], slotIndex: Int) = {
 
     val (slotsHead, slotsRight) = slots.splitAt(slotIndex)
     val newSlots = slotsHead ++ slotsRight.drop(1)
@@ -395,7 +410,7 @@ case class TrieNode(
 
   protected def copyWithCalcId(
    slots: IndexedSeq[Long] = slots,
-   slotKeys: IndexedSeq[Option[Long]] = slotKeys,
+   slotKeys: IndexedSeq[Option[BigInt]] = slotKeys,
    bitmap: Long = bitmap,
    overflowBitmap: Long = overflowBitmap,
    overflowCounts: IndexedSeq[Byte] = overflowCounts,
@@ -407,7 +422,9 @@ case class TrieNode(
     val dos = new DataOutputStream(baos)
 
     slots.foreach(dos.writeLong(_))
-    slotKeys.flatten.foreach(dos.writeLong(_))
+    slotKeys.flatten.foreach { key =>
+      key.toByteArray.foreach(dos.writeLong(_))
+    }
     dos.writeByte(level)
 
     dos.close()

@@ -162,7 +162,6 @@ class TrieNodeTest extends UnitTest {
     val subNodes2 = subNodeResult2.newSubNodes.get
 
     assert(getNestedValue(key3, parentNode2, subNodes2) == 66L)
-
   }
 
   protected final def getNestedValue(key: Long, parentNode: TrieNode, subNodes: Map[Long, TrieNode]): Long = {
@@ -172,6 +171,43 @@ class TrieNodeTest extends UnitTest {
     } else {
       getNestedValue(key, subNodes.get(result._1).get, subNodes)
     }
+  }
+
+  it should "should create sub nodes from parents with no overflows" in {
+    val fullNode = (0 to 63).foldLeft(baseNode) { (result, i) =>
+      val key = baseKey + i
+      result.addOrGetNextNodeId(key, i).newNode.get
+    }
+
+    val key = baseKey + 64
+    val result = fullNode.addOrGetNextNodeId(key, 64)
+
+    assert(getNestedValue(key, result.newNode.get, result.newSubNodes.get) == 64)
+  }
+
+  it should "should maintain keys in order" in {
+
+    val nonOverflowNode = (31 to 0 by -1).foldLeft(baseNode) { (result, i) =>
+      val key = baseKey + i
+      result.addOrGetNextNodeId(key, i).newNode.get
+    }
+
+    val fullNonOverflowNode = (32 to 63).foldLeft(nonOverflowNode) { (result, i) =>
+      val key = baseKey + i
+      result.addOrGetNextNodeId(key, i).newNode.get
+    }
+
+    assert(fullNonOverflowNode.slots.head == 0L)
+    assert(fullNonOverflowNode.slots.last == 63L)
+
+    val overflowNode = (63 to 0 by -1).foldLeft(baseNode) { (result, i) =>
+      val key = baseKey * i
+      result.addOrGetNextNodeId(key, i).newNode.get
+    }
+
+
+    assert(overflowNode.slots.head == 0)
+    assert(overflowNode.slots.last == 63)
   }
 
 }
