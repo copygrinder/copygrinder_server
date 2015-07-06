@@ -17,7 +17,7 @@ import org.copygrinder.UnitTest
 
 class TrieNodeTest extends UnitTest {
 
-  val baseNode = new TrieNode()
+  val baseNode = new TrieNode(keyLength = 66)
 
   val baseKey = 100000000000000000L
 
@@ -136,11 +136,11 @@ class TrieNodeTest extends UnitTest {
   it should "should create sub nodes" in {
 
     val fullNode = (1 to 64).foldLeft(baseNode) { (result, i) =>
-      val key = baseKey * i
+      val key = baseKey + i
       result.addOrGetNextNodeId(key, i).newNode.get
     }
 
-    val key2 = baseKey * 65
+    val key2 = baseKey + 65
 
     val subNodeResult = fullNode.addOrGetNextNodeId(key2, 65L)
 
@@ -150,11 +150,11 @@ class TrieNodeTest extends UnitTest {
     val parentNode = subNodeResult.newNode.get
     val subNodes = subNodeResult.newSubNodes.get
 
-    assert(subNodes.size == 3)
+    assert(subNodes.size == 10)
 
     assert(getNestedValue(key2, parentNode, subNodes) == 65L)
 
-    val key3 = baseKey * 66
+    val key3 = baseKey + 66
 
     val subNodeResult2 = fullNode.addOrGetNextNodeId(key3, 66L)
 
