@@ -28,12 +28,9 @@ case class TrieNode(
  overflowBitmap: Long = 0L,
  overflowCounts: IndexedSeq[Byte] = IndexedSeq(),
  level: Int = 0,
- size: Int = 0,
- keyLength: Int) {
+ size: Int = 0) {
 
-  if (keyLength % 6 != 0) {
-    throw new CopygrinderRuntimeException("TrieNode keyLength must be divisible by 6.")
-  }
+  protected final val maxKeyLength = 3072
 
   protected lazy val nonPackedCount = java.lang.Long.bitCount(bitmap)
 
@@ -81,10 +78,8 @@ case class TrieNode(
   }
 
   protected def getMask(key: BigInt): Long = {
-    val shift =  keyLength - level - 6
-    val index = key.>>(shift).&(0x3F).toLong
-    val mask = 1L << index
-    mask
+    val index = key.>>(level).&(0x3F).toLong
+    1L << index
   }
 
   protected def getSlotIndex(mask: Long): Int = {
@@ -140,7 +135,42 @@ case class TrieNode(
     overflowStartIndex
   }
 
-  def addOrGetNextNodeId(key: BigInt, value: Long): AddResult = {
+  def addOrGetNextNodeId(key: BigInt, value: Long, parentLevel: Int = maxKeyLength): AddResult = {
+
+    val isRootNode = parentLevel == maxKeyLength
+
+    if (isRootNode) {
+      val keyLength = key.bitLength
+      if (keyLength > level + 6) {
+        nodeLevelUp(key, value, keyLength)
+      } else {
+        doAddOrGet(key, value, parentLevel)
+      }
+    } else {
+      doAddOrGet(key, value, parentLevel)
+    }
+
+  }
+
+  protected def nodeLevelUp(key: BigInt, value: Long, keyLength: Int): AddResult = {
+
+    val newLevel = (Math.ceil(keyLength / 6.0) * 6 - 6).toInt
+    val tmpNode = TrieNode(level = newLevel).addOrGetNextNodeId(key, value, maxKeyLength).newNode.get
+
+    val newNode = if (slots.nonEmpty) {
+      val (newSlots, tmpKeys) = tmpNode.insertKeyAndValue(0, id, 0)
+      val newKeys = tmpKeys.updated(0, None)
+      val newBitmap = tmpNode.bitmap | 1L
+
+      tmpNode.copyWithCalcId(slots = newSlots, slotKeys = newKeys, bitmap = newBitmap)
+    } else {
+      tmpNode
+    }
+
+    AddResult.newNodeOnly(newNode)
+  }
+
+  protected def doAddOrGet(key: BigInt, value: Long, parentLevel: Int): AddResult = {
 
     val existingValueOpt = getWithSlotIndex(key)
 
@@ -156,7 +186,7 @@ case class TrieNode(
       if (slots.length < 64) {
         addToNode(key, value)
       } else {
-        addToSubNode(key, value)
+        addToSubNode(key, value, parentLevel)
       }
     }
 
@@ -239,16 +269,16 @@ case class TrieNode(
     (newSlots, newSlotKeys)
   }
 
-  protected def addToSubNode(key: BigInt, value: Long): AddResult = {
+  protected def addToSubNode(key: BigInt, value: Long, parentLevel: Int): AddResult = {
 
     val (parentNode, subNode) = breakNodeIntoSubNode(key, value)
 
-    val result1 = parentNode.addOrGetNextNodeId(key, value)
+    val result1 = parentNode.addOrGetNextNodeId(key, value, parentLevel)
 
     if (result1.newNode.isDefined) {
       AddResult.newNodeAndSub(result1.newNode.get, Map(subNode.id -> subNode))
     } else {
-      val result2 = subNode.addOrGetNextNodeId(key, value)
+      val result2 = subNode.addOrGetNextNodeId(key, value, parentNode.level)
       if (result2.newNode.isDefined) {
         val newSubNode = result2.newNode.get
         val nestedSubNodes = result2.newSubNodes.getOrElse(Map())
@@ -281,7 +311,7 @@ case class TrieNode(
       result.removeOrGetNextNodeId(removalKey).newNode.get
     }
 
-    val baseSubNode = TrieNode(level = level + 6, keyLength = keyLength)
+    val baseSubNode = TrieNode(level = level - 6)
 
     val subNode = removedKeysAndValues.foldLeft(baseSubNode) { case (result, (removedKey, removedValue)) =>
       result.addToNode(removedKey, removedValue).newNode.get
@@ -419,8 +449,7 @@ case class TrieNode(
    overflowBitmap: Long = overflowBitmap,
    overflowCounts: IndexedSeq[Byte] = overflowCounts,
    level: Int = level,
-   size: Int = size,
-   keyLength: Int = keyLength): TrieNode = {
+   size: Int = size): TrieNode = {
 
     val hashBuilder = HashFactoryWrapper.newHash()
 
@@ -439,7 +468,7 @@ case class TrieNode(
     hashBuilder.update(bytes, 0, bytes.length)
     val hash = hashBuilder.getValue
 
-    new TrieNode(hash, slots, slotKeys, bitmap, overflowBitmap, overflowCounts, level, size, keyLength)
+    new TrieNode(hash, slots, slotKeys, bitmap, overflowBitmap, overflowCounts, level, size)
   }
 
   protected def isKeyPrefixed(key: BigInt, prefix: BigInt, prefixLength: Int): Boolean = {

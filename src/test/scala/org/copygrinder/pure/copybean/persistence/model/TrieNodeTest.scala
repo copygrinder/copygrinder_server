@@ -17,7 +17,7 @@ import org.copygrinder.UnitTest
 
 class TrieNodeTest extends UnitTest {
 
-  val baseNode = new TrieNode(keyLength = 66)
+  val baseNode = new TrieNode()
 
   val baseKey = 100000000000000000L
 
@@ -150,7 +150,7 @@ class TrieNodeTest extends UnitTest {
     val parentNode = subNodeResult.newNode.get
     val subNodes = subNodeResult.newSubNodes.get
 
-    assert(subNodes.size == 10)
+    assert(subNodes.size == 9)
 
     assert(getNestedValue(key2, parentNode, subNodes) == 65L)
 
